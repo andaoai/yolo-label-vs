@@ -123,7 +123,10 @@ export class YoloDataReader {
     }
 
     public getLabelFile(imagePath: string): string {
-        return imagePath.replace(/\.(jpg|jpeg|png)$/i, '.txt');
+        // 将 images 替换为 labels
+        const labelPath = imagePath.replace(/images/g, 'labels');
+        // 将图片扩展名替换为 .txt
+        return labelPath.replace(/\.(jpg|jpeg|png)$/i, '.txt');
     }
 
     public readLabels(imagePath: string): BoundingBox[] {
