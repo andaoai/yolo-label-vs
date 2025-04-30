@@ -1,0 +1,89 @@
+{
+  "name": "labeling-vs",
+  "displayName": "YOLO Labeling",
+  "description": "A VS Code extension for YOLO dataset labeling",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:**/*.yaml",
+    "workspaceContains:**/*.yml"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "labeling-vs.openLabelingPanel",
+        "title": "Open YOLO Labeling Panel"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "labeling-vs.openLabelingPanel",
+          "group": "navigation@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "labeling-vs.openLabelingPanel",
+          "group": "navigation@1"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "labeling-vs.openLabelingPanel",
+          "group": "navigation@1"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "labeling-vs.openLabelingPanel",
+        "key": "ctrl+shift+y",
+        "when": "editorTextFocus && resourceExtname == .yaml || resourceExtname == .yml"
+      },
+      {
+        "command": "labeling-vs.nextImage",
+        "key": "ctrl+right",
+        "when": "focusedView == yoloLabeling"
+      },
+      {
+        "command": "labeling-vs.previousImage",
+        "key": "ctrl+left",
+        "when": "focusedView == yoloLabeling"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.17.32",
+    "@types/vscode": "^1.99.0",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.23.0",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}
