@@ -305,59 +305,6 @@
             color: var(--text-color);
             font-size: 13px;
         }
-
-        .search-container {
-            position: relative;
-            flex: 1;
-            max-width: 300px;
-            margin: 0 16px;
-        }
-
-        #imageSearch {
-            width: 100%;
-            padding: 6px 12px;
-            background-color: var(--surface-color);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 13px;
-        }
-
-        #imageSearch:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-
-        .search-results {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            margin-top: 4px;
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-        }
-
-        .search-result-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            color: var(--text-color);
-            font-size: 13px;
-        }
-
-        .search-result-item:hover {
-            background-color: var(--surface-color-hover);
-        }
-
-        .search-result-item.selected {
-            background-color: var(--primary-color);
-            color: #ffffff;
-        }
     </style>
 </head>
 <body>
@@ -376,10 +323,6 @@
                         <path d="M9 18l6-6-6-6"/>
                     </svg>
                 </button>
-            </div>
-            <div class="search-container">
-                <input type="text" id="imageSearch" placeholder="Search images..." />
-                <div id="searchResults" class="search-results"></div>
             </div>
             <div class="mode-selector">
                 <label for="labelMode">Mode:</label>
@@ -822,113 +765,16 @@
             vscode.postMessage({ command: 'save', labels: initialLabels });
         });
 
-        // Add image search functionality
-        let allImageFiles = [];
-        let selectedSearchIndex = -1;
-
-        // Request image list from vscode
-        vscode.postMessage({ command: 'getImageList' });
-
-        // Listen for image list from vscode
+        // Update message listener for image updates
         window.addEventListener('message', event => {
             const message = event.data;
             switch (message.command) {
                 case 'updateImage':
-                    loadImage(message.imageData);
+                    currentImage = message.imageData;
                     initialLabels = message.labels;
-                    drawLabels();
-                    updateLabelList();
+                    document.getElementById('imageInfo').textContent = message.imageInfo;
+                    loadImage(currentImage);
                     break;
-                case 'imageList':
-                    allImageFiles = message.files;
-                    break;
-            }
-        });
-
-        const searchInput = document.getElementById('imageSearch');
-        const searchResults = document.getElementById('searchResults');
-
-        function getFileName(path) {
-            return path.split(/[\\/]/).pop();
-        }
-
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            if (!searchTerm) {
-                searchResults.style.display = 'none';
-                return;
-            }
-
-            const matches = allImageFiles
-                .filter(file => getFileName(file).toLowerCase().includes(searchTerm))
-                .slice(0, 10); // Limit to 10 results
-
-            if (matches.length > 0) {
-                searchResults.innerHTML = matches
-                    .map((file, index) => `
-                        <div class="search-result-item" data-index="${index}" data-file="${file}">
-                            ${getFileName(file)}
-                        </div>
-                    `).join('');
-                searchResults.style.display = 'block';
-                selectedSearchIndex = -1;
-            } else {
-                searchResults.style.display = 'none';
-            }
-        });
-
-        searchInput.addEventListener('keydown', (e) => {
-            const items = searchResults.getElementsByClassName('search-result-item');
-            if (!items.length) return;
-
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                selectedSearchIndex = Math.min(selectedSearchIndex + 1, items.length - 1);
-                updateSelectedResult();
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                selectedSearchIndex = Math.max(selectedSearchIndex - 1, 0);
-                updateSelectedResult();
-            } else if (e.key === 'Enter' && selectedSearchIndex >= 0) {
-                e.preventDefault();
-                const selectedItem = items[selectedSearchIndex];
-                if (selectedItem) {
-                    const file = selectedItem.dataset.file;
-                    vscode.postMessage({ command: 'loadImage', file });
-                    searchResults.style.display = 'none';
-                    searchInput.value = getFileName(file);
-                }
-            } else if (e.key === 'Escape') {
-                searchResults.style.display = 'none';
-            }
-        });
-
-        function updateSelectedResult() {
-            const items = searchResults.getElementsByClassName('search-result-item');
-            Array.from(items).forEach((item, index) => {
-                if (index === selectedSearchIndex) {
-                    item.classList.add('selected');
-                    item.scrollIntoView({ block: 'nearest' });
-                } else {
-                    item.classList.remove('selected');
-                }
-            });
-        }
-
-        searchResults.addEventListener('click', (e) => {
-            const item = e.target.closest('.search-result-item');
-            if (item) {
-                const file = item.dataset.file;
-                vscode.postMessage({ command: 'loadImage', file });
-                searchResults.style.display = 'none';
-                searchInput.value = getFileName(file);
-            }
-        });
-
-        // Hide search results when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-                searchResults.style.display = 'none';
             }
         });
 
@@ -945,6 +791,22 @@
         if (currentImage) {
             loadImage(currentImage);
         }
+
+        // Remove any duplicate event listeners that might have been added
+        const prevButton = document.getElementById('prevImage');
+        const nextButton = document.getElementById('nextImage');
+        const oldPrevButton = prevButton.cloneNode(true);
+        const oldNextButton = nextButton.cloneNode(true);
+        prevButton.parentNode.replaceChild(oldPrevButton, prevButton);
+        nextButton.parentNode.replaceChild(oldNextButton, nextButton);
+
+        oldPrevButton.addEventListener('click', () => {
+            vscode.postMessage({ command: 'previous' });
+        });
+
+        oldNextButton.addEventListener('click', () => {
+            vscode.postMessage({ command: 'next' });
+        });
     </script>
 </body>
 </html> 
