@@ -4,7 +4,7 @@ A VS Code extension for quickly browsing and editing YOLO dataset annotations. T
 
 ## Demo
 
-![YOLO Label VS 演示](demo.gif)
+![YOLO Label VS 演示](./docs/images/demo.gif)
 
 ## Documentation
 

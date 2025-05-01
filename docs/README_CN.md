@@ -5,7 +5,7 @@
 
 ## 演示
 
-![YOLO Label VS 演示](demo.gif)
+![YOLO Label VS 演示](./images/demo.gif)
 
 ## 相关文档
 
