@@ -75,11 +75,6 @@
             gap: 12px;
         }
 
-        .label-select {
-            width: 100%;
-            margin: 0;
-        }
-
         .label-item {
             display: flex;
             align-items: center;
@@ -256,12 +251,6 @@
             </div>
             <div class="sidebar">
                 <div class="sidebar-section">
-                    <h3>Next Label Class</h3>
-                    <select id="labelSelect" class="label-select">
-                        {{classNames}}
-                    </select>
-                </div>
-                <div class="sidebar-section">
                     <h3>Labels</h3>
                     <div class="label-list" id="labelList"></div>
                 </div>
@@ -284,7 +273,6 @@
 
         const canvas = document.getElementById('imageCanvas');
         const ctx = canvas.getContext('2d');
-        const labelSelect = document.getElementById('labelSelect');
         const coordinates = document.getElementById('coordinates');
         const labelList = document.getElementById('labelList');
 
@@ -323,7 +311,7 @@
                 ctx.strokeRect(x - width/2, y - height/2, width, height);
                 
                 // Draw label background
-                const text = labelSelect.options[label.class].text;
+                const text = label.class.toString();
                 const textWidth = ctx.measureText(text).width;
                 ctx.fillStyle = colors[label.class % colors.length];
                 ctx.fillRect(x - width/2, y - height/2 - 20, textWidth + 10, 20);
@@ -346,7 +334,7 @@
                 colorDiv.style.backgroundColor = colors[label.class % colors.length];
                 
                 const select = document.createElement('select');
-                select.innerHTML = labelSelect.innerHTML;
+                select.innerHTML = `{{classNames}}`;
                 select.value = label.class;
                 select.onchange = () => {
                     initialLabels[index].class = parseInt(select.value);
@@ -368,11 +356,6 @@
                 div.appendChild(deleteBtn);
                 labelList.appendChild(div);
             });
-
-            // 自动选择第一个标签类别
-            if (labelSelect) {
-                labelSelect.selectedIndex = 0;
-            }
         }
 
         canvas.addEventListener('mousemove', (e) => {
@@ -425,7 +408,7 @@
                 const y = Math.min(startY, currentY) + height/2;
                 
                 initialLabels.push({
-                    class: parseInt(labelSelect.value),
+                    class: 0, // Default to first class
                     x: x,
                     y: y,
                     width: width,
