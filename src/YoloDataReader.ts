@@ -15,6 +15,8 @@ export interface BoundingBox {
     y: number;
     width: number;
     height: number;
+    isSegmentation?: boolean;
+    points?: number[];  // For segmentation format: [x1,y1,x2,y2,...]
 }
 
 export class YoloDataReader {
@@ -223,11 +225,28 @@ export class YoloDataReader {
                 .split('\n')
                 .filter(line => line.trim())
                 .map(line => {
-                    const [classId, x, y, width, height] = line.split(' ').map(Number);
-                    if (isNaN(classId) || isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) {
-                        throw new Error(`Invalid label format in line: ${line}`);
+                    const values = line.split(' ').map(Number);
+                    const classId = values[0];
+                    
+                    // Check if it's a segmentation format (more than 5 values)
+                    if (values.length > 5) {
+                        return {
+                            class: classId,
+                            x: 0,  // These will be calculated from points
+                            y: 0,
+                            width: 0,
+                            height: 0,
+                            isSegmentation: true,
+                            points: values.slice(1)  // All values after classId are points
+                        };
+                    } else {
+                        // Regular bounding box format
+                        const [_, x, y, width, height] = values;
+                        if (isNaN(classId) || isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) {
+                            throw new Error(`Invalid label format in line: ${line}`);
+                        }
+                        return { class: classId, x, y, width, height, isSegmentation: false };
                     }
-                    return { class: classId, x, y, width, height };
                 });
         } catch (error: any) {
             console.error(`Error reading labels from ${labelPath}:`, error);
@@ -239,7 +258,13 @@ export class YoloDataReader {
         try {
             const labelPath = this.getLabelFile(imagePath);
             const labelContent = labels
-                .map(label => `${label.class} ${label.x} ${label.y} ${label.width} ${label.height}`)
+                .map(label => {
+                    if (label.isSegmentation && label.points) {
+                        return `${label.class} ${label.points.join(' ')}`;
+                    } else {
+                        return `${label.class} ${label.x} ${label.y} ${label.width} ${label.height}`;
+                    }
+                })
                 .join('\n');
             
             // 确保标签目录存在
