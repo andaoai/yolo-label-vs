@@ -682,7 +682,7 @@ class CanvasManager {
         // 重置变换矩阵，确保在Canvas空间中绘制
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         
-        this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)';
+        this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.94)';
         this.ctx.lineWidth = 1;
         this.ctx.setLineDash([5, 5]);
         
