@@ -92,6 +92,10 @@ export class LabelingPanel {
         const labels = currentImage ? this._yoloReader.readLabels(currentImage) : [];
         const initialImageData = currentImage ? await this._loadImage(currentImage) : null;
 
+        // Get path to CSS file
+        const cssPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'templates', 'styles', 'labeling-panel.css');
+        const cssSrc = webview.asWebviewUri(cssPath);
+
         // Read the HTML template
         const templatePath = path.join(this._extensionUri.fsPath, 'src', 'templates', 'labeling-panel.html');
         let html = await fs.promises.readFile(templatePath, 'utf8');
@@ -100,6 +104,7 @@ export class LabelingPanel {
         html = html.replace('{{classNames}}', classNames.map((name, index) => `<option value="${index}">${name}</option>`).join(''));
         html = html.replace('`{{initialImageData}}`', JSON.stringify(initialImageData));
         html = html.replace('`{{labels}}`', JSON.stringify(labels));
+        html = html.replace('styles/labeling-panel.css', cssSrc.toString());
 
         // Add image count information
         const totalImages = this._yoloReader.getTotalImages();
