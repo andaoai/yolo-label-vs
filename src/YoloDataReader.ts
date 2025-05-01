@@ -117,7 +117,8 @@ export class YoloDataReader {
                 imagesPath = path.resolve(yamlDir, imagesPath);
             }
 
-            this.imageFiles = [];
+            // 使用 Set 来存储唯一的文件路径
+            const imageFilesSet = new Set<string>();
 
             // 处理训练集路径
             const trainPaths = Array.isArray(this.config.train) 
@@ -142,7 +143,8 @@ export class YoloDataReader {
                     })
                     .map(file => path.join(fullPath, file));
 
-                this.imageFiles.push(...files);
+                // 添加到 Set 中以去重
+                files.forEach(file => imageFilesSet.add(file));
             }
 
             // 处理验证集路径
@@ -168,17 +170,18 @@ export class YoloDataReader {
                     })
                     .map(file => path.join(fullPath, file));
 
-                this.imageFiles.push(...files);
+                // 添加到 Set 中以去重
+                files.forEach(file => imageFilesSet.add(file));
             }
 
-            // 对文件进行排序以确保顺序一致
-            this.imageFiles.sort();
+            // 转换 Set 为数组并排序
+            this.imageFiles = Array.from(imageFilesSet).sort();
 
             if (this.imageFiles.length === 0) {
                 throw new Error('No supported image files found in any of the directories');
             }
 
-            console.log(`Loaded ${this.imageFiles.length} images from ${trainPaths.length} train and ${valPaths.length} val directories`);
+            console.log(`Loaded ${this.imageFiles.length} unique images from ${trainPaths.length} train and ${valPaths.length} val directories`);
         } catch (error: any) {
             console.error('Error loading image files:', error);
             throw new Error(`Failed to load image files: ${error.message}`);
@@ -290,18 +293,5 @@ export class YoloDataReader {
 
     public getCurrentImageIndex(): number {
         return this.currentImageIndex;
-    }
-
-    public getAllImages(): string[] {
-        return [...this.imageFiles];
-    }
-
-    public setCurrentImageByPath(imagePath: string): boolean {
-        const index = this.imageFiles.findIndex(file => file === imagePath);
-        if (index !== -1) {
-            this.currentImageIndex = index;
-            return true;
-        }
-        return false;
     }
 } 
