@@ -385,6 +385,29 @@
             gap: 24px;
             flex-shrink: 0;
         }
+
+        .toggle-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-color);
+        }
+
+        .toggle-button.active {
+            background-color: var(--primary-color);
+            color: #ffffff;
+        }
+
+        .toggle-button svg {
+            width: 16px;
+            height: 16px;
+        }
     </style>
 </head>
 <body>
@@ -418,6 +441,12 @@
                         <option value="seg">Segmentation</option>
                     </select>
                 </div>
+                <button class="toggle-button" id="toggleLabels">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    Show Labels
+                </button>
                 <button id="saveLabels" class="secondary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
@@ -460,6 +489,7 @@
         let currentMode = 'box';
         let polygonPoints = [];
         let isDrawingPolygon = false;
+        let showLabels = true;
         const CLOSE_POINT_THRESHOLD = 0.01; // 1% of canvas size for close point detection
         let allImagePaths = [];
         let selectedSearchIndex = -1;
@@ -546,35 +576,37 @@
                     ctx.closePath();
                     ctx.stroke();
                     
-                    // Draw label background
-                    const text = `${classNamesList[label.class] || label.class.toString()} (SEG)`;
-                    const textWidth = ctx.measureText(text).width;
-                    ctx.fillStyle = color;
-                    ctx.fillRect(label.points[0] * canvas.width, label.points[1] * canvas.height - 20, textWidth + 10, 20);
-                    
-                    // Draw label text
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = '14px sans-serif';
-                    ctx.fillText(text, label.points[0] * canvas.width + 5, label.points[1] * canvas.height - 5);
+                    // Draw label background and text only if showLabels is true
+                    if (showLabels) {
+                        const text = `${classNamesList[label.class] || label.class.toString()} (SEG)`;
+                        const textWidth = ctx.measureText(text).width;
+                        ctx.fillStyle = color;
+                        ctx.fillRect(label.points[0] * canvas.width, label.points[1] * canvas.height - 20, textWidth + 10, 20);
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '14px sans-serif';
+                        ctx.fillText(text, label.points[0] * canvas.width + 5, label.points[1] * canvas.height - 5);
+                    }
                 } else {
                     // Draw bounding box
-                const x = label.x * canvas.width;
-                const y = label.y * canvas.height;
-                const width = label.width * canvas.width;
-                const height = label.height * canvas.height;
-                
-                ctx.strokeRect(x - width/2, y - height/2, width, height);
-                
-                // Draw label background
-                    const text = `${classNamesList[label.class] || label.class.toString()} (BOX)`;
-                const textWidth = ctx.measureText(text).width;
-                    ctx.fillStyle = color;
-                ctx.fillRect(x - width/2, y - height/2 - 20, textWidth + 10, 20);
-                
-                // Draw label text
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '14px sans-serif';
-                ctx.fillText(text, x - width/2 + 5, y - height/2 - 5);
+                    const x = label.x * canvas.width;
+                    const y = label.y * canvas.height;
+                    const width = label.width * canvas.width;
+                    const height = label.height * canvas.height;
+                    
+                    ctx.strokeRect(x - width/2, y - height/2, width, height);
+                    
+                    // Draw label background and text only if showLabels is true
+                    if (showLabels) {
+                        const text = `${classNamesList[label.class] || label.class.toString()} (BOX)`;
+                        const textWidth = ctx.measureText(text).width;
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x - width/2, y - height/2 - 20, textWidth + 10, 20);
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '14px sans-serif';
+                        ctx.fillText(text, x - width/2 + 5, y - height/2 - 5);
+                    }
                 }
             });
         }
@@ -1039,6 +1071,14 @@
 
         oldNextButton.addEventListener('click', () => {
             vscode.postMessage({ command: 'next' });
+        });
+
+        // Add toggle labels button event listener
+        document.getElementById('toggleLabels').addEventListener('click', () => {
+            showLabels = !showLabels;
+            const button = document.getElementById('toggleLabels');
+            button.classList.toggle('active', showLabels);
+            drawLabels();
         });
     </script>
 </body>
