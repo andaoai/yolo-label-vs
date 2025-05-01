@@ -10,12 +10,12 @@
 ## 相关文档
 
 - 中文文档
-  - [打包指南](./docs/PACKAGING_CN.md)
-  - [发布指南](./docs/PUBLISHING_CN.md)
+  - [打包指南](./PACKAGING_CN.md)
+  - [发布指南](./PUBLISHING_CN.md)
 - English Documentation
-  - [Packaging Guide](./docs/PACKAGING.md)
-  - [Publishing Guide](./docs/PUBLISHING.md)
-  - [README in English](./README.md)
+  - [Packaging Guide](./PACKAGING.md)
+  - [Publishing Guide](./PUBLISHING.md)
+  - [README in English](../README.md)
 
 ## 核心功能
 
@@ -55,11 +55,34 @@
 3. 选择 "打开 YOLO 标注面板"
 4. 浏览已标注的图片并根据需要进行调整
 
+### 界面控件
+
+- **上一张/下一张图片**：在数据集中导航浏览图片
+- **模式选择器**：在边界框(Box)和分割(Segmentation)标注模式之间切换
+- **显示标签**：切换图像上标签的可见性
+- **保存标签**：将当前标注保存到磁盘
+- **搜索框**：在数据集中搜索特定图片
+
 ### 快捷键
 
-- `Ctrl+Shift+Y`: 打开 YOLO 标注面板
-- `Ctrl+Right`: 下一张图片
-- `Ctrl+Left`: 上一张图片
+#### 全局快捷键
+- `Ctrl+Y`: 打开 YOLO 标注面板
+
+#### 标注面板内快捷键
+- `D`: 下一张图片
+- `A`: 上一张图片
+- `Ctrl+S`: 保存标签
+- `Ctrl+滚轮`: 以鼠标位置为中心放大/缩小
+- `Alt+拖动`: 放大时平移图像
+- `滚轮`: 放大时垂直滚动
+- `Shift+滚轮`: 放大时水平滚动
+- `右键点击`: 取消多边形绘制（在分割模式下）
+
+#### 搜索功能
+- `向下箭头`: 在搜索结果中向下移动
+- `向上箭头`: 在搜索结果中向上移动
+- `回车`: 选择高亮的搜索结果
+- `Esc`: 关闭搜索结果面板
 
 ## 扩展设置
 
@@ -87,7 +110,7 @@ YOLO 标注工具首次发布：
 
 ## 许可证
 
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
+本项目采用 MIT 许可证 - 详见 [LICENSE](../LICENSE) 文件。
 
 ## 支持
 

@@ -54,11 +54,34 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 3. Select "Open YOLO Labeling Panel"
 4. Browse through your labeled images and make adjustments as needed
 
+### Interface Controls
+
+- **Previous/Next Image**: Navigate through images in the dataset
+- **Mode Selector**: Switch between Box and Segmentation labeling modes
+- **Show Labels**: Toggle visibility of labels on the image
+- **Save Labels**: Save current annotations to disk
+- **Search Box**: Search for specific images in the dataset
+
 ### Keyboard Shortcuts
 
-- `Ctrl+Shift+Y`: Open YOLO Labeling Panel
-- `Ctrl+Right`: Next image
-- `Ctrl+Left`: Previous image
+#### Global Shortcuts
+- `Ctrl+Y`: Open YOLO Labeling Panel
+
+#### In Labeling Panel
+- `D`: Go to next image
+- `A`: Go to previous image
+- `Ctrl+S`: Save labels
+- `Ctrl+Wheel`: Zoom in/out at mouse position
+- `Alt+Drag`: Pan the image when zoomed in
+- `Wheel`: Scroll vertically when zoomed in
+- `Shift+Wheel`: Scroll horizontally when zoomed in
+- `Right-click`: Cancel polygon drawing (in segmentation mode)
+
+#### Search Functionality
+- `Arrow Down`: Move down through search results
+- `Arrow Up`: Move up through search results
+- `Enter`: Select the highlighted search result
+- `Escape`: Close search results panel
 
 ## Extension Settings
 
