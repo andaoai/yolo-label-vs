@@ -285,6 +285,9 @@
         let isDrawing = false;
         let startX, startY;
         let currentLabel = 0;
+        let classNamesList = `{{classNames}}`.split('</option>')
+            .map(opt => opt.match(/>([^<]+)$/)?.[1] || '')
+            .filter(name => name);
 
         const canvas = document.getElementById('imageCanvas');
         const ctx = canvas.getContext('2d');
@@ -326,7 +329,7 @@
                 ctx.strokeRect(x - width/2, y - height/2, width, height);
                 
                 // Draw label background
-                const text = label.class.toString();
+                const text = classNamesList[label.class] || label.class.toString();
                 const textWidth = ctx.measureText(text).width;
                 ctx.fillStyle = colors[label.class % colors.length];
                 ctx.fillRect(x - width/2, y - height/2 - 20, textWidth + 10, 20);
@@ -349,8 +352,9 @@
                 colorDiv.style.backgroundColor = colors[label.class % colors.length];
                 
                 const select = document.createElement('select');
-                select.innerHTML = `{{classNames}}`;
-                select.value = label.class;
+                select.innerHTML = classNamesList.map((name, i) => 
+                    `<option value="${i}"${i === label.class ? ' selected' : ''}>${name}</option>`
+                ).join('');
                 select.onchange = () => {
                     initialLabels[index].class = parseInt(select.value);
                     colorDiv.style.backgroundColor = colors[label.class % colors.length];
