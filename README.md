@@ -21,9 +21,9 @@ A Visual Studio Code extension for labeling images in YOLO format. This extensio
 
 This extension contributes the following commands:
 
-* `labeling-vs.openLabelingPanel`: Open the YOLO Labeling Panel
-* `labeling-vs.nextImage`: Navigate to next image (Ctrl+Right)
-* `labeling-vs.previousImage`: Navigate to previous image (Ctrl+Left)
+* `yolo-labeling-vs.openLabelingPanel`: Open the YOLO Labeling Panel
+* `yolo-labeling-vs.nextImage`: Navigate to next image (Ctrl+Right)
+* `yolo-labeling-vs.previousImage`: Navigate to previous image (Ctrl+Left)
 
 ## Usage
 
