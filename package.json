@@ -3,6 +3,19 @@
   "displayName": "YOLO Labeling",
   "description": "A VS Code extension for YOLO dataset labeling",
   "version": "0.0.1",
+  "publisher": "andao",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/yolo-label-vs"
+  },
+  "keywords": [
+    "yolo",
+    "labeling",
+    "dataset",
+    "computer vision",
+    "machine learning"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
