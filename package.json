@@ -5,7 +5,7 @@
   "version": "0.0.3",
   "publisher": "andaoai",
   "license": "MIT",
-  "icon": "icon.png",
+  "icon": "docs/images/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/andaoai/yolo-label-vs"
