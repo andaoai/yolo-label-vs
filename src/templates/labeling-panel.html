@@ -4,416 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YOLO Labeling</title>
-    <style>
-        :root {
-            --primary-color: #0098ff;
-            --secondary-color: #73c991;
-            --danger-color: #f14c4c;
-            --background-color: #1e1e1e;
-            --surface-color: #252526;
-            --surface-color-hover: #2d2d2d;
-            --border-color: #454545;
-            --text-color: #cccccc;
-            --text-color-secondary: #8a8a8a;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            overflow: hidden;
-        }
-
-        .container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            padding: 20px;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-
-        .toolbar {
-            display: flex;
-            align-items: center;
-            background-color: var(--surface-color);
-            padding: 12px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            margin-bottom: 20px;
-            flex-shrink: 0;
-            gap: 12px;
-        }
-
-        .main-content {
-            flex: 1;
-            display: flex;
-            gap: 20px;
-            min-height: 0;
-        }
-
-        .canvas-container {
-            flex: 1;
-            background-color: var(--surface-color);
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            padding: 12px;
-            position: relative;
-            overflow: hidden;
-            min-height: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .sidebar {
-            width: 280px;
-            background-color: var(--surface-color);
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            min-height: 0;
-            flex-shrink: 0;
-        }
-
-        .sidebar-section {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            flex: 1;
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        .label-item {
-            display: flex;
-            align-items: center;
-            padding: 8px;
-            background-color: var(--background-color);
-            border: 1px solid var(--border-color);
-            border-radius: 2px;
-            margin-bottom: 8px;
-            gap: 8px;
-        }
-
-        .label-item select {
-            flex: 1;
-            min-width: 0;
-            margin: 0;
-        }
-
-        .sidebar h3 {
-            margin-top: 0;
-            color: var(--text-color);
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 16px;
-        }
-
-        #imageCanvas {
-            max-width: 100%;
-            max-height: 100%;
-            height: auto;
-            border-radius: 2px;
-            background-color: var(--background-color);
-            object-fit: contain;
-        }
-
-        button {
-            background-color: var(--surface-color);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            padding: 6px 12px;
-            border-radius: 2px;
-            cursor: pointer;
-            font-size: 13px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background-color: var(--surface-color-hover);
-        }
-
-        button:active {
-            background-color: var(--border-color);
-        }
-
-        button.secondary {
-            background-color: var(--surface-color);
-            border-color: var(--border-color);
-        }
-
-        button.secondary:hover {
-            background-color: var(--surface-color-hover);
-        }
-
-        .nav-buttons {
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-
-        select {
-            padding: 6px 8px;
-            border-radius: 2px;
-            border: 1px solid var(--border-color);
-            font-size: 13px;
-            background-color: var(--surface-color);
-            color: var(--text-color);
-            margin: 0 12px;
-            min-width: 150px;
-        }
-
-        select:focus {
-            outline: 1px solid var(--primary-color);
-            border-color: var(--primary-color);
-        }
-
-        .label-list {
-            margin-top: 16px;
-            overflow-y: auto;
-            flex: 1;
-            min-height: 0;
-        }
-
-        .label-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
-            margin-right: 8px;
-        }
-
-        .label-item button {
-            padding: 2px 6px;
-            background: transparent;
-            border: none;
-            color: var(--text-color-secondary);
-            opacity: 0.7;
-        }
-
-        .label-item button:hover {
-            color: var(--danger-color);
-            opacity: 1;
-        }
-
-        .status-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 16px;
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            margin-top: 12px;
-            font-size: 12px;
-            color: var(--text-color-secondary);
-            flex-shrink: 0;
-        }
-
-        .tooltip {
-            position: absolute;
-            background-color: var(--surface-color);
-            color: var(--text-color);
-            padding: 4px 8px;
-            border-radius: 2px;
-            font-size: 12px;
-            pointer-events: none;
-            z-index: 1000;
-            border: 1px solid var(--border-color);
-        }
-
-        svg {
-            color: var(--text-color);
-            opacity: 0.8;
-        }
-
-        button:hover svg {
-            opacity: 1;
-        }
-
-        .label-mode {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 16px;
-            padding: 8px;
-            background-color: var(--background-color);
-            border: 1px solid var(--border-color);
-            border-radius: 2px;
-        }
-
-        .label-mode select {
-            flex: 1;
-            min-width: 0;
-            margin: 0;
-        }
-
-        .label-mode span {
-            color: var(--text-color);
-            font-size: 13px;
-        }
-
-        .label-item .class-select {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .label-item .mode-select {
-            width: 80px;
-            min-width: 80px;
-        }
-
-        .label-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
-            flex-shrink: 0;
-        }
-
-        .label-type {
-            font-size: 12px;
-            padding: 2px 6px;
-            border-radius: 2px;
-            background-color: var(--surface-color);
-            color: var(--text-color-secondary);
-            font-weight: 500;
-        }
-
-        .mode-selector {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-
-        .mode-selector select {
-            background-color: var(--surface-color);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            padding: 4px 8px;
-            border-radius: 4px;
-            min-width: 120px;
-        }
-
-        .mode-selector label {
-            color: var(--text-color);
-            font-size: 13px;
-            white-space: nowrap;
-        }
-
-        .search-container {
-            flex: 1;
-            min-width: 0;
-            margin: 0 24px;
-        }
-
-        .search-box {
-            position: relative;
-            width: 100%;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 6px 12px;
-            background-color: var(--surface-color);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 13px;
-        }
-
-        .search-box input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-
-        .search-results {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            max-height: 200px;
-            overflow-y: auto;
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            margin-top: 4px;
-            z-index: 1000;
-        }
-
-        .search-result-item {
-            padding: 12px;
-            cursor: pointer;
-            color: var(--text-color);
-            font-size: 13px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .search-result-item:last-child {
-            border-bottom: none;
-        }
-
-        .search-result-item .filename {
-            color: var(--text-color);
-        }
-
-        .search-result-item .filepath {
-            color: var(--text-color-secondary);
-            font-size: 12px;
-        }
-
-        .search-result-item.selected {
-            background-color: var(--primary-color);
-            color: #ffffff;
-        }
-
-        .right-controls {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            flex-shrink: 0;
-        }
-
-        .toggle-button {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 12px;
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 2px;
-            cursor: pointer;
-            font-size: 13px;
-            color: var(--text-color);
-        }
-
-        .toggle-button.active {
-            background-color: var(--primary-color);
-            color: #ffffff;
-        }
-
-        .toggle-button svg {
-            width: 16px;
-            height: 16px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles/labeling-panel.css">
 </head>
 <body>
     <div class="container">
-        <div class="toolbar">
-            <div class="nav-buttons">
+        <!-- 顶部工具栏 -->
+        <header class="toolbar">
+            <nav class="nav-buttons">
                 <button id="prevImage">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M15 18l-6-6 6-6"/>
@@ -426,7 +23,7 @@
                         <path d="M9 18l6-6-6-6"/>
                     </svg>
                 </button>
-            </div>
+            </nav>
             <div class="search-container">
                 <div class="search-box">
                     <input type="text" id="imageSearch" placeholder="Search images..." autocomplete="off">
@@ -456,26 +53,28 @@
                     Save Labels
                 </button>
             </div>
-        </div>
-        
-        <div class="main-content">
-            <div class="canvas-container">
+        </header>
+        <!-- 主体内容区 -->
+        <main class="main-content">
+            <!-- 画布区 -->
+            <section class="canvas-container">
                 <canvas id="imageCanvas"></canvas>
-            </div>
-            <div class="sidebar">
-                <div class="sidebar-section">
+            </section>
+            <!-- 侧边栏 -->
+            <aside class="sidebar">
+                <section class="sidebar-section">
                     <h3>Labels</h3>
                     <div class="label-list" id="labelList"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="status-bar">
+                </section>
+            </aside>
+        </main>
+        <!-- 状态栏 -->
+        <footer class="status-bar">
             <span id="imageInfo">Image: 1 of 1</span>
             <span id="coordinates"></span>
-        </div>
+        </footer>
     </div>
-
+    <!-- JS 脚本部分，保持不变 -->
     <script>
         const vscode = acquireVsCodeApi();
         let currentImage = `{{initialImageData}}`;
