@@ -291,4 +291,17 @@ export class YoloDataReader {
     public getCurrentImageIndex(): number {
         return this.currentImageIndex;
     }
+
+    public getAllImages(): string[] {
+        return [...this.imageFiles];
+    }
+
+    public setCurrentImageByPath(imagePath: string): boolean {
+        const index = this.imageFiles.findIndex(file => file === imagePath);
+        if (index !== -1) {
+            this.currentImageIndex = index;
+            return true;
+        }
+        return false;
+    }
 } 
