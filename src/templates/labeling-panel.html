@@ -764,6 +764,27 @@
         }
 
         let currentMousePos = null;
+        function drawCrosshairs(x, y) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            
+            // Draw horizontal line
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+            
+            // Draw vertical line
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+
         canvas.addEventListener('mousemove', (e) => {
             const pos = getMousePos(canvas, e);
             const x = pos.x / canvas.width;
@@ -772,29 +793,35 @@
             coordinates.textContent = `X: ${Math.round(x * 100)}%, Y: ${Math.round(y * 100)}%`;
             
             if (currentMode === 'box' && isDrawing) {
-            const currentX = x;
-            const currentY = y;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(currentImage, 0, 0);
-            drawLabels();
-            
-            const width = Math.abs(currentX - startX);
-            const height = Math.abs(currentY - startY);
-            const boxX = Math.min(startX, currentX) + width/2;
-            const boxY = Math.min(startY, currentY) + height/2;
-            
-            ctx.strokeStyle = colors[currentLabel % colors.length];
-            ctx.lineWidth = 2;
-            ctx.strokeRect(boxX * canvas.width - width * canvas.width/2,
-                          boxY * canvas.height - height * canvas.height/2,
-                          width * canvas.width,
-                          height * canvas.height);
+                const currentX = x;
+                const currentY = y;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(currentImage, 0, 0);
+                drawLabels();
+                
+                const width = Math.abs(currentX - startX);
+                const height = Math.abs(currentY - startY);
+                const boxX = Math.min(startX, currentX) + width/2;
+                const boxY = Math.min(startY, currentY) + height/2;
+                
+                ctx.strokeStyle = colors[currentLabel % colors.length];
+                ctx.lineWidth = 2;
+                ctx.strokeRect(boxX * canvas.width - width * canvas.width/2,
+                            boxY * canvas.height - height * canvas.height/2,
+                            width * canvas.width,
+                            height * canvas.height);
             } else if (currentMode === 'seg' && isDrawingPolygon) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(currentImage, 0, 0);
                 drawLabels();
                 drawCurrentPolygon();
+            } else {
+                // Draw crosshairs when not drawing
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(currentImage, 0, 0);
+                drawLabels();
+                drawCrosshairs(pos.x, pos.y);
             }
         });
 
