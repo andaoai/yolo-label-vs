@@ -23,7 +23,7 @@
    ```bash
    vsce package
    ```
-   This will generate `yolo-labeling-vs-0.0.1.vsix` in the project root directory
+   This will generate `yolo-labeling-vs-0.0.3.vsix` in the project root directory
 
 ## Local Testing
 

@@ -2,7 +2,9 @@
 
 A VS Code extension for quickly browsing and editing YOLO dataset annotations. This extension allows you to efficiently view and modify YOLO-formatted labels through YAML configuration files, making it easy to manage your computer vision datasets directly within VS Code.
 
-![YOLO Labeling](images/preview.png)
+## Demo
+
+![YOLO Label VS 演示](demo.gif)
 
 ## Documentation
 
@@ -70,7 +72,7 @@ Please report issues on our [GitHub repository](https://github.com/andaoai/yolo-
 
 ## Release Notes
 
-### 0.0.1
+### 0.0.3
 
 Initial release of YOLO Labeling:
 - Basic image labeling functionality
