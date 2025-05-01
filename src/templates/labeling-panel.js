@@ -550,10 +550,8 @@ class CanvasManager {
             // Draw the image
             this.ctx.drawImage(this.state.currentImage, 0, 0);
             
-            // Draw all labels
-            if (this.state.showLabels) {
-                this.drawLabels();
-            }
+            // Always draw labels, the label text visibility is controlled inside the drawLabels methods
+            this.drawLabels();
             
             // Draw current polygon if in polygon mode
             if (this.state.currentMode === 'seg' && this.state.isDrawingPolygon) {
@@ -603,7 +601,7 @@ class CanvasManager {
         this.ctx.stroke();
         this.ctx.fill(); // Add semi-transparent fill
         
-        // Draw the label text if enabled
+        // Draw the label text only if showLabels is enabled
         if (this.state.showLabels && label.points.length >= 2) {
             // Find a good position for the label (use the first point)
             const labelX = label.points[0] * this.state.originalImageWidth;
@@ -641,10 +639,10 @@ class CanvasManager {
         const width = label.width * this.state.originalImageWidth;
         const height = label.height * this.state.originalImageHeight;
         
-        // Draw the bounding box
+        // Always draw the bounding box
         this.ctx.strokeRect(x - width/2, y - height/2, width, height);
         
-        // Draw the label text if enabled
+        // Draw the label text only if showLabels is enabled
         if (this.state.showLabels) {
             const text = `${this.state.classNamesList[label.class] || label.class.toString()} (BOX)`;
             
