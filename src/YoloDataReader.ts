@@ -4,8 +4,8 @@ import * as yaml from 'js-yaml';
 
 export interface YoloConfig {
     path: string;      // 数据集根目录
-    train: string;     // 训练图片目录（相对于path）
-    val: string;       // 验证图片目录（相对于path）
+    train: string | string[];     // 训练图片目录（相对于path）
+    val: string | string[];       // 验证图片目录（相对于path）
     names: string[];   // 标签类别名称列表
 }
 
@@ -22,80 +22,164 @@ export class YoloDataReader {
     private currentImageIndex: number = 0;
     private imageFiles: string[] = [];
     private basePath: string;
+    private readonly SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
 
     constructor(private yamlPath: string) {
         this.basePath = path.dirname(yamlPath);
         this.loadConfig();
     }
 
+    private validateConfig(config: any): config is YoloConfig {
+        if (!config.path) {
+            throw new Error('Missing required field: path');
+        }
+
+        // Handle different names formats
+        if (!config.names) {
+            throw new Error('Missing required field: names');
+        }
+
+        // If names is an object (YOLO format), convert it to array
+        if (typeof config.names === 'object' && !Array.isArray(config.names)) {
+            const namesObj = config.names;
+            config.names = Object.entries(namesObj)
+                .sort(([a], [b]) => Number(a) - Number(b))
+                .map(([_, name]) => String(name));
+        }
+
+        // Validate names array
+        if (!Array.isArray(config.names)) {
+            throw new Error('Names must be an array or an object with numeric keys');
+        }
+
+        if (config.names.length === 0) {
+            throw new Error('Names array cannot be empty');
+        }
+
+        // Validate each name
+        config.names.forEach((name: any, index: number) => {
+            if (typeof name !== 'string' || name.trim() === '') {
+                throw new Error(`Invalid name at index ${index}: must be a non-empty string`);
+            }
+        });
+
+        // Validate train and val paths
+        if (config.train && !this._isValidPath(config.train)) {
+            throw new Error('Train path must be a string or an array of strings');
+        }
+
+        if (config.val && !this._isValidPath(config.val)) {
+            throw new Error('Val path must be a string or an array of strings');
+        }
+
+        return true;
+    }
+
+    private _isValidPath(path: any): boolean {
+        if (typeof path === 'string') return true;
+        if (Array.isArray(path)) {
+            return path.every(p => typeof p === 'string');
+        }
+        return false;
+    }
+
     private loadConfig() {
         try {
             const yamlContent = fs.readFileSync(this.yamlPath, 'utf8');
-            console.log('Raw YAML content:', yamlContent);
             
             const rawConfig = yaml.load(yamlContent) as any;
-            console.log('Parsed YAML:', rawConfig);
+            if (!this.validateConfig(rawConfig)) {
+                throw new Error('Invalid configuration format');
+            }
             
-            // 处理 names 字段，将对象转换为数组
-            const namesObj = rawConfig.names || {};
-            const namesArray = Object.entries(namesObj)
-                .sort(([a], [b]) => Number(a) - Number(b))
-                .map(([_, name]) => String(name));
-
             this.config = {
                 path: rawConfig.path,
-                train: rawConfig.train,
-                val: rawConfig.val,
-                names: namesArray
+                train: rawConfig.train || '',
+                val: rawConfig.val || '',
+                names: rawConfig.names
             };
 
-            console.log('Final config:', this.config);
             this.loadImageFiles();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error loading config:', error);
-            throw error;
+            throw new Error(`Failed to load configuration: ${error.message}`);
         }
     }
 
     private loadImageFiles() {
         try {
-            // 获取 YAML 文件所在目录的绝对路径
             const yamlDir = path.dirname(path.resolve(this.yamlPath));
-            console.log('YAML directory:', yamlDir);
-
-            // 解析图片目录的路径
             let imagesPath = this.config.path;
+            
             if (!path.isAbsolute(imagesPath)) {
                 imagesPath = path.resolve(yamlDir, imagesPath);
             }
 
-            // 如果指定了 train 路径，则添加到路径中
-            if (this.config.train) {
-                imagesPath = path.join(imagesPath, this.config.train);
+            this.imageFiles = [];
+
+            // 处理训练集路径
+            const trainPaths = Array.isArray(this.config.train) 
+                ? this.config.train 
+                : [this.config.train];
+
+            // 遍历所有训练集路径
+            for (const trainPath of trainPaths) {
+                if (!trainPath) continue;
+
+                const fullPath = path.join(imagesPath, trainPath);
+                if (!fs.existsSync(fullPath)) {
+                    console.warn(`Warning: Directory does not exist: ${fullPath}`);
+                    continue;
+                }
+
+                // 读取当前目录下的所有文件
+                const files = fs.readdirSync(fullPath)
+                    .filter(file => {
+                        const ext = path.extname(file).toLowerCase();
+                        return this.SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
+                    })
+                    .map(file => path.join(fullPath, file));
+
+                this.imageFiles.push(...files);
             }
 
-            console.log('Final images path:', imagesPath);
-            
-            if (!fs.existsSync(imagesPath)) {
-                console.error('Images directory does not exist:', imagesPath);
-                return;
+            // 处理验证集路径
+            const valPaths = Array.isArray(this.config.val)
+                ? this.config.val
+                : [this.config.val];
+
+            // 遍历所有验证集路径
+            for (const valPath of valPaths) {
+                if (!valPath) continue;
+
+                const fullPath = path.join(imagesPath, valPath);
+                if (!fs.existsSync(fullPath)) {
+                    console.warn(`Warning: Directory does not exist: ${fullPath}`);
+                    continue;
+                }
+
+                // 读取当前目录下的所有文件
+                const files = fs.readdirSync(fullPath)
+                    .filter(file => {
+                        const ext = path.extname(file).toLowerCase();
+                        return this.SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
+                    })
+                    .map(file => path.join(fullPath, file));
+
+                this.imageFiles.push(...files);
             }
 
-            // 读取所有文件并过滤出图片文件
-            const allFiles = fs.readdirSync(imagesPath);
-            console.log('All files in directory:', allFiles);
-            
-            this.imageFiles = allFiles
-                .filter(file => file.toLowerCase().match(/\.(jpg|jpeg|png)$/))
-                .map(file => path.join(imagesPath, file));
+            // 对文件进行排序以确保顺序一致
+            this.imageFiles.sort();
 
-            console.log('Found images:', this.imageFiles.length);
-            if (this.imageFiles.length > 0) {
-                console.log('Image files:', this.imageFiles);
+            if (this.imageFiles.length === 0) {
+                throw new Error('No supported image files found in any of the directories');
             }
-        } catch (error) {
+
+            console.log(`Loaded ${this.imageFiles.length} images from ${trainPaths.length} train and ${valPaths.length} val directories`);
+        } catch (error: any) {
             console.error('Error loading image files:', error);
-            throw error;
+            throw new Error(`Failed to load image files: ${error.message}`);
         }
     }
 
@@ -123,9 +207,7 @@ export class YoloDataReader {
     }
 
     public getLabelFile(imagePath: string): string {
-        // 将 images 替换为 labels
         const labelPath = imagePath.replace(/images/g, 'labels');
-        // 将图片扩展名替换为 .txt
         return labelPath.replace(/\.(jpg|jpeg|png)$/i, '.txt');
     }
 
@@ -135,25 +217,53 @@ export class YoloDataReader {
             return [];
         }
 
-        const labelContent = fs.readFileSync(labelPath, 'utf8');
-        return labelContent
-            .split('\n')
-            .filter(line => line.trim())
-            .map(line => {
-                const [classId, x, y, width, height] = line.split(' ').map(Number);
-                return { class: classId, x, y, width, height };
-            });
+        try {
+            const labelContent = fs.readFileSync(labelPath, 'utf8');
+            return labelContent
+                .split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                    const [classId, x, y, width, height] = line.split(' ').map(Number);
+                    if (isNaN(classId) || isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) {
+                        throw new Error(`Invalid label format in line: ${line}`);
+                    }
+                    return { class: classId, x, y, width, height };
+                });
+        } catch (error: any) {
+            console.error(`Error reading labels from ${labelPath}:`, error);
+            return [];
+        }
     }
 
     public saveLabels(imagePath: string, labels: BoundingBox[]) {
-        const labelPath = this.getLabelFile(imagePath);
-        const labelContent = labels
-            .map(label => `${label.class} ${label.x} ${label.y} ${label.width} ${label.height}`)
-            .join('\n');
-        fs.writeFileSync(labelPath, labelContent);
+        try {
+            const labelPath = this.getLabelFile(imagePath);
+            const labelContent = labels
+                .map(label => `${label.class} ${label.x} ${label.y} ${label.width} ${label.height}`)
+                .join('\n');
+            
+            // 确保标签目录存在
+            const labelDir = path.dirname(labelPath);
+            if (!fs.existsSync(labelDir)) {
+                fs.mkdirSync(labelDir, { recursive: true });
+            }
+            
+            fs.writeFileSync(labelPath, labelContent);
+        } catch (error: any) {
+            console.error(`Error saving labels to ${imagePath}:`, error);
+            throw new Error(`Failed to save labels: ${error.message}`);
+        }
     }
 
     public getClassNames(): string[] {
         return this.config.names;
+    }
+
+    public getTotalImages(): number {
+        return this.imageFiles.length;
+    }
+
+    public getCurrentImageIndex(): number {
+        return this.currentImageIndex;
     }
 } 
