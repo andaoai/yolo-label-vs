@@ -91,22 +91,25 @@ body {
     background-color: var(--surface-color);
     border-radius: 4px;
     border: 1px solid var(--border-color);
-    padding: 12px;
+    padding: 0;
     position: relative;
     overflow: hidden;
     min-height: 0;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: stretch;
 }
 #imageCanvas {
-    max-width: 100%;
-    max-height: 100%;
-    height: auto;
-    border-radius: 2px;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
     background-color: var(--background-color);
     object-fit: contain;
     cursor: crosshair;
+    box-sizing: border-box;
+    display: block;
 }
 #imageCanvas.grabbing {
     cursor: grabbing !important;
