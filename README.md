@@ -9,11 +9,11 @@ A VS Code extension for quickly browsing and editing YOLO dataset annotations. T
 ## Documentation
 
 - English
-  - [Packaging Guide](./PACKAGING.md)
-  - [Publishing Guide](./PUBLISHING.md)
+  - [Packaging Guide](./docs/PACKAGING.md)
+  - [Publishing Guide](./docs/PUBLISHING.md)
 - 中文文档
-  - [打包指南](./PACKAGING_CN.md)
-  - [发布指南](./PUBLISHING_CN.md)
+  - [打包指南](./docs/PACKAGING_CN.md)
+  - [发布指南](./docs/PUBLISHING_CN.md)
   - [README 中文版](./README_CN.md)
 
 ## Key Features
