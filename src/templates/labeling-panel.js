@@ -83,6 +83,9 @@ class CanvasManager {
         // Add keyboard events for cursor updates
         window.addEventListener('keydown', this.handleKeyDown.bind(this));
         window.addEventListener('keyup', this.handleKeyUp.bind(this));
+        
+        // Add keyboard shortcuts for navigation and saving
+        window.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
     }
 
     // 新增: 更新画布与图像的关系矩形
@@ -892,6 +895,35 @@ class CanvasManager {
         // If alt key is released and not panning
         if (!e.altKey && !this.state.isPanning) {
             this.canvas.classList.remove('grabable');
+        }
+    }
+
+    // Handle keyboard shortcuts for navigation and saving
+    handleKeyboardShortcuts(e) {
+        // Ignore keyboard shortcuts when typing in input fields
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            return;
+        }
+        
+        // Save labels with Ctrl+S
+        if (e.ctrlKey && e.key.toLowerCase() === 's') {
+            e.preventDefault(); // Prevent browser's save dialog
+            this.state.vscode.postMessage({ command: 'save', labels: this.state.initialLabels });
+            return;
+        }
+        
+        // Navigate with A and D keys (without modifiers)
+        if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
+            switch (e.key.toLowerCase()) {
+                case 'a':
+                    e.preventDefault();
+                    this.state.vscode.postMessage({ command: 'previous' });
+                    break;
+                case 'd':
+                    e.preventDefault();
+                    this.state.vscode.postMessage({ command: 'next' });
+                    break;
+            }
         }
     }
 }
