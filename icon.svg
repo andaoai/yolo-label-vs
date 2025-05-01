@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+    <!-- 背景 -->
+    <rect x="0" y="0" width="128" height="128" fill="#2C2C2C"/>
+    
+    <!-- YOLO标注框 -->
+    <rect x="24" y="24" width="80" height="60" 
+          fill="none" 
+          stroke="#007ACC" 
+          stroke-width="4"
+          rx="4"/>
+    
+    <!-- 标注点 -->
+    <circle cx="24" cy="24" r="4" fill="#007ACC"/>
+    <circle cx="104" cy="24" r="4" fill="#007ACC"/>
+    <circle cx="24" cy="84" r="4" fill="#007ACC"/>
+    <circle cx="104" cy="84" r="4" fill="#007ACC"/>
+    
+    <!-- YOLO文字 -->
+    <text x="64" y="108" 
+          font-family="Arial Black" 
+          font-size="20" 
+          fill="#007ACC" 
+          text-anchor="middle">
+        YOLO
+    </text>
+</svg> 

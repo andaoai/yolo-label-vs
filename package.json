@@ -3,11 +3,12 @@
   "displayName": "YOLO Labeling",
   "description": "A VS Code extension for YOLO dataset labeling",
   "version": "0.0.1",
-  "publisher": "andao",
+  "publisher": "andaoai",
   "license": "MIT",
+  "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/yolo-label-vs"
+    "url": "https://github.com/andaoai/yolo-label-vs"
   },
   "keywords": [
     "yolo",
@@ -94,6 +95,8 @@
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "eslint": "^9.23.0",
+    "svg2png-cli": "^1.1.1",
+    "svgexport": "^0.4.2",
     "typescript": "^5.8.2"
   },
   "dependencies": {
