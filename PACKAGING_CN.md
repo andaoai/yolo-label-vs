@@ -23,7 +23,7 @@
    ```bash
    vsce package
    ```
-   执行成功后会在项目根目录生成 `yolo-labeling-vs-0.0.1.vsix` 文件
+   执行成功后会在项目根目录生成 `yolo-labeling-vs-0.0.3.vsix` 文件
 
 ## 本地测试安装
 
