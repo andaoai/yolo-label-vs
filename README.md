@@ -101,6 +101,7 @@ Please report issues on our [GitHub repository](https://github.com/andaoai/yolo-
 - Changed main shortcut from `Ctrl+Shift+Y` to `Ctrl+Y` for easier access
 - Removed `Ctrl+Right` and `Ctrl+Left` shortcuts
 - Improved UI by hiding scrollbar in label list
+- Reduced package size by excluding test data files
 
 ### 0.0.3
 
