@@ -153,6 +153,13 @@ body {
     overflow-y: auto;
     flex: 1;
     min-height: 0;
+    /* Hide scrollbar while maintaining scroll functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+/* Hide scrollbar for Chrome, Safari and Opera */
+.label-list::-webkit-scrollbar {
+    display: none;
 }
 .label-item {
     display: flex;
