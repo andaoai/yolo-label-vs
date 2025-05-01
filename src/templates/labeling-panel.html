@@ -607,34 +607,34 @@
             ctx.strokeStyle = colors[currentLabel % colors.length];
             ctx.lineWidth = 2;
             
-            // Draw the polygon
+            // Draw the complete polygon including the preview line
             ctx.beginPath();
             const firstX = polygonPoints[0] * canvas.width;
             const firstY = polygonPoints[1] * canvas.height;
             ctx.moveTo(firstX, firstY);
             
+            // Draw all existing lines
             for (let i = 2; i < polygonPoints.length; i += 2) {
                 const x = polygonPoints[i] * canvas.width;
                 const y = polygonPoints[i + 1] * canvas.height;
                 ctx.lineTo(x, y);
             }
             
-            // Draw line to current mouse position if moving
+            // Draw preview line
             if (currentMousePos) {
-                // If near first point, snap to it
+                const lastX = polygonPoints[polygonPoints.length - 2] * canvas.width;
+                const lastY = polygonPoints[polygonPoints.length - 1] * canvas.height;
+                ctx.moveTo(lastX, lastY);
+
+                // If near first point, connect to it
                 if (isNearFirstPoint(currentMousePos.x, currentMousePos.y)) {
                     ctx.lineTo(firstX, firstY);
-                    // Highlight the first point
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.beginPath();
-                    ctx.arc(firstX, firstY, 5, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.strokeStyle = colors[currentLabel % colors.length];
                 } else {
                     ctx.lineTo(currentMousePos.x * canvas.width, currentMousePos.y * canvas.height);
                 }
             }
             
+            // Always stroke the path to show all lines
             ctx.stroke();
             
             // Draw points
@@ -647,12 +647,29 @@
                 ctx.fill();
             }
 
-            // Always highlight the first point
+            // Highlight the first point
             if (polygonPoints.length >= 4) {
+                // Draw outer white circle
                 ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(firstX, firstY, 5, 0, Math.PI * 2);
                 ctx.stroke();
+
+                // Draw inner colored circle
+                ctx.fillStyle = colors[currentLabel % colors.length];
+                ctx.beginPath();
+                ctx.arc(firstX, firstY, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // If mouse is near first point, add extra highlight
+                if (currentMousePos && isNearFirstPoint(currentMousePos.x, currentMousePos.y)) {
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(firstX, firstY, 8, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
             }
         }
 
