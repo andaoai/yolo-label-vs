@@ -371,6 +371,8 @@
             .filter(name => name);
         let currentMode = 'box';
         let polygonPoints = [];
+        let isDrawingPolygon = false;
+        const CLOSE_POINT_THRESHOLD = 0.01; // 1% of canvas size for close point detection
 
         const canvas = document.getElementById('imageCanvas');
         const ctx = canvas.getContext('2d');
@@ -533,83 +535,27 @@
         document.getElementById('labelMode').addEventListener('change', (e) => {
             currentMode = e.target.value;
             polygonPoints = [];
+            isDrawingPolygon = false;
             drawLabels();
         });
 
-        canvas.addEventListener('mousedown', (e) => {
-            if (currentMode === 'box') {
-                isDrawing = true;
-                const pos = getMousePos(canvas, e);
-                startX = pos.x / canvas.width;
-                startY = pos.y / canvas.height;
-            } else if (currentMode === 'seg') {
-                const pos = getMousePos(canvas, e);
-                polygonPoints.push(pos.x / canvas.width, pos.y / canvas.height);
-                drawLabels();
+        // Add keydown event listener for Enter key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && currentMode === 'seg' && isDrawingPolygon && polygonPoints.length >= 6) {
+                completePolygon();
             }
         });
 
-        canvas.addEventListener('mousemove', (e) => {
-            const pos = getMousePos(canvas, e);
-            const x = pos.x / canvas.width;
-            const y = pos.y / canvas.height;
-            coordinates.textContent = `X: ${Math.round(x * 100)}%, Y: ${Math.round(y * 100)}%`;
-            
-            if (!isDrawing || currentMode !== 'box') return;
-            
-            const currentX = x;
-            const currentY = y;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(currentImage, 0, 0);
-            drawLabels();
-            
-            const width = Math.abs(currentX - startX);
-            const height = Math.abs(currentY - startY);
-            const boxX = Math.min(startX, currentX) + width/2;
-            const boxY = Math.min(startY, currentY) + height/2;
-            
-            ctx.strokeStyle = colors[currentLabel % colors.length];
-            ctx.lineWidth = 2;
-            ctx.strokeRect(boxX * canvas.width - width * canvas.width/2,
-                          boxY * canvas.height - height * canvas.height/2,
-                          width * canvas.width,
-                          height * canvas.height);
-        });
+        function isNearFirstPoint(x, y) {
+            if (polygonPoints.length < 2) return false;
+            const firstX = polygonPoints[0];
+            const firstY = polygonPoints[1];
+            const distance = Math.sqrt(Math.pow(x - firstX, 2) + Math.pow(y - firstY, 2));
+            return distance < CLOSE_POINT_THRESHOLD;
+        }
 
-        canvas.addEventListener('mouseup', (e) => {
-            if (!isDrawing || currentMode !== 'box') return;
-            
-            const pos = getMousePos(canvas, e);
-            const currentX = pos.x / canvas.width;
-            const currentY = pos.y / canvas.height;
-            
-            const width = Math.abs(currentX - startX);
-            const height = Math.abs(currentY - startY);
-            
-            if (width > 0.01 && height > 0.01) {
-                const x = Math.min(startX, currentX) + width/2;
-                const y = Math.min(startY, currentY) + height/2;
-                
-                initialLabels.push({
-                    class: currentLabel,
-                    x: x,
-                    y: y,
-                    width: width,
-                    height: height,
-                    isSegmentation: false
-                });
-                
-                drawLabels();
-                updateLabelList();
-            }
-            
-            isDrawing = false;
-        });
-
-        // Add double-click to complete polygon
-        canvas.addEventListener('dblclick', (e) => {
-            if (currentMode === 'seg' && polygonPoints.length >= 6) {  // At least 3 points (6 coordinates)
+        function completePolygon() {
+            if (polygonPoints.length >= 6) {
                 initialLabels.push({
                     class: currentLabel,
                     x: 0,
@@ -617,20 +563,175 @@
                     width: 0,
                     height: 0,
                     isSegmentation: true,
-                    points: polygonPoints
+                    points: [...polygonPoints]
                 });
                 
+                isDrawingPolygon = false;
                 polygonPoints = [];
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(currentImage, 0, 0);
                 drawLabels();
                 updateLabelList();
             }
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(canvas, e);
+            const x = pos.x / canvas.width;
+            const y = pos.y / canvas.height;
+
+            if (currentMode === 'box') {
+                isDrawing = true;
+                startX = x;
+                startY = y;
+            } else if (currentMode === 'seg') {
+                if (!isDrawingPolygon) {
+                    isDrawingPolygon = true;
+                    polygonPoints = [x, y];
+                } else {
+                    // Check if click is near the first point
+                    if (polygonPoints.length >= 6 && isNearFirstPoint(x, y)) {
+                        completePolygon();
+                    } else {
+                        polygonPoints.push(x, y);
+                    }
+                }
+                drawLabels();
+                drawCurrentPolygon();
+            }
         });
+
+        function drawCurrentPolygon() {
+            if (!isDrawingPolygon || polygonPoints.length < 2) return;
+
+            ctx.strokeStyle = colors[currentLabel % colors.length];
+            ctx.lineWidth = 2;
+            
+            // Draw the polygon
+            ctx.beginPath();
+            const firstX = polygonPoints[0] * canvas.width;
+            const firstY = polygonPoints[1] * canvas.height;
+            ctx.moveTo(firstX, firstY);
+            
+            for (let i = 2; i < polygonPoints.length; i += 2) {
+                const x = polygonPoints[i] * canvas.width;
+                const y = polygonPoints[i + 1] * canvas.height;
+                ctx.lineTo(x, y);
+            }
+            
+            // Draw line to current mouse position if moving
+            if (currentMousePos) {
+                // If near first point, snap to it
+                if (isNearFirstPoint(currentMousePos.x, currentMousePos.y)) {
+                    ctx.lineTo(firstX, firstY);
+                    // Highlight the first point
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(firstX, firstY, 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.strokeStyle = colors[currentLabel % colors.length];
+                } else {
+                    ctx.lineTo(currentMousePos.x * canvas.width, currentMousePos.y * canvas.height);
+                }
+            }
+            
+            ctx.stroke();
+            
+            // Draw points
+            ctx.fillStyle = colors[currentLabel % colors.length];
+            for (let i = 0; i < polygonPoints.length; i += 2) {
+                const x = polygonPoints[i] * canvas.width;
+                const y = polygonPoints[i + 1] * canvas.height;
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Always highlight the first point
+            if (polygonPoints.length >= 4) {
+                ctx.strokeStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(firstX, firstY, 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        let currentMousePos = null;
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(canvas, e);
+            const x = pos.x / canvas.width;
+            const y = pos.y / canvas.height;
+            currentMousePos = { x, y };
+            coordinates.textContent = `X: ${Math.round(x * 100)}%, Y: ${Math.round(y * 100)}%`;
+            
+            if (currentMode === 'box' && isDrawing) {
+                const currentX = x;
+                const currentY = y;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(currentImage, 0, 0);
+                drawLabels();
+                
+                const width = Math.abs(currentX - startX);
+                const height = Math.abs(currentY - startY);
+                const boxX = Math.min(startX, currentX) + width/2;
+                const boxY = Math.min(startY, currentY) + height/2;
+                
+                ctx.strokeStyle = colors[currentLabel % colors.length];
+                ctx.lineWidth = 2;
+                ctx.strokeRect(boxX * canvas.width - width * canvas.width/2,
+                            boxY * canvas.height - height * canvas.height/2,
+                            width * canvas.width,
+                            height * canvas.height);
+            } else if (currentMode === 'seg' && isDrawingPolygon) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(currentImage, 0, 0);
+                drawLabels();
+                drawCurrentPolygon();
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (currentMode === 'box' && isDrawing) {
+                const pos = getMousePos(canvas, e);
+                const currentX = pos.x / canvas.width;
+                const currentY = pos.y / canvas.height;
+                
+                const width = Math.abs(currentX - startX);
+                const height = Math.abs(currentY - startY);
+                
+                if (width > 0.01 && height > 0.01) {
+                    const x = Math.min(startX, currentX) + width/2;
+                    const y = Math.min(startY, currentY) + height/2;
+                    
+                    initialLabels.push({
+                        class: currentLabel,
+                        x: x,
+                        y: y,
+                        width: width,
+                        height: height,
+                        isSegmentation: false
+                    });
+                    
+                    drawLabels();
+                    updateLabelList();
+                }
+                
+                isDrawing = false;
+            }
+        });
+
+        // Remove the double-click event since we now have better ways to complete the polygon
+        canvas.removeEventListener('dblclick', null);
 
         // Add right-click to cancel polygon
         canvas.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-            if (currentMode === 'seg') {
+            if (currentMode === 'seg' && isDrawingPolygon) {
+                isDrawingPolygon = false;
                 polygonPoints = [];
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(currentImage, 0, 0);
                 drawLabels();
             }
         });
