@@ -236,6 +236,75 @@
         button:hover svg {
             opacity: 1;
         }
+
+        .label-mode {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 8px;
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: 2px;
+        }
+
+        .label-mode select {
+            flex: 1;
+            min-width: 0;
+            margin: 0;
+        }
+
+        .label-mode span {
+            color: var(--text-color);
+            font-size: 13px;
+        }
+
+        .label-item .class-select {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .label-item .mode-select {
+            width: 80px;
+            min-width: 80px;
+        }
+
+        .label-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .label-type {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 2px;
+            background-color: var(--surface-color);
+            color: var(--text-color-secondary);
+            font-weight: 500;
+        }
+
+        .mode-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 16px;
+        }
+
+        .mode-selector select {
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+            min-width: 120px;
+        }
+
+        .mode-selector label {
+            color: var(--text-color);
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -254,6 +323,13 @@
                         <path d="M9 18l6-6-6-6"/>
                     </svg>
                 </button>
+            </div>
+            <div class="mode-selector">
+                <label for="labelMode">Mode:</label>
+                <select id="labelMode">
+                    <option value="box">Box</option>
+                    <option value="seg">Segmentation</option>
+                </select>
             </div>
             <button id="saveLabels" class="secondary">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -293,6 +369,8 @@
         let classNamesList = `{{classNames}}`.split('</option>')
             .map(opt => opt.match(/>([^<]+)$/)?.[1] || '')
             .filter(name => name);
+        let currentMode = 'box';
+        let polygonPoints = [];
 
         const canvas = document.getElementById('imageCanvas');
         const ctx = canvas.getContext('2d');
@@ -357,25 +435,55 @@
             ctx.drawImage(currentImage, 0, 0);
             
             initialLabels.forEach((label, index) => {
-                const x = label.x * canvas.width;
-                const y = label.y * canvas.height;
-                const width = label.width * canvas.width;
-                const height = label.height * canvas.height;
-                
-                ctx.strokeStyle = colors[label.class % colors.length];
+                const color = colors[label.class % colors.length];
+                ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
-                ctx.strokeRect(x - width/2, y - height/2, width, height);
                 
-                // Draw label background
-                const text = classNamesList[label.class] || label.class.toString();
-                const textWidth = ctx.measureText(text).width;
-                ctx.fillStyle = colors[label.class % colors.length];
-                ctx.fillRect(x - width/2, y - height/2 - 20, textWidth + 10, 20);
-                
-                // Draw label text
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '14px sans-serif';
-                ctx.fillText(text, x - width/2 + 5, y - height/2 - 5);
+                if (label.isSegmentation && label.points) {
+                    // Draw segmentation polygon
+                    ctx.beginPath();
+                    for (let i = 0; i < label.points.length; i += 2) {
+                        const x = label.points[i] * canvas.width;
+                        const y = label.points[i + 1] * canvas.height;
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                    
+                    // Draw label background
+                    const text = `${classNamesList[label.class] || label.class.toString()} (SEG)`;
+                    const textWidth = ctx.measureText(text).width;
+                    ctx.fillStyle = color;
+                    ctx.fillRect(label.points[0] * canvas.width, label.points[1] * canvas.height - 20, textWidth + 10, 20);
+                    
+                    // Draw label text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '14px sans-serif';
+                    ctx.fillText(text, label.points[0] * canvas.width + 5, label.points[1] * canvas.height - 5);
+                } else {
+                    // Draw bounding box
+                    const x = label.x * canvas.width;
+                    const y = label.y * canvas.height;
+                    const width = label.width * canvas.width;
+                    const height = label.height * canvas.height;
+                    
+                    ctx.strokeRect(x - width/2, y - height/2, width, height);
+                    
+                    // Draw label background
+                    const text = `${classNamesList[label.class] || label.class.toString()} (BOX)`;
+                    const textWidth = ctx.measureText(text).width;
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x - width/2, y - height/2 - 20, textWidth + 10, 20);
+                    
+                    // Draw label text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '14px sans-serif';
+                    ctx.fillText(text, x - width/2 + 5, y - height/2 - 5);
+                }
             });
         }
 
@@ -390,6 +498,7 @@
                 colorDiv.style.backgroundColor = colors[label.class % colors.length];
                 
                 const select = document.createElement('select');
+                select.className = 'class-select';
                 select.innerHTML = classNamesList.map((name, i) => 
                     `<option value="${i}"${i === label.class ? ' selected' : ''}>${name}</option>`
                 ).join('');
@@ -398,6 +507,11 @@
                     colorDiv.style.backgroundColor = colors[label.class % colors.length];
                     drawLabels();
                 };
+
+                // Add label type indicator
+                const typeSpan = document.createElement('span');
+                typeSpan.className = 'label-type';
+                typeSpan.textContent = label.isSegmentation ? 'SEG' : 'BOX';
                 
                 const deleteBtn = document.createElement('button');
                 deleteBtn.innerHTML = '×';
@@ -410,10 +524,30 @@
                 
                 div.appendChild(colorDiv);
                 div.appendChild(select);
+                div.appendChild(typeSpan);
                 div.appendChild(deleteBtn);
                 labelList.appendChild(div);
             });
         }
+
+        document.getElementById('labelMode').addEventListener('change', (e) => {
+            currentMode = e.target.value;
+            polygonPoints = [];
+            drawLabels();
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (currentMode === 'box') {
+                isDrawing = true;
+                const pos = getMousePos(canvas, e);
+                startX = pos.x / canvas.width;
+                startY = pos.y / canvas.height;
+            } else if (currentMode === 'seg') {
+                const pos = getMousePos(canvas, e);
+                polygonPoints.push(pos.x / canvas.width, pos.y / canvas.height);
+                drawLabels();
+            }
+        });
 
         canvas.addEventListener('mousemove', (e) => {
             const pos = getMousePos(canvas, e);
@@ -421,7 +555,7 @@
             const y = pos.y / canvas.height;
             coordinates.textContent = `X: ${Math.round(x * 100)}%, Y: ${Math.round(y * 100)}%`;
             
-            if (!isDrawing) return;
+            if (!isDrawing || currentMode !== 'box') return;
             
             const currentX = x;
             const currentY = y;
@@ -443,15 +577,8 @@
                           height * canvas.height);
         });
 
-        canvas.addEventListener('mousedown', (e) => {
-            isDrawing = true;
-            const pos = getMousePos(canvas, e);
-            startX = pos.x / canvas.width;
-            startY = pos.y / canvas.height;
-        });
-
         canvas.addEventListener('mouseup', (e) => {
-            if (!isDrawing) return;
+            if (!isDrawing || currentMode !== 'box') return;
             
             const pos = getMousePos(canvas, e);
             const currentX = pos.x / canvas.width;
@@ -469,7 +596,8 @@
                     x: x,
                     y: y,
                     width: width,
-                    height: height
+                    height: height,
+                    isSegmentation: false
                 });
                 
                 drawLabels();
@@ -479,9 +607,32 @@
             isDrawing = false;
         });
 
-        canvas.addEventListener('mouseleave', () => {
-            isDrawing = false;
-            drawLabels();
+        // Add double-click to complete polygon
+        canvas.addEventListener('dblclick', (e) => {
+            if (currentMode === 'seg' && polygonPoints.length >= 6) {  // At least 3 points (6 coordinates)
+                initialLabels.push({
+                    class: currentLabel,
+                    x: 0,
+                    y: 0,
+                    width: 0,
+                    height: 0,
+                    isSegmentation: true,
+                    points: polygonPoints
+                });
+                
+                polygonPoints = [];
+                drawLabels();
+                updateLabelList();
+            }
+        });
+
+        // Add right-click to cancel polygon
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (currentMode === 'seg') {
+                polygonPoints = [];
+                drawLabels();
+            }
         });
 
         document.getElementById('prevImage').addEventListener('click', () => {
