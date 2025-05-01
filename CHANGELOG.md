@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Removed `Ctrl+Right` and `Ctrl+Left` shortcuts, relying solely on `A` and `D` keys for navigation
 - Updated documentation with comprehensive list of keyboard shortcuts and interface controls
 - Improved UI by hiding scrollbar in label list while maintaining scrolling functionality
+- Added `test_label/` to `.vscodeignore` to reduce extension package size
 
 ## [0.0.3] - 2024-05-01
 
