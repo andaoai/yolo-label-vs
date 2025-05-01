@@ -245,8 +245,8 @@ export class YoloDataReader {
                     } else {
                         // Regular bounding box format
                         const [_, x, y, width, height] = values;
-                        if (isNaN(classId) || isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) {
-                            throw new Error(`Invalid label format in line: ${line}`);
+                    if (isNaN(classId) || isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) {
+                        throw new Error(`Invalid label format in line: ${line}`);
                         }
                         return { class: classId, x, y, width, height, isSegmentation: false };
                     }
@@ -293,5 +293,18 @@ export class YoloDataReader {
 
     public getCurrentImageIndex(): number {
         return this.currentImageIndex;
+    }
+
+    public getAllImages(): string[] {
+        return [...this.imageFiles]; // Return a copy of the array
+    }
+
+    public setCurrentImageByPath(path: string): boolean {
+        const index = this.imageFiles.indexOf(path);
+        if (index !== -1) {
+            this.currentImageIndex = index;
+            return true;
+        }
+        return false;
     }
 } 

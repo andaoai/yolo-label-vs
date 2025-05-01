@@ -114,6 +114,28 @@ export class LabelingPanel {
             async message => {
                 try {
                     switch (message.command) {
+                        case 'getImageList':
+                            // Send the list of all images to the webview
+                            this._panel.webview.postMessage({
+                                command: 'imageList',
+                                paths: this._yoloReader.getAllImages()
+                            });
+                            return;
+                        case 'loadImage':
+                            // Load specific image by path
+                            if (message.path) {
+                                const imageData = await this._loadImage(message.path);
+                                const labels = this._yoloReader.readLabels(message.path);
+                                this._yoloReader.setCurrentImageByPath(message.path);
+                                this._panel.webview.postMessage({ 
+                                    command: 'updateImage', 
+                                    imageData: imageData,
+                                    labels: labels,
+                                    currentPath: message.path,
+                                    imageInfo: `Image: ${this._yoloReader.getCurrentImageIndex() + 1} of ${this._yoloReader.getTotalImages()}`
+                                });
+                            }
+                            return;
                         case 'save':
                             const currentImage = this._yoloReader.getCurrentImage();
                             if (currentImage) {
@@ -130,6 +152,7 @@ export class LabelingPanel {
                                     command: 'updateImage', 
                                     imageData: imageData,
                                     labels: labels,
+                                    currentPath: nextImage,
                                     imageInfo: `Image: ${this._yoloReader.getCurrentImageIndex() + 1} of ${this._yoloReader.getTotalImages()}`
                                 });
                             }
@@ -143,6 +166,7 @@ export class LabelingPanel {
                                     command: 'updateImage', 
                                     imageData: imageData,
                                     labels: labels,
+                                    currentPath: prevImage,
                                     imageInfo: `Image: ${this._yoloReader.getCurrentImageIndex() + 1} of ${this._yoloReader.getTotalImages()}`
                                 });
                             }
