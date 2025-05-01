@@ -95,6 +95,13 @@ Please report issues on our [GitHub repository](https://github.com/andaoai/yolo-
 
 ## Release Notes
 
+### 0.0.4
+
+- Simplified keyboard shortcuts for better usability
+- Changed main shortcut from `Ctrl+Shift+Y` to `Ctrl+Y` for easier access
+- Removed `Ctrl+Right` and `Ctrl+Left` shortcuts
+- Improved UI by hiding scrollbar in label list
+
 ### 0.0.3
 
 Initial release of YOLO Labeling:

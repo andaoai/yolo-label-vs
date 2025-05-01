@@ -5,6 +5,15 @@ All notable changes to the "yolo-labeling-vs" extension will be documented in th
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.4] - 2024-05-10
+
+### Changed
+- Simplified keyboard shortcuts for better usability
+- Changed main shortcut from `Ctrl+Shift+Y` to `Ctrl+Y` for easier access
+- Removed `Ctrl+Right` and `Ctrl+Left` shortcuts, relying solely on `A` and `D` keys for navigation
+- Updated documentation with comprehensive list of keyboard shortcuts and interface controls
+- Improved UI by hiding scrollbar in label list while maintaining scrolling functionality
+
 ## [0.0.3] - 2024-05-01
 
 ### Added
