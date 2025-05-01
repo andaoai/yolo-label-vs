@@ -396,6 +396,25 @@ class CanvasManager {
                 this.redrawWithTransform();
             }
         }
+        // Add scrolling when zoomed in (scale > 1)
+        else if (this.state.scale > 1) {
+            e.preventDefault();
+            
+            // 计算滚动距离
+            const scrollSpeed = 30; // 滚动速度
+            const delta = e.deltaY > 0 ? 1 : -1;
+            
+            if (e.shiftKey) {
+                // Shift+滚轮实现水平滚动
+                this.state.translateX -= delta * scrollSpeed;
+            } else {
+                // 普通滚轮实现垂直滚动
+                this.state.translateY -= delta * scrollSpeed;
+            }
+            
+            // 重绘画布
+            this.redrawWithTransform();
+        }
     }
 
     handleContextMenu(e) {
