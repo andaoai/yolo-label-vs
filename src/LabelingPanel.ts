@@ -147,6 +147,27 @@ export class LabelingPanel {
                                 });
                             }
                             return;
+                        case 'getImageList':
+                            // Send the list of all images to the webview
+                            this._panel.webview.postMessage({
+                                command: 'imageList',
+                                files: this._yoloReader.getAllImages()
+                            });
+                            return;
+                        case 'loadImage':
+                            // Load specific image by path
+                            const imagePath = message.file;
+                            if (imagePath && this._yoloReader.setCurrentImageByPath(imagePath)) {
+                                const imageData = await this._loadImage(imagePath);
+                                const labels = this._yoloReader.readLabels(imagePath);
+                                this._panel.webview.postMessage({ 
+                                    command: 'updateImage', 
+                                    imageData: imageData,
+                                    labels: labels,
+                                    imageInfo: `Image: ${this._yoloReader.getCurrentImageIndex() + 1} of ${this._yoloReader.getTotalImages()}`
+                                });
+                            }
+                            return;
                     }
                 } catch (error: any) {
                     vscode.window.showErrorMessage(`Error: ${error.message}`);
