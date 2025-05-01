@@ -92,24 +92,37 @@ export class LabelingPanel {
         const labels = currentImage ? this._yoloReader.readLabels(currentImage) : [];
         const initialImageData = currentImage ? await this._loadImage(currentImage) : null;
 
-        // Get path to CSS file
-        const cssPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'templates', 'styles', 'labeling-panel.css');
+        // Get path to CSS and JS files
+        const cssPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'templates', 'labeling-panel.css');
+        const jsPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'templates', 'labeling-panel.js');
         const cssSrc = webview.asWebviewUri(cssPath);
+        const jsSrc = webview.asWebviewUri(jsPath);
 
         // Read the HTML template
         const templatePath = path.join(this._extensionUri.fsPath, 'src', 'templates', 'labeling-panel.html');
         let html = await fs.promises.readFile(templatePath, 'utf8');
 
+        // Inject data into window object
+        const dataScript = `
+            <script>
+                window.initialImageData = ${JSON.stringify(initialImageData)};
+                window.initialLabels = ${JSON.stringify(labels)};
+                window.classNames = ${JSON.stringify(classNames)};
+            </script>
+        `;
+
         // Replace placeholders with actual data
         html = html.replace('{{classNames}}', classNames.map((name, index) => `<option value="${index}">${name}</option>`).join(''));
-        html = html.replace('`{{initialImageData}}`', JSON.stringify(initialImageData));
-        html = html.replace('`{{labels}}`', JSON.stringify(labels));
-        html = html.replace('styles/labeling-panel.css', cssSrc.toString());
+        html = html.replace('labeling-panel.css', cssSrc.toString());
+        html = html.replace('labeling-panel.js', jsSrc.toString());
 
         // Add image count information
         const totalImages = this._yoloReader.getTotalImages();
         const currentIndex = this._yoloReader.getCurrentImageIndex();
         html = html.replace('{{imageInfo}}', `Image: ${currentIndex + 1} of ${totalImages}`);
+
+        // Insert the data script before the closing head tag
+        html = html.replace('</head>', `${dataScript}</head>`);
 
         return html;
     }
