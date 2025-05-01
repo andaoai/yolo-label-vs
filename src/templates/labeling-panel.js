@@ -6,7 +6,10 @@ const CONFIG = {
         '#00BCD4', '#FF9800', '#795548', '#607D8B', '#E91E63'
     ],
     DEBOUNCE_DELAY: 200,
-    MAX_SEARCH_RESULTS: 10
+    MAX_SEARCH_RESULTS: 10,
+    MIN_ZOOM: 0.1,
+    MAX_ZOOM: 10,
+    ZOOM_SPEED: 0.1
 };
 
 // State Management
@@ -28,6 +31,13 @@ class LabelingState {
         this.selectedSearchIndex = -1;
         this.currentMousePos = null;
         this.searchTimeout = null;
+        
+        // Zoom and pan related state
+        this.scale = 1;
+        this.translateX = 0;
+        this.translateY = 0;
+        this.isPanning = false;
+        this.lastPanPoint = { x: 0, y: 0 };
     }
 }
 
@@ -48,17 +58,47 @@ class CanvasManager {
         this.canvas.addEventListener('mouseleave', () => {
             if (this.state.isDrawing) {
                 this.state.isDrawing = false;
-                this.drawLabels();
+                this.redrawWithTransform();
             }
+            if (this.state.isPanning) {
+                this.state.isPanning = false;
+                this.canvas.classList.remove('grabbing');
+            }
+            this.canvas.classList.remove('grabable');
         });
         this.canvas.addEventListener('contextmenu', this.handleContextMenu.bind(this));
         window.addEventListener('resize', this.handleResize.bind(this));
+
+        // Add wheel event for zooming
+        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
+
+        // Add keyboard events for cursor updates
+        window.addEventListener('keydown', this.handleKeyDown.bind(this));
+        window.addEventListener('keyup', this.handleKeyUp.bind(this));
     }
 
     getMousePos(evt) {
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.width / rect.width;
         const scaleY = this.canvas.height / rect.height;
+        
+        // Calculate mouse position considering zoom and translation
+        let x = (evt.clientX - rect.left) * scaleX;
+        let y = (evt.clientY - rect.top) * scaleY;
+        
+        // Convert to normalized coordinates that account for zooming and panning
+        x = (x - this.state.translateX) / this.state.scale;
+        y = (y - this.state.translateY) / this.state.scale;
+        
+        return { x, y };
+    }
+
+    // Get raw mouse position on canvas (not normalized for zooming)
+    getRawMousePos(evt) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        
         return {
             x: (evt.clientX - rect.left) * scaleX,
             y: (evt.clientY - rect.top) * scaleY
@@ -66,6 +106,14 @@ class CanvasManager {
     }
 
     handleMouseDown(e) {
+        // Check if alt key is pressed for panning
+        if (e.altKey) {
+            this.state.isPanning = true;
+            this.state.lastPanPoint = this.getRawMousePos(e);
+            this.canvas.classList.add('grabbing');
+            return;
+        }
+        
         const pos = this.getMousePos(e);
         const x = pos.x / this.canvas.width;
         const y = pos.y / this.canvas.height;
@@ -91,6 +139,27 @@ class CanvasManager {
     }
 
     handleMouseMove(e) {
+        // Update cursor based on alt key
+        if (e.altKey && !this.state.isPanning) {
+            this.canvas.classList.add('grabable');
+        } else if (!e.altKey && !this.state.isPanning) {
+            this.canvas.classList.remove('grabable');
+        }
+
+        // If panning is active, handle pan movement
+        if (this.state.isPanning) {
+            const currentPoint = this.getRawMousePos(e);
+            const deltaX = currentPoint.x - this.state.lastPanPoint.x;
+            const deltaY = currentPoint.y - this.state.lastPanPoint.y;
+            
+            this.state.translateX += deltaX;
+            this.state.translateY += deltaY;
+            this.state.lastPanPoint = currentPoint;
+            
+            this.redrawWithTransform();
+            return;
+        }
+        
         const pos = this.getMousePos(e);
         const x = pos.x / this.canvas.width;
         const y = pos.y / this.canvas.height;
@@ -104,20 +173,44 @@ class CanvasManager {
         const x = pos.x / this.canvas.width;
         const y = pos.y / this.canvas.height;
 
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.drawImage(this.state.currentImage, 0, 0);
-        this.drawLabels();
+        this.redrawWithTransform();
 
         if (this.state.currentMode === 'box' && this.state.isDrawing) {
+            // Save current context and apply transformations
+            this.ctx.save();
+            // Set the transformation matrix back to what's used in redrawWithTransform
+            this.ctx.translate(this.state.translateX, this.state.translateY);
+            this.ctx.scale(this.state.scale, this.state.scale);
+            
             this.drawPreviewBox(x, y);
+            
+            this.ctx.restore();
         } else if (this.state.currentMode === 'seg' && this.state.isDrawingPolygon) {
+            // Save current context and apply transformations
+            this.ctx.save();
+            // Set the transformation matrix back to what's used in redrawWithTransform
+            this.ctx.translate(this.state.translateX, this.state.translateY);
+            this.ctx.scale(this.state.scale, this.state.scale);
+            
             this.drawCurrentPolygon();
+            
+            this.ctx.restore();
         } else if (!this.state.isDrawing) {
             this.drawCrosshairs(pos.x, pos.y);
         }
     }
 
     handleMouseUp(e) {
+        // If was panning, stop panning
+        if (this.state.isPanning) {
+            this.state.isPanning = false;
+            this.canvas.classList.remove('grabbing');
+            if (e.altKey) {
+                this.canvas.classList.add('grabable');
+            }
+            return;
+        }
+        
         if (this.state.currentMode === 'box' && this.state.isDrawing) {
             const pos = this.getMousePos(e);
             const currentX = pos.x / this.canvas.width;
@@ -141,8 +234,44 @@ class CanvasManager {
             }
             
             this.state.isDrawing = false;
-            this.drawLabels();
+            this.redrawWithTransform();
             this.updateLabelList();
+        }
+    }
+
+    handleWheel(e) {
+        // Only handle zooming when ctrl key is pressed
+        if (e.ctrlKey) {
+            e.preventDefault();
+            
+            // Get mouse position before zoom
+            const mousePos = this.getRawMousePos(e);
+            
+            // Calculate zoom factor
+            const delta = e.deltaY > 0 ? -1 : 1;
+            const zoom = delta * CONFIG.ZOOM_SPEED;
+            const newScale = Math.max(
+                CONFIG.MIN_ZOOM,
+                Math.min(CONFIG.MAX_ZOOM, this.state.scale + zoom)
+            );
+            
+            // Adjust translation to zoom towards mouse position
+            if (newScale !== this.state.scale) {
+                const scaleRatio = newScale / this.state.scale;
+                
+                // Calculate new offsets to zoom towards mouse position
+                this.state.translateX = mousePos.x - (mousePos.x - this.state.translateX) * scaleRatio;
+                this.state.translateY = mousePos.y - (mousePos.y - this.state.translateY) * scaleRatio;
+                
+                // Apply new scale
+                this.state.scale = newScale;
+                
+                // Update info in status bar to show zoom level
+                const zoomPercent = Math.round(this.state.scale * 100);
+                document.getElementById('zoom-info').textContent = `Zoom: ${zoomPercent}%`;
+                
+                this.redrawWithTransform();
+            }
         }
     }
 
@@ -151,17 +280,14 @@ class CanvasManager {
         if (this.state.currentMode === 'seg' && this.state.isDrawingPolygon) {
             this.state.isDrawingPolygon = false;
             this.state.polygonPoints = [];
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.ctx.drawImage(this.state.currentImage, 0, 0);
-            this.drawLabels();
+            this.redrawWithTransform();
         }
     }
 
     handleResize() {
         if (this.state.currentImage) {
             this.resizeCanvas();
-            this.ctx.drawImage(this.state.currentImage, 0, 0);
-            this.drawLabels();
+            this.redrawWithTransform();
         }
     }
 
@@ -195,17 +321,34 @@ class CanvasManager {
             this.canvas.width = img.width;
             this.canvas.height = img.height;
             this.resizeCanvas();
-            this.ctx.drawImage(img, 0, 0);
-            this.drawLabels();
+            
+            // Reset zoom and pan when loading a new image
+            this.state.scale = 1;
+            this.state.translateX = 0;
+            this.state.translateY = 0;
+            document.getElementById('zoom-info').textContent = 'Zoom: 100%';
+            
+            this.redrawWithTransform();
             this.updateLabelList();
         };
         img.src = imagePath;
         this.state.currentImage = img;
     }
 
-    drawLabels() {
+    redrawWithTransform() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Save context, apply transformations, draw, then restore
+        this.ctx.save();
+        this.ctx.translate(this.state.translateX, this.state.translateY);
+        this.ctx.scale(this.state.scale, this.state.scale);
         this.ctx.drawImage(this.state.currentImage, 0, 0);
+        this.drawLabels();
+        this.ctx.restore();
+    }
+
+    drawLabels() {
+        // No need to clear here as it's done in redrawWithTransform
         
         this.state.initialLabels.forEach((label, index) => {
             const color = CONFIG.COLORS[label.class % CONFIG.COLORS.length];
@@ -287,13 +430,16 @@ class CanvasManager {
     }
 
     drawPreviewBox(currentX, currentY) {
+        // Calculate normalized dimensions
         const width = Math.abs(currentX - this.state.startX);
         const height = Math.abs(currentY - this.state.startY);
         const boxX = Math.min(this.state.startX, currentX) + width/2;
         const boxY = Math.min(this.state.startY, currentY) + height/2;
         
         this.ctx.strokeStyle = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 2 / this.state.scale; // Adjust line width for zoom level
+        
+        // Draw the rectangle in normalized coordinates
         this.ctx.strokeRect(
             boxX * this.canvas.width - width * this.canvas.width/2,
             boxY * this.canvas.height - height * this.canvas.height/2,
@@ -303,21 +449,28 @@ class CanvasManager {
     }
 
     drawCrosshairs(x, y) {
+        // Save current transformation, then reset for crosshairs in screen space
         this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to draw crosshairs at raw position
+        
         this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)';
         this.ctx.lineWidth = 1;
         this.ctx.setLineDash([5, 5]);
         
+        // Calculate position in screen space accounting for current zoom and translation
+        const screenX = x * this.state.scale + this.state.translateX;
+        const screenY = y * this.state.scale + this.state.translateY;
+        
         // Draw horizontal line
         this.ctx.beginPath();
-        this.ctx.moveTo(0, y);
-        this.ctx.lineTo(this.canvas.width, y);
+        this.ctx.moveTo(0, screenY);
+        this.ctx.lineTo(this.canvas.width, screenY);
         this.ctx.stroke();
         
         // Draw vertical line
         this.ctx.beginPath();
-        this.ctx.moveTo(x, 0);
-        this.ctx.lineTo(x, this.canvas.height);
+        this.ctx.moveTo(screenX, 0);
+        this.ctx.lineTo(screenX, this.canvas.height);
         this.ctx.stroke();
         
         this.ctx.restore();
@@ -327,7 +480,7 @@ class CanvasManager {
         if (!this.state.isDrawingPolygon || this.state.polygonPoints.length < 2) return;
 
         this.ctx.strokeStyle = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 2 / this.state.scale;
         
         // Draw the complete polygon including the preview line
         this.ctx.beginPath();
@@ -367,11 +520,14 @@ class CanvasManager {
     drawPolygonPoints() {
         this.ctx.fillStyle = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
         
+        // Adjust point size based on zoom level
+        const pointRadius = 3 / this.state.scale;
+        
         for (let i = 0; i < this.state.polygonPoints.length; i += 2) {
             const x = this.state.polygonPoints[i] * this.canvas.width;
             const y = this.state.polygonPoints[i + 1] * this.canvas.height;
             this.ctx.beginPath();
-            this.ctx.arc(x, y, 3, 0, Math.PI * 2);
+            this.ctx.arc(x, y, pointRadius, 0, Math.PI * 2);
             this.ctx.fill();
         }
 
@@ -382,24 +538,24 @@ class CanvasManager {
             
             // Draw outer white circle
             this.ctx.strokeStyle = '#ffffff';
-            this.ctx.lineWidth = 2;
+            this.ctx.lineWidth = 2 / this.state.scale;
             this.ctx.beginPath();
-            this.ctx.arc(firstX, firstY, 5, 0, Math.PI * 2);
+            this.ctx.arc(firstX, firstY, 5 / this.state.scale, 0, Math.PI * 2);
             this.ctx.stroke();
 
             // Draw inner colored circle
             this.ctx.fillStyle = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
             this.ctx.beginPath();
-            this.ctx.arc(firstX, firstY, 3, 0, Math.PI * 2);
+            this.ctx.arc(firstX, firstY, pointRadius, 0, Math.PI * 2);
             this.ctx.fill();
 
             // Extra highlight when mouse is near
             if (this.state.currentMousePos && 
                 this.isNearFirstPoint(this.state.currentMousePos.x, this.state.currentMousePos.y)) {
                 this.ctx.strokeStyle = '#ffffff';
-                this.ctx.lineWidth = 3;
+                this.ctx.lineWidth = 3 / this.state.scale;
                 this.ctx.beginPath();
-                this.ctx.arc(firstX, firstY, 8, 0, Math.PI * 2);
+                this.ctx.arc(firstX, firstY, 8 / this.state.scale, 0, Math.PI * 2);
                 this.ctx.stroke();
             }
         }
@@ -427,9 +583,7 @@ class CanvasManager {
             
             this.state.isDrawingPolygon = false;
             this.state.polygonPoints = [];
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.ctx.drawImage(this.state.currentImage, 0, 0);
-            this.drawLabels();
+            this.redrawWithTransform();
             this.updateLabelList();
         }
     }
@@ -454,7 +608,7 @@ class CanvasManager {
             select.onchange = () => {
                 this.state.initialLabels[index].class = parseInt(select.value);
                 colorDiv.style.backgroundColor = CONFIG.COLORS[label.class % CONFIG.COLORS.length];
-                this.drawLabels();
+                this.redrawWithTransform();
             };
 
             const typeSpan = document.createElement('span');
@@ -466,7 +620,7 @@ class CanvasManager {
             deleteBtn.style.marginLeft = 'auto';
             deleteBtn.onclick = () => {
                 this.state.initialLabels.splice(index, 1);
-                this.drawLabels();
+                this.redrawWithTransform();
                 this.updateLabelList();
             };
             
@@ -476,6 +630,19 @@ class CanvasManager {
             div.appendChild(deleteBtn);
             labelList.appendChild(div);
         });
+    }
+
+    handleKeyDown(e) {
+        if (e.altKey && !this.state.isPanning && !e.ctrlKey) {
+            this.canvas.classList.add('grabable');
+        }
+    }
+
+    handleKeyUp(e) {
+        // If alt key is released and not panning
+        if (!e.altKey && !this.state.isPanning) {
+            this.canvas.classList.remove('grabable');
+        }
     }
 }
 
@@ -507,14 +674,14 @@ class UIManager {
             this.state.currentMode = e.target.value;
             this.state.polygonPoints = [];
             this.state.isDrawingPolygon = false;
-            this.canvasManager.drawLabels();
+            this.canvasManager.redrawWithTransform();
         });
 
         // Toggle labels button
         document.getElementById('toggleLabels').addEventListener('click', () => {
             this.state.showLabels = !this.state.showLabels;
             document.getElementById('toggleLabels').classList.toggle('active', this.state.showLabels);
-            this.canvasManager.drawLabels();
+            this.canvasManager.redrawWithTransform();
         });
 
         // Search functionality
