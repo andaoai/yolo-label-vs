@@ -44,6 +44,7 @@
             border: 1px solid var(--border-color);
             margin-bottom: 20px;
             flex-shrink: 0;
+            gap: 12px;
         }
 
         .main-content {
@@ -157,6 +158,7 @@
         .nav-buttons {
             display: flex;
             gap: 8px;
+            flex-shrink: 0;
         }
 
         select {
@@ -289,7 +291,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            margin: 0 16px;
+            flex-shrink: 0;
         }
 
         .mode-selector select {
@@ -304,6 +306,84 @@
         .mode-selector label {
             color: var(--text-color);
             font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .search-container {
+            flex: 1;
+            min-width: 0;
+            margin: 0 24px;
+        }
+
+        .search-box {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 6px 12px;
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .search-results {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-top: 4px;
+            z-index: 1000;
+        }
+
+        .search-result-item {
+            padding: 12px;
+            cursor: pointer;
+            color: var(--text-color);
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-item .filename {
+            color: var(--text-color);
+        }
+
+        .search-result-item .filepath {
+            color: var(--text-color-secondary);
+            font-size: 12px;
+        }
+
+        .search-result-item.selected {
+            background-color: var(--primary-color);
+            color: #ffffff;
+        }
+
+        .right-controls {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -324,21 +404,29 @@
                     </svg>
                 </button>
             </div>
-            <div class="mode-selector">
-                <label for="labelMode">Mode:</label>
-                <select id="labelMode">
-                    <option value="box">Box</option>
-                    <option value="seg">Segmentation</option>
-                </select>
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" id="imageSearch" placeholder="Search images..." autocomplete="off">
+                    <div id="searchResults" class="search-results"></div>
+                </div>
             </div>
-            <button id="saveLabels" class="secondary">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                    <polyline points="17 21 17 13 7 13 7 21"/>
-                    <polyline points="7 3 7 8 15 8"/>
-                </svg>
-                Save Labels
-            </button>
+            <div class="right-controls">
+                <div class="mode-selector">
+                    <label for="labelMode">Mode:</label>
+                    <select id="labelMode">
+                        <option value="box">Box</option>
+                        <option value="seg">Segmentation</option>
+                    </select>
+                </div>
+                <button id="saveLabels" class="secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    Save Labels
+                </button>
+            </div>
         </div>
         
         <div class="main-content">
@@ -373,6 +461,8 @@
         let polygonPoints = [];
         let isDrawingPolygon = false;
         const CLOSE_POINT_THRESHOLD = 0.01; // 1% of canvas size for close point detection
+        let allImagePaths = [];
+        let selectedSearchIndex = -1;
 
         const canvas = document.getElementById('imageCanvas');
         const ctx = canvas.getContext('2d');
@@ -468,23 +558,23 @@
                     ctx.fillText(text, label.points[0] * canvas.width + 5, label.points[1] * canvas.height - 5);
                 } else {
                     // Draw bounding box
-                    const x = label.x * canvas.width;
-                    const y = label.y * canvas.height;
-                    const width = label.width * canvas.width;
-                    const height = label.height * canvas.height;
-                    
-                    ctx.strokeRect(x - width/2, y - height/2, width, height);
-                    
-                    // Draw label background
+                const x = label.x * canvas.width;
+                const y = label.y * canvas.height;
+                const width = label.width * canvas.width;
+                const height = label.height * canvas.height;
+                
+                ctx.strokeRect(x - width/2, y - height/2, width, height);
+                
+                // Draw label background
                     const text = `${classNamesList[label.class] || label.class.toString()} (BOX)`;
-                    const textWidth = ctx.measureText(text).width;
+                const textWidth = ctx.measureText(text).width;
                     ctx.fillStyle = color;
-                    ctx.fillRect(x - width/2, y - height/2 - 20, textWidth + 10, 20);
-                    
-                    // Draw label text
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = '14px sans-serif';
-                    ctx.fillText(text, x - width/2 + 5, y - height/2 - 5);
+                ctx.fillRect(x - width/2, y - height/2 - 20, textWidth + 10, 20);
+                
+                // Draw label text
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '14px sans-serif';
+                ctx.fillText(text, x - width/2 + 5, y - height/2 - 5);
                 }
             });
         }
@@ -682,24 +772,24 @@
             coordinates.textContent = `X: ${Math.round(x * 100)}%, Y: ${Math.round(y * 100)}%`;
             
             if (currentMode === 'box' && isDrawing) {
-                const currentX = x;
-                const currentY = y;
-                
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(currentImage, 0, 0);
-                drawLabels();
-                
-                const width = Math.abs(currentX - startX);
-                const height = Math.abs(currentY - startY);
-                const boxX = Math.min(startX, currentX) + width/2;
-                const boxY = Math.min(startY, currentY) + height/2;
-                
-                ctx.strokeStyle = colors[currentLabel % colors.length];
-                ctx.lineWidth = 2;
-                ctx.strokeRect(boxX * canvas.width - width * canvas.width/2,
-                            boxY * canvas.height - height * canvas.height/2,
-                            width * canvas.width,
-                            height * canvas.height);
+            const currentX = x;
+            const currentY = y;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentImage, 0, 0);
+            drawLabels();
+            
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            const boxX = Math.min(startX, currentX) + width/2;
+            const boxY = Math.min(startY, currentY) + height/2;
+            
+            ctx.strokeStyle = colors[currentLabel % colors.length];
+            ctx.lineWidth = 2;
+            ctx.strokeRect(boxX * canvas.width - width * canvas.width/2,
+                          boxY * canvas.height - height * canvas.height/2,
+                          width * canvas.width,
+                          height * canvas.height);
             } else if (currentMode === 'seg' && isDrawingPolygon) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(currentImage, 0, 0);
@@ -710,31 +800,31 @@
 
         canvas.addEventListener('mouseup', (e) => {
             if (currentMode === 'box' && isDrawing) {
-                const pos = getMousePos(canvas, e);
-                const currentX = pos.x / canvas.width;
-                const currentY = pos.y / canvas.height;
+            const pos = getMousePos(canvas, e);
+            const currentX = pos.x / canvas.width;
+            const currentY = pos.y / canvas.height;
+            
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            
+            if (width > 0.01 && height > 0.01) {
+                const x = Math.min(startX, currentX) + width/2;
+                const y = Math.min(startY, currentY) + height/2;
                 
-                const width = Math.abs(currentX - startX);
-                const height = Math.abs(currentY - startY);
-                
-                if (width > 0.01 && height > 0.01) {
-                    const x = Math.min(startX, currentX) + width/2;
-                    const y = Math.min(startY, currentY) + height/2;
-                    
-                    initialLabels.push({
-                        class: currentLabel,
-                        x: x,
-                        y: y,
-                        width: width,
+                initialLabels.push({
+                    class: currentLabel,
+                    x: x,
+                    y: y,
+                    width: width,
                         height: height,
                         isSegmentation: false
-                    });
-                    
-                    drawLabels();
-                    updateLabelList();
-                }
+                });
                 
-                isDrawing = false;
+                drawLabels();
+                updateLabelList();
+            }
+            
+            isDrawing = false;
             }
         });
 
@@ -749,7 +839,7 @@
                 polygonPoints = [];
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(currentImage, 0, 0);
-                drawLabels();
+            drawLabels();
             }
         });
 
@@ -765,16 +855,132 @@
             vscode.postMessage({ command: 'save', labels: initialLabels });
         });
 
-        // Update message listener for image updates
+        // Request image list from extension
+        vscode.postMessage({ command: 'getImageList' });
+
+        // Add handler for receiving image list
         window.addEventListener('message', event => {
             const message = event.data;
             switch (message.command) {
+                case 'imageList':
+                    allImagePaths = message.paths;
+                    break;
                 case 'updateImage':
                     currentImage = message.imageData;
                     initialLabels = message.labels;
                     document.getElementById('imageInfo').textContent = message.imageInfo;
+                    document.getElementById('imageSearch').value = message.currentPath || '';
                     loadImage(currentImage);
                     break;
+            }
+        });
+
+        function searchImages(query) {
+            if (!query) {
+                document.getElementById('searchResults').style.display = 'none';
+                return;
+            }
+
+            const results = allImagePaths
+                .filter(path => {
+                    const lowerPath = path.toLowerCase();
+                    const lowerQuery = query.toLowerCase();
+                    // Match against both full path and filename
+                    return lowerPath.includes(lowerQuery) || path.split('/').pop().toLowerCase().includes(lowerQuery);
+                })
+                .slice(0, 10); // Limit to 10 results
+
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '';
+            
+            if (results.length > 0) {
+                results.forEach((path, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result-item';
+                    
+                    // Create separate elements for filename and path
+                    const filename = document.createElement('div');
+                    filename.className = 'filename';
+                    filename.textContent = path.split('/').pop();
+                    
+                    const filepath = document.createElement('div');
+                    filepath.className = 'filepath';
+                    filepath.textContent = path;
+                    
+                    div.appendChild(filename);
+                    div.appendChild(filepath);
+                    div.setAttribute('data-path', path);
+                    div.onclick = () => {
+                        vscode.postMessage({ command: 'loadImage', path: path });
+                        resultsDiv.style.display = 'none';
+                        selectedSearchIndex = -1;
+                    };
+                    resultsDiv.appendChild(div);
+                });
+                resultsDiv.style.display = 'block';
+            } else {
+                resultsDiv.style.display = 'none';
+            }
+        }
+
+        const searchInput = document.getElementById('imageSearch');
+        let searchTimeout = null;
+
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchImages(e.target.value);
+            }, 200); // Debounce search
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            const results = document.getElementById('searchResults');
+            const items = results.getElementsByClassName('search-result-item');
+            
+            switch(e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    selectedSearchIndex = Math.min(selectedSearchIndex + 1, items.length - 1);
+                    updateSelectedResult(items);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    selectedSearchIndex = Math.max(selectedSearchIndex - 1, -1);
+                    updateSelectedResult(items);
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (selectedSearchIndex >= 0 && items[selectedSearchIndex]) {
+                        const path = items[selectedSearchIndex].getAttribute('data-path');
+                        vscode.postMessage({ command: 'loadImage', path: path });
+                        results.style.display = 'none';
+                        selectedSearchIndex = -1;
+                    }
+                    break;
+                case 'Escape':
+                    results.style.display = 'none';
+                    selectedSearchIndex = -1;
+                    break;
+            }
+        });
+
+        function updateSelectedResult(items) {
+            Array.from(items).forEach((item, index) => {
+                if (index === selectedSearchIndex) {
+                    item.classList.add('selected');
+                    item.scrollIntoView({ block: 'nearest' });
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
+
+        // Close search results when clicking outside
+        document.addEventListener('click', (e) => {
+            const searchBox = document.querySelector('.search-box');
+            if (!searchBox.contains(e.target)) {
+                document.getElementById('searchResults').style.display = 'none';
+                selectedSearchIndex = -1;
             }
         });
 
