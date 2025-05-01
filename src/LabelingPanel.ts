@@ -88,12 +88,15 @@ export class LabelingPanel {
                 <title>YOLO Labeling</title>
                 <style>
                     :root {
-                        --primary-color: #2196F3;
-                        --secondary-color: #4CAF50;
-                        --danger-color: #f44336;
-                        --background-color: #f5f5f5;
-                        --surface-color: #ffffff;
-                        --text-color: #333333;
+                        --primary-color: #0098ff;
+                        --secondary-color: #73c991;
+                        --danger-color: #f14c4c;
+                        --background-color: #1e1e1e;
+                        --surface-color: #252526;
+                        --surface-color-hover: #2d2d2d;
+                        --border-color: #454545;
+                        --text-color: #cccccc;
+                        --text-color-secondary: #8a8a8a;
                     }
 
                     body {
@@ -117,8 +120,8 @@ export class LabelingPanel {
                         align-items: center;
                         background-color: var(--surface-color);
                         padding: 12px;
-                        border-radius: 8px;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        border-radius: 4px;
+                        border: 1px solid var(--border-color);
                         margin-bottom: 20px;
                     }
 
@@ -131,8 +134,8 @@ export class LabelingPanel {
                     .canvas-container {
                         flex: 1;
                         background-color: var(--surface-color);
-                        border-radius: 8px;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        border-radius: 4px;
+                        border: 1px solid var(--border-color);
                         padding: 12px;
                         position: relative;
                     }
@@ -140,46 +143,55 @@ export class LabelingPanel {
                     .sidebar {
                         width: 250px;
                         background-color: var(--surface-color);
-                        border-radius: 8px;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        border-radius: 4px;
+                        border: 1px solid var(--border-color);
                         padding: 16px;
+                    }
+
+                    .sidebar h3 {
+                        margin-top: 0;
+                        color: var(--text-color);
+                        font-size: 14px;
+                        font-weight: 500;
+                        margin-bottom: 16px;
                     }
 
                     #imageCanvas {
                         max-width: 100%;
                         height: auto;
-                        border-radius: 4px;
+                        border-radius: 2px;
+                        background-color: var(--background-color);
                     }
 
                     button {
-                        background-color: var(--primary-color);
-                        color: white;
-                        border: none;
-                        padding: 8px 16px;
-                        border-radius: 4px;
+                        background-color: var(--surface-color);
+                        color: var(--text-color);
+                        border: 1px solid var(--border-color);
+                        padding: 6px 12px;
+                        border-radius: 2px;
                         cursor: pointer;
-                        font-size: 14px;
-                        font-weight: 500;
-                        transition: background-color 0.2s;
+                        font-size: 13px;
                         display: inline-flex;
                         align-items: center;
-                        gap: 8px;
+                        gap: 6px;
+                        transition: background-color 0.2s;
                     }
 
                     button:hover {
-                        background-color: #1976D2;
+                        background-color: var(--surface-color-hover);
                     }
 
                     button:active {
-                        background-color: #1565C0;
+                        background-color: var(--border-color);
                     }
 
                     button.secondary {
-                        background-color: var(--secondary-color);
+                        background-color: var(--surface-color);
+                        border-color: var(--border-color);
                     }
 
                     button.secondary:hover {
-                        background-color: #43A047;
+                        background-color: var(--surface-color-hover);
                     }
 
                     .nav-buttons {
@@ -188,13 +200,19 @@ export class LabelingPanel {
                     }
 
                     select {
-                        padding: 8px;
-                        border-radius: 4px;
-                        border: 1px solid #ddd;
-                        font-size: 14px;
-                        background-color: white;
+                        padding: 6px 8px;
+                        border-radius: 2px;
+                        border: 1px solid var(--border-color);
+                        font-size: 13px;
+                        background-color: var(--surface-color);
+                        color: var(--text-color);
                         margin: 0 12px;
                         min-width: 150px;
+                    }
+
+                    select:focus {
+                        outline: 1px solid var(--primary-color);
+                        border-color: var(--primary-color);
                     }
 
                     .label-list {
@@ -205,16 +223,34 @@ export class LabelingPanel {
                         display: flex;
                         align-items: center;
                         padding: 8px;
-                        background-color: #f8f9fa;
-                        border-radius: 4px;
+                        background-color: var(--background-color);
+                        border: 1px solid var(--border-color);
+                        border-radius: 2px;
                         margin-bottom: 8px;
                     }
 
+                    .label-item:hover {
+                        background-color: var(--surface-color-hover);
+                    }
+
                     .label-color {
-                        width: 16px;
-                        height: 16px;
-                        border-radius: 50%;
+                        width: 12px;
+                        height: 12px;
+                        border-radius: 2px;
                         margin-right: 8px;
+                    }
+
+                    .label-item button {
+                        padding: 2px 6px;
+                        background: transparent;
+                        border: none;
+                        color: var(--text-color-secondary);
+                        opacity: 0.7;
+                    }
+
+                    .label-item button:hover {
+                        color: var(--danger-color);
+                        opacity: 1;
                     }
 
                     .status-bar {
@@ -223,21 +259,32 @@ export class LabelingPanel {
                         justify-content: space-between;
                         padding: 8px 16px;
                         background-color: var(--surface-color);
+                        border: 1px solid var(--border-color);
                         border-radius: 4px;
                         margin-top: 12px;
                         font-size: 12px;
-                        color: #666;
+                        color: var(--text-color-secondary);
                     }
 
                     .tooltip {
                         position: absolute;
-                        background-color: rgba(0,0,0,0.8);
-                        color: white;
+                        background-color: var(--surface-color);
+                        color: var(--text-color);
                         padding: 4px 8px;
-                        border-radius: 4px;
+                        border-radius: 2px;
                         font-size: 12px;
                         pointer-events: none;
                         z-index: 1000;
+                        border: 1px solid var(--border-color);
+                    }
+
+                    svg {
+                        color: var(--text-color);
+                        opacity: 0.8;
+                    }
+
+                    button:hover svg {
+                        opacity: 1;
                     }
                 </style>
             </head>
