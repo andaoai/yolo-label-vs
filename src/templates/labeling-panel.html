@@ -62,6 +62,9 @@
             position: relative;
             overflow: hidden;
             min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .sidebar {
@@ -113,9 +116,11 @@
 
         #imageCanvas {
             max-width: 100%;
+            max-height: 100%;
             height: auto;
             border-radius: 2px;
             background-color: var(--background-color);
+            object-fit: contain;
         }
 
         button {
@@ -300,6 +305,38 @@
             '#00BCD4', '#FF9800', '#795548', '#607D8B', '#E91E63'
         ];
 
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (evt.clientX - rect.left) * scaleX,
+                y: (evt.clientY - rect.top) * scaleY
+            };
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const containerStyle = window.getComputedStyle(container);
+            const maxWidth = container.clientWidth - parseInt(containerStyle.paddingLeft) - parseInt(containerStyle.paddingRight);
+            const maxHeight = container.clientHeight - parseInt(containerStyle.paddingTop) - parseInt(containerStyle.paddingBottom);
+            
+            const imageAspectRatio = currentImage.width / currentImage.height;
+            const containerAspectRatio = maxWidth / maxHeight;
+            
+            let newWidth, newHeight;
+            if (imageAspectRatio > containerAspectRatio) {
+                newWidth = maxWidth;
+                newHeight = maxWidth / imageAspectRatio;
+            } else {
+                newHeight = maxHeight;
+                newWidth = maxHeight * imageAspectRatio;
+            }
+            
+            canvas.style.width = `${newWidth}px`;
+            canvas.style.height = `${newHeight}px`;
+        }
+
         function loadImage(imagePath) {
             if (!imagePath) return;
             
@@ -307,6 +344,7 @@
             currentImage.onload = () => {
                 canvas.width = currentImage.width;
                 canvas.height = currentImage.height;
+                resizeCanvas();
                 ctx.drawImage(currentImage, 0, 0);
                 drawLabels();
                 updateLabelList();
@@ -378,9 +416,9 @@
         }
 
         canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / canvas.width;
-            const y = (e.clientY - rect.top) / canvas.height;
+            const pos = getMousePos(canvas, e);
+            const x = pos.x / canvas.width;
+            const y = pos.y / canvas.height;
             coordinates.textContent = `X: ${Math.round(x * 100)}%, Y: ${Math.round(y * 100)}%`;
             
             if (!isDrawing) return;
@@ -400,24 +438,24 @@
             ctx.strokeStyle = colors[currentLabel % colors.length];
             ctx.lineWidth = 2;
             ctx.strokeRect(boxX * canvas.width - width * canvas.width/2,
-                         boxY * canvas.height - height * canvas.height/2,
-                         width * canvas.width,
-                         height * canvas.height);
+                          boxY * canvas.height - height * canvas.height/2,
+                          width * canvas.width,
+                          height * canvas.height);
         });
 
         canvas.addEventListener('mousedown', (e) => {
             isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
-            startX = (e.clientX - rect.left) / canvas.width;
-            startY = (e.clientY - rect.top) / canvas.height;
+            const pos = getMousePos(canvas, e);
+            startX = pos.x / canvas.width;
+            startY = pos.y / canvas.height;
         });
 
         canvas.addEventListener('mouseup', (e) => {
             if (!isDrawing) return;
             
-            const rect = canvas.getBoundingClientRect();
-            const currentX = (e.clientX - rect.left) / canvas.width;
-            const currentY = (e.clientY - rect.top) / canvas.height;
+            const pos = getMousePos(canvas, e);
+            const currentX = pos.x / canvas.width;
+            const currentY = pos.y / canvas.height;
             
             const width = Math.abs(currentX - startX);
             const height = Math.abs(currentY - startY);
@@ -427,7 +465,7 @@
                 const y = Math.min(startY, currentY) + height/2;
                 
                 initialLabels.push({
-                    class: 0, // Default to first class
+                    class: currentLabel,
                     x: x,
                     y: y,
                     width: width,
@@ -468,6 +506,15 @@
                     drawLabels();
                     updateLabelList();
                     break;
+            }
+        });
+
+        // Add window resize handler
+        window.addEventListener('resize', () => {
+            if (currentImage) {
+                resizeCanvas();
+                ctx.drawImage(currentImage, 0, 0);
+                drawLabels();
             }
         });
 
