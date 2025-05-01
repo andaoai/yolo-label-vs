@@ -62,18 +62,8 @@
     "keybindings": [
       {
         "command": "yolo-labeling-vs.openLabelingPanel",
-        "key": "ctrl+shift+y",
+        "key": "ctrl+y",
         "when": "editorTextFocus && resourceExtname == .yaml || resourceExtname == .yml"
-      },
-      {
-        "command": "yolo-labeling-vs.nextImage",
-        "key": "ctrl+right",
-        "when": "focusedView == yoloLabeling"
-      },
-      {
-        "command": "yolo-labeling-vs.previousImage",
-        "key": "ctrl+left",
-        "when": "focusedView == yoloLabeling"
       }
     ]
   },
