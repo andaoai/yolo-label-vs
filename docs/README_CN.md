@@ -10,11 +10,11 @@
 ## 相关文档
 
 - 中文文档
-  - [打包指南](./PACKAGING_CN.md)
-  - [发布指南](./PUBLISHING_CN.md)
+  - [打包指南](./docs/PACKAGING_CN.md)
+  - [发布指南](./docs/PUBLISHING_CN.md)
 - English Documentation
-  - [Packaging Guide](./PACKAGING.md)
-  - [Publishing Guide](./PUBLISHING.md)
+  - [Packaging Guide](./docs/PACKAGING.md)
+  - [Publishing Guide](./docs/PUBLISHING.md)
   - [README in English](./README.md)
 
 ## 核心功能
