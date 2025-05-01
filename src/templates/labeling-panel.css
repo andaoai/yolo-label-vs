@@ -106,6 +106,13 @@ body {
     border-radius: 2px;
     background-color: var(--background-color);
     object-fit: contain;
+    cursor: crosshair;
+}
+#imageCanvas.grabbing {
+    cursor: grabbing !important;
+}
+#imageCanvas.grabable {
+    cursor: grab;
 }
 
 /* =================== 侧边栏 =================== */
@@ -323,15 +330,23 @@ select:focus {
 .status-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 6px 12px;
     background-color: var(--surface-color);
-    border: 1px solid var(--border-color);
+    padding: 6px 12px;
     border-radius: 4px;
+    border: 1px solid var(--border-color);
     margin-top: 10px;
     font-size: 12px;
-    color: var(--text-color-secondary);
+    gap: 20px;
     flex-shrink: 0;
+    height: 20px;
+}
+.status-bar span {
+    color: var(--text-color-secondary);
+}
+.shortcuts-info {
+    margin-left: auto;
+    font-style: italic;
+    font-size: 11px;
 }
 
 /* =================== 工具提示 =================== */
