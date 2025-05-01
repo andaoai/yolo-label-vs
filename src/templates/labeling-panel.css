@@ -25,7 +25,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    padding: 20px;
+    padding: 10px;
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -35,10 +35,10 @@ body {
     display: flex;
     align-items: center;
     background-color: var(--surface-color);
-    padding: 12px;
+    padding: 8px;
     border-radius: 4px;
     border: 1px solid var(--border-color);
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     flex-shrink: 0;
     gap: 12px;
 }
@@ -81,7 +81,7 @@ body {
 .main-content {
     flex: 1;
     display: flex;
-    gap: 20px;
+    gap: 10px;
     min-height: 0;
 }
 
@@ -117,7 +117,7 @@ body {
     padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 12px;
     min-height: 0;
     flex-shrink: 0;
 }
@@ -134,12 +134,12 @@ body {
     color: var(--text-color);
     font-size: 14px;
     font-weight: 500;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
 }
 
 /* =================== 标签列表 =================== */
 .label-list {
-    margin-top: 16px;
+    margin-top: 0;
     overflow-y: auto;
     flex: 1;
     min-height: 0;
@@ -324,11 +324,11 @@ select:focus {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 16px;
+    padding: 6px 12px;
     background-color: var(--surface-color);
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    margin-top: 12px;
+    margin-top: 10px;
     font-size: 12px;
     color: var(--text-color-secondary);
     flex-shrink: 0;
