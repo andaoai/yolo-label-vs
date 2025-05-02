@@ -506,12 +506,64 @@ select:focus {
 }
 
 .shortcuts-info {
-    color: var(--vscode-descriptionForeground);
-    margin-left: auto;
-    opacity: 0.7 !important;
+    opacity: 0.7;
+    font-size: 11px;
 }
 
-/* =================== 工具提示 =================== */
+/* Support links section */
+.support-links {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    gap: 8px;
+}
+
+.sponsor-link, .star-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.sponsor-link {
+    color: var(--vscode-textLink-foreground);
+}
+
+.star-link {
+    color: #f1c40f; /* GitHub star yellow */
+    animation: star-pulse 3s infinite;
+}
+
+@keyframes star-pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.sponsor-link:hover, .star-link:hover {
+    background-color: var(--vscode-textLink-activeForeground);
+    color: var(--vscode-button-foreground);
+}
+
+.sponsor-link svg {
+    color: #ff6b6b;
+}
+
+.star-link svg {
+    color: #f1c40f; /* GitHub star yellow */
+}
+
+/* Tooltip styles */
 .tooltip {
     position: absolute;
     background-color: var(--surface-color);
@@ -714,6 +766,21 @@ svg {
     
     .right-controls {
         min-width: auto;
+    }
+
+    .status-bar {
+        flex-wrap: wrap;
+    }
+
+    .support-links {
+        width: 100%;
+        margin-top: 4px;
+        justify-content: center;
+        margin-left: 0;
+    }
+
+    .shortcuts-info {
+        display: none; /* Hide shortcuts info on very small screens */
     }
 }
 
