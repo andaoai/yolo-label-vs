@@ -35,51 +35,75 @@ body {
     display: flex;
     align-items: center;
     background-color: var(--vscode-editor-background);
-    padding: 6px 8px;
+    padding: 6px 12px;
     border-radius: 3px;
     border: 1px solid var(--vscode-panel-border);
     margin-bottom: 10px;
     flex-shrink: 0;
-    gap: 10px;
+    gap: 16px;
 }
 
+/* 导航按钮组 */
 .nav-buttons {
     display: flex;
-    gap: 4px;
+    gap: 8px;
     flex-shrink: 0;
+    justify-content: center;
 }
 
-.nav-buttons button {
+/* 文件操作按钮 */
+.file-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    justify-content: center;
+}
+
+.nav-buttons button,
+.file-actions button,
+.search-action-button,
+.toolbar .right-controls button {
     background-color: var(--vscode-button-secondaryBackground, var(--vscode-editor-background));
     border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
     color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
-    padding: 5px 8px;
+    padding: 5px 10px;
     opacity: 0.9;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 3px;
+    min-width: 32px;
+    height: 28px;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.nav-buttons button svg {
+.nav-buttons button svg,
+.file-actions button svg {
     opacity: 0.8;
     color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
 }
 
-.nav-buttons button:hover {
+.nav-buttons button:hover,
+.file-actions button:hover,
+.search-action-button:hover,
+.toolbar .right-controls button:hover {
     background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
     opacity: 1;
 }
 
-.nav-buttons button:hover svg {
+.nav-buttons button:hover svg,
+.file-actions button:hover svg {
     opacity: 1;
 }
 
 .right-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     flex-shrink: 0;
+    justify-content: flex-end;
+    min-width: 150px;
 }
 
 .toggle-button {
@@ -375,25 +399,37 @@ select:focus {
 .search-container {
     flex: 1;
     min-width: 0;
-    margin: 0 24px;
+    margin: 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: calc(100% - 400px);
 }
+
 .search-box {
     position: relative;
     width: 100%;
+    padding-right: 8px; /* Add padding to prevent text from touching the edge */
 }
+
 .search-box input {
     width: 100%;
     padding: 6px 12px;
-    border-radius: 2px;
+    border-radius: 3px;
     border: 1px solid var(--vscode-input-border);
     background-color: var(--vscode-input-background);
     color: var(--vscode-input-foreground);
     outline: none;
     font-size: 13px;
+    text-overflow: ellipsis; /* Add ellipsis for long text */
+    white-space: nowrap;
+    overflow: hidden;
 }
+
 .search-box input:focus {
     border-color: var(--vscode-focusBorder);
 }
+
 .search-results {
     position: absolute;
     top: 100%;
@@ -408,6 +444,7 @@ select:focus {
     display: none;
     border-radius: 0 0 4px 4px;
 }
+
 .search-result-item {
     padding: 8px 12px;
     cursor: pointer;
@@ -416,19 +453,24 @@ select:focus {
     flex-direction: column;
     gap: 4px;
 }
+
 .search-result-item:last-child {
     border-bottom: none;
 }
+
 .search-result-item .filename {
     color: var(--vscode-dropdown-foreground);
 }
+
 .search-result-item .filepath {
     color: var(--vscode-descriptionForeground);
     font-size: 12px;
 }
+
 .search-result-item:hover {
     background-color: var(--vscode-list-hoverBackground);
 }
+
 .search-result-item.selected {
     background-color: var(--vscode-list-activeSelectionBackground);
     color: var(--vscode-list-activeSelectionForeground);
@@ -448,9 +490,11 @@ select:focus {
     margin-top: 10px;
     flex-shrink: 0;
 }
+
 .status-bar span {
     opacity: 0.9;
 }
+
 .shortcuts-info {
     color: var(--vscode-descriptionForeground);
     margin-left: auto;
@@ -474,6 +518,7 @@ svg {
     color: currentColor;
     opacity: 0.8;
 }
+
 button:hover svg {
     opacity: 1;
 }
@@ -506,28 +551,84 @@ button:hover svg {
 }
 
 /* 右侧工具栏按钮 */
-.toolbar .right-controls button {
-    background-color: var(--vscode-button-secondaryBackground, var(--vscode-editor-background));
-    border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
-    padding: 5px 8px;
-    opacity: 0.9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 3px;
-}
-
 .toolbar .right-controls button svg {
     opacity: 0.8;
     color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
 }
 
-.toolbar .right-controls button:hover {
-    background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
+.toolbar .right-controls button:hover svg {
     opacity: 1;
 }
 
-.toolbar .right-controls button:hover svg {
+/* 搜索框旁边的操作按钮 */
+.search-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+    margin-left: 0;
+}
+
+.file-actions button svg,
+.search-action-button svg {
+    opacity: 0.8;
+    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
+    width: 16px;
+    height: 16px;
+}
+
+.file-actions button:hover svg,
+.search-action-button:hover svg {
     opacity: 1;
+}
+
+.file-actions button:disabled,
+.file-actions button.disabled,
+.search-action-button:disabled,
+.search-action-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.file-actions button:disabled svg,
+.file-actions button.disabled svg,
+.search-action-button:disabled svg,
+.search-action-button.disabled svg {
+    opacity: 0.5;
+}
+
+/* Make toolbar more responsive */
+@media (max-width: 900px) {
+    .toolbar {
+        gap: 12px;
+        padding: 6px 8px;
+    }
+    
+    .nav-buttons, 
+    .file-actions {
+        gap: 6px;
+    }
+    
+    .search-container {
+        gap: 8px;
+        margin: 0 6px;
+        max-width: calc(100% - 350px);
+    }
+}
+
+/* For very narrow screens */
+@media (max-width: 700px) {
+    .toolbar {
+        flex-wrap: wrap;
+    }
+    
+    .search-container {
+        order: 3;
+        width: 100%;
+        max-width: 100%;
+        margin: 8px 0 0 0;
+    }
+    
+    .right-controls {
+        min-width: auto;
+    }
 } 

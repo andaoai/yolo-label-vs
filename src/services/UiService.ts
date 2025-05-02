@@ -100,8 +100,9 @@ export class UiService {
         initialLabels: any[];
         imageInfoText: string;
         webview: vscode.Webview;
+        currentPath?: string;
     }): Promise<string> {
-        const { classNames, initialImageData, initialLabels, imageInfoText, webview } = options;
+        const { classNames, initialImageData, initialLabels, imageInfoText, webview, currentPath } = options;
         
         // 获取CSS和JS文件的路径
         const cssPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'templates', 'labeling-panel.css');
@@ -119,6 +120,7 @@ export class UiService {
                 window.initialImageData = ${JSON.stringify(initialImageData)};
                 window.initialLabels = ${JSON.stringify(initialLabels)};
                 window.classNames = ${JSON.stringify(classNames)};
+                window.currentPath = ${JSON.stringify(currentPath || '')};
             </script>
         `;
 

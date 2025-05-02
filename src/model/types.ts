@@ -37,7 +37,7 @@ export interface ErrorMessage extends ExtensionToWebviewMessage {
 
 // 从Webview到扩展的消息
 export interface WebviewToExtensionMessage extends WebviewMessage {
-  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload';
+  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab';
 }
 
 // 保存标签消息
@@ -49,6 +49,18 @@ export interface SaveLabelsMessage extends WebviewToExtensionMessage {
 // 加载图片消息
 export interface LoadImageMessage extends WebviewToExtensionMessage {
   command: 'loadImage';
+  path: string;
+}
+
+// 在新标签中打开图片消息
+export interface OpenImageInNewTabMessage extends WebviewToExtensionMessage {
+  command: 'openImageInNewTab';
+  path: string;
+}
+
+// 在新标签中打开文本文件消息
+export interface OpenTxtInNewTabMessage extends WebviewToExtensionMessage {
+  command: 'openTxtInNewTab';
   path: string;
 }
 

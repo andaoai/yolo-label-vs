@@ -5,7 +5,9 @@ import {
     WebviewToExtensionMessage, 
     LoadImageMessage, 
     SaveLabelsMessage,
-    UpdateImageMessage
+    UpdateImageMessage,
+    OpenImageInNewTabMessage,
+    OpenTxtInNewTabMessage
 } from '../model/types';
 import { ErrorHandler, ErrorType } from '../ErrorHandler';
 import { ImageService } from './ImageService';
@@ -60,6 +62,16 @@ export class WebviewMessageHandler {
                 
             case 'previous':
                 await this.handlePreviousImageCommand();
+                break;
+                
+            case 'openImageInNewTab':
+                const openImageMessage = message as OpenImageInNewTabMessage;
+                await this.handleOpenImageInNewTabCommand(openImageMessage);
+                break;
+                
+            case 'openTxtInNewTab':
+                const openTxtMessage = message as OpenTxtInNewTabMessage;
+                await this.handleOpenTxtInNewTabCommand(openTxtMessage);
                 break;
                 
             default:
@@ -241,5 +253,61 @@ export class WebviewMessageHandler {
         const currentIndex = this._yoloReader.getCurrentImageIndex();
         const totalImages = this._yoloReader.getTotalImages();
         return `Image: ${currentIndex + 1} of ${totalImages}`;
+    }
+    
+    /**
+     * 处理在新标签中打开图片命令
+     * @param message 打开图片消息
+     */
+    private async handleOpenImageInNewTabCommand(message: OpenImageInNewTabMessage): Promise<void> {
+        if (!message.path) {
+            return;
+        }
+        
+        try {
+            // 创建Uri并打开图片
+            const uri = vscode.Uri.file(message.path);
+            await vscode.commands.executeCommand('vscode.open', uri, {
+                viewColumn: vscode.ViewColumn.Beside  // 在新标签中打开
+            });
+        } catch (error: any) {
+            ErrorHandler.handleError(
+                error,
+                'Failed to open image in new tab',
+                {
+                    filePath: message.path,
+                    webview: this._webview,
+                    type: ErrorType.UNKNOWN_ERROR
+                }
+            );
+        }
+    }
+    
+    /**
+     * 处理在新标签中打开文本文件命令
+     * @param message 打开文本文件消息
+     */
+    private async handleOpenTxtInNewTabCommand(message: OpenTxtInNewTabMessage): Promise<void> {
+        if (!message.path) {
+            return;
+        }
+        
+        try {
+            // 创建Uri并打开文本文件
+            const uri = vscode.Uri.file(message.path);
+            await vscode.commands.executeCommand('vscode.open', uri, {
+                viewColumn: vscode.ViewColumn.Beside  // 在新标签中打开
+            });
+        } catch (error: any) {
+            ErrorHandler.handleError(
+                error,
+                'Failed to open text file in new tab',
+                {
+                    filePath: message.path,
+                    webview: this._webview,
+                    type: ErrorType.UNKNOWN_ERROR
+                }
+            );
+        }
     }
 } 
