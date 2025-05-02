@@ -113,6 +113,11 @@ Please report issues on our [GitHub repository](https://github.com/andaoai/yolo-
 
 ## Release Notes
 
+### 0.0.8
+
+- Fixed theme showcase display in GitHub readme (changed from grid to table layout)
+- Improved documentation formatting for better platform compatibility
+
 ### 0.0.7
 
 - Significantly reduced extension package size (from 51MB to 1.5MB)
