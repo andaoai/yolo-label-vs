@@ -4,8 +4,6 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths-ignore:
-      - 'package.json'
 
 permissions:
   contents: write
@@ -28,30 +26,6 @@ jobs:
         id: current_version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
         
-      - name: Bump minor version (second number)
-        id: new_version
-        run: |
-          CURRENT=${{ steps.current_version.outputs.version }}
-          MAJOR=$(echo $CURRENT | cut -d. -f1)
-          MINOR=$(echo $CURRENT | cut -d. -f2)
-          PATCH=$(echo $CURRENT | cut -d. -f3)
-          NEWMINOR=$((MINOR + 1))
-          NEWVERSION="$MAJOR.$NEWMINOR.0"
-          echo "version=$NEWVERSION" >> $GITHUB_OUTPUT
-          
-      - name: Update package.json version
-        run: |
-          npm version ${{ steps.new_version.outputs.version }} --no-git-tag-version
-          
-      - name: Commit and push changes
-        run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
-          git add package.json
-          git commit -m "Bump minor version to ${{ steps.new_version.outputs.version }} for marketplace release [skip ci]"
-          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}
-          git push
-      
       - name: Delete package-lock.json and install dependencies
         run: |
           rm -f package-lock.json
@@ -71,13 +45,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
-          tag_name: v${{ steps.new_version.outputs.version }}
-          release_name: Release v${{ steps.new_version.outputs.version }}
+          tag_name: v${{ steps.current_version.outputs.version }}
+          release_name: Release v${{ steps.current_version.outputs.version }}
           draft: false
           prerelease: false
           body: |
             New version released to VS Code Marketplace.
-            Version: ${{ steps.new_version.outputs.version }}
+            Version: ${{ steps.current_version.outputs.version }}
       
       - name: Upload VSIX to Release
         uses: actions/upload-release-asset@v1
@@ -85,8 +59,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./yolo-labeling-vs-${{ steps.new_version.outputs.version }}.vsix
-          asset_name: yolo-labeling-vs-${{ steps.new_version.outputs.version }}.vsix
+          asset_path: ./yolo-labeling-vs-${{ steps.current_version.outputs.version }}.vsix
+          asset_name: yolo-labeling-vs-${{ steps.current_version.outputs.version }}.vsix
           asset_content_type: application/octet-stream
       
       - name: Publish to Visual Studio Marketplace
