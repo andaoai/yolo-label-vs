@@ -30,6 +30,14 @@
        - Publish
        - Manage
 
+## Automated Publishing
+
+We have set up automated publishing to VS Code Marketplace using GitHub Actions. For detailed instructions, please see:
+
+* [VS Code Marketplace CI Guide](./CI_CD_WORKFLOW.md)
+
+With this setup, the extension will be automatically published whenever a new GitHub Release is created.
+
 ## Publishing Steps
 
 1. Login with access token
