@@ -49,10 +49,10 @@ jobs:
           git commit -m "Bump patch version to ${{ steps.new_version.outputs.version }} for dev release"
           git push
       
-      - name: Clean npm cache and install dependencies
+      - name: Delete package-lock.json and install dependencies
         run: |
-          npm cache clean --force
-          npm install
+          rm -f package-lock.json
+          npm install --no-package-lock --ignore-scripts
         
       - name: Compile extension
         run: npm run compile
