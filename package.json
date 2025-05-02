@@ -34,6 +34,10 @@
       {
         "command": "yolo-labeling-vs.openLabelingPanel",
         "title": "Open YOLO Labeling Panel"
+      },
+      {
+        "command": "yolo-labeling-vs.openLabelingPanelKeyboard",
+        "title": "Open YOLO Labeling Panel (Keyboard Shortcut)"
       }
     ],
     "menus": {
@@ -64,6 +68,11 @@
         "command": "yolo-labeling-vs.openLabelingPanel",
         "key": "ctrl+y",
         "when": "editorTextFocus && resourceExtname == .yaml || resourceExtname == .yml"
+      },
+      {
+        "command": "yolo-labeling-vs.openLabelingPanelKeyboard",
+        "key": "ctrl+y",
+        "when": "!editorTextFocus || !(resourceExtname == .yaml || resourceExtname == .yml)"
       }
     ]
   },
