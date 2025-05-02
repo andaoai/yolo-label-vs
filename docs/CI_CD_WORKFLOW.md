@@ -1,4 +1,4 @@
-# <img src="./images/icon.svg" width="32" height="32" alt="YOLO标注工具图标"> 自动化工作流指南
+# <img src="./images/icon.png" width="32" height="32" alt="YOLO标注工具图标"> 自动化工作流指南
 
 本文档说明了项目中配置的 GitHub Actions 自动化工作流的功能和使用方法。
 
