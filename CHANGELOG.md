@@ -5,6 +5,13 @@ All notable changes to the "yolo-labeling-vs" extension will be documented in th
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.7] - 2024-09-01
+
+### Changed
+- Significantly reduced extension package size (from 51MB to 1.5MB)
+- Updated documentation to use GitHub hosted images
+- Improved extension loading performance
+
 ## [0.0.6] - 2024-09-01
 
 ### Added

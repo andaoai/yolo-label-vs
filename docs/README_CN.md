@@ -5,19 +5,19 @@
 
 ## 演示
 
-![YOLO Label VS 演示](./images/demo.gif)
+![YOLO Label VS 演示](https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/demo.gif)
 
 ## 主题支持
 
 我们的扩展无缝集成了所有 VS Code 主题，提供一致的用户体验：
 
 <div style="display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, auto); gap: 10px;">
-  <img src="../docs/images/themes/1746183912332.jpg" style="width: 100%; height: auto;" alt="默认浅色主题">
-  <img src="../docs/images/themes/1746183969990.jpg" style="width: 100%; height: auto;" alt="默认深色主题">
-  <img src="../docs/images/themes/1746183996831.jpg" style="width: 100%; height: auto;" alt="高对比度主题">
-  <img src="../docs/images/themes/1746184077610.jpg" style="width: 100%; height: auto;" alt="Monokai主题">
-  <img src="../docs/images/themes/1746184138365.jpg" style="width: 100%; height: auto;" alt="GitHub浅色主题">
-  <img src="../docs/images/themes/1746184166688.jpg" style="width: 100%; height: auto;" alt="Night Owl主题">
+  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183912332.jpg" style="width: 100%; height: auto;" alt="默认浅色主题">
+  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183969990.jpg" style="width: 100%; height: auto;" alt="默认深色主题">
+  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183996831.jpg" style="width: 100%; height: auto;" alt="高对比度主题">
+  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184077610.jpg" style="width: 100%; height: auto;" alt="Monokai主题">
+  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184138365.jpg" style="width: 100%; height: auto;" alt="GitHub浅色主题">
+  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184166688.jpg" style="width: 100%; height: auto;" alt="Night Owl主题">
 </div>
 
 ## 相关文档
@@ -109,6 +109,12 @@
 如果您发现任何问题，请在我们的 [GitHub 仓库](https://github.com/andaoai/yolo-label-vs/issues) 上报告。
 
 ## 版本说明
+
+### 0.0.7
+
+- 显著减小扩展包大小（从51MB减少到1.5MB）
+- 更新文档以使用GitHub托管的图片
+- 改进扩展加载性能
 
 ### 0.0.6
 
