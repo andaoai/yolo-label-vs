@@ -1,5 +1,18 @@
 # <img src="docs/images/icon.png" width="32" height="32" alt="YOLO Label Tool Icon"> YOLO Labeling
 
+[![Publish to VS Code Marketplace](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml/badge.svg)](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml)
+[![VS Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Contributors](https://img.shields.io/github/contributors/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/graphs/contributors)
+[![Repo Size](https://img.shields.io/github/repo-size/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs)
+[![Last Commit](https://img.shields.io/github/last-commit/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/commits)
+[![Issues](https://img.shields.io/github/issues/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/issues)
+[![VS Code Engine](https://img.shields.io/badge/vscode-%5E1.85.0-blue)](https://code.visualstudio.com/)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
+[![Sponsor](https://img.shields.io/badge/sponsor-donate-brightgreen)](https://github.com/andaoai/yolo-label-vs#sponsorship)
+
 A VS Code extension for quickly browsing and editing YOLO dataset annotations. This extension allows you to efficiently view and modify YOLO-formatted labels through YAML configuration files, making it easy to manage your computer vision datasets directly within VS Code.
 
 ## Demo
@@ -172,6 +185,21 @@ Initial release of YOLO Labeling:
 ## Contributing
 
 We welcome contributions! Please feel free to submit a Pull Request.
+
+## Sponsorship
+
+If you find this extension helpful, consider supporting its development:
+
+<table>
+  <tr>
+    <th>WeChat Pay</th>
+    <th>Alipay</th>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/微信支付_20250503021350.jpg" width="300" alt="WeChat Pay"></td>
+    <td><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/支付宝支付_20250503021444.jpg" width="300" alt="Alipay"></td>
+  </tr>
+</table>
 
 ## License
 
