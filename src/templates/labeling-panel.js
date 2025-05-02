@@ -73,6 +73,15 @@ class LabelingState {
     maxHistorySize = 50;
     
     constructor() {
+        // Ensure all labels have a visibility property
+        if (this.initialLabels) {
+            this.initialLabels.forEach(label => {
+                if (label.visible === undefined) {
+                    label.visible = true;
+                }
+            });
+        }
+        
         // Store initial labels in history
         this.pushHistory();
     }
@@ -721,6 +730,11 @@ class CanvasManager {
         }
         
         this.state.initialLabels.forEach((label, index) => {
+            // Skip labels that are not visible
+            if (label.visible === false) {
+                return;
+            }
+            
             const color = CONFIG.COLORS[label.class % CONFIG.COLORS.length];
             
             if (label.isSegmentation && label.points) {
@@ -1087,6 +1101,29 @@ class CanvasManager {
             typeSpan.className = 'label-type';
             typeSpan.textContent = label.isSegmentation ? 'SEG' : 'BOX';
             
+            // Create visibility toggle button (eye icon)
+            const visibilityBtn = document.createElement('button');
+            visibilityBtn.className = 'visibility-button';
+            visibilityBtn.title = label.visible !== false ? 'Hide label' : 'Show label';
+            visibilityBtn.innerHTML = label.visible !== false ? 
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>' : 
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+            
+            visibilityBtn.style.marginLeft = '4px';
+            visibilityBtn.onclick = () => {
+                // Toggle visibility
+                label.visible = label.visible === false ? true : false;
+                
+                // Update button appearance
+                visibilityBtn.title = label.visible ? 'Hide label' : 'Show label';
+                visibilityBtn.innerHTML = label.visible ? 
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>' : 
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+                
+                // Redraw canvas
+                this.state.requestRedraw();
+            };
+            
             // Create delete button
             const deleteBtn = document.createElement('button');
             deleteBtn.innerHTML = '×';
@@ -1104,6 +1141,7 @@ class CanvasManager {
             div.appendChild(colorDiv);
             div.appendChild(select);
             div.appendChild(typeSpan);
+            div.appendChild(visibilityBtn);
             div.appendChild(deleteBtn);
             labelList.appendChild(div);
         });

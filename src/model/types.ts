@@ -95,6 +95,7 @@ export interface BoundingBox {
   height: number;
   isSegmentation?: boolean;
   points?: number[];
+  visible?: boolean;
 }
 
 // 图片信息接口

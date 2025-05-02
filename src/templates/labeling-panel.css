@@ -195,6 +195,13 @@ body {
     color: var(--vscode-errorForeground);
     opacity: 1;
 }
+.label-item .visibility-button {
+    color: var(--vscode-descriptionForeground);
+    padding: 2px;
+}
+.label-item .visibility-button:hover {
+    color: var(--vscode-foreground);
+}
 .label-color {
     width: 12px;
     height: 12px;

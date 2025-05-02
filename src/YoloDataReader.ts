@@ -286,7 +286,8 @@ export class YoloDataReader {
                     if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
                         labels.push({
                             class: classIndex,
-                            x, y, width, height
+                            x, y, width, height,
+                            visible: true
                         });
                     }
                 } 
@@ -307,7 +308,8 @@ export class YoloDataReader {
                             class: classIndex,
                             x, y, width, height,
                             isSegmentation: true,
-                            points: points
+                            points: points,
+                            visible: true
                         });
                     }
                 }
