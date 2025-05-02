@@ -986,13 +986,16 @@ class CanvasManager {
 
     completePolygon() {
         if (this.state.polygonPoints.length >= 6) {
+            // Calculate bounding box from polygon points
+            const bbox = this.calculateBoundingBoxFromPolygon(this.state.polygonPoints);
+            
             // Add new segmentation label
             this.state.initialLabels.push({
                 class: this.state.currentLabel,
-                x: 0,
-                y: 0,
-                width: 0,
-                height: 0,
+                x: bbox.x,
+                y: bbox.y,
+                width: bbox.width,
+                height: bbox.height,
                 isSegmentation: true,
                 points: [...this.state.polygonPoints]
             });
@@ -1008,6 +1011,40 @@ class CanvasManager {
             this.state.requestRedraw();
             this.updateLabelList();
         }
+    }
+
+    // Calculate bounding box from polygon points
+    calculateBoundingBoxFromPolygon(points) {
+        if (points.length < 4) return { x: 0, y: 0, width: 0, height: 0 };
+        
+        // Initialize min/max values
+        let minX = points[0];
+        let minY = points[1];
+        let maxX = points[0];
+        let maxY = points[1];
+        
+        // Find min/max x and y coordinates
+        for (let i = 0; i < points.length; i += 2) {
+            const x = points[i];
+            const y = points[i + 1];
+            
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+        }
+        
+        // Calculate width and height
+        const width = maxX - minX;
+        const height = maxY - minY;
+        
+        // Return box with center point, width, and height (YOLO format)
+        return {
+            x: minX + width / 2,
+            y: minY + height / 2,
+            width: width,
+            height: height
+        };
     }
 
     updateLabelList() {
