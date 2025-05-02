@@ -2,7 +2,7 @@
   "name": "yolo-labeling-vs",
   "displayName": "YOLO Labeling",
   "description": "A VS Code extension for YOLO dataset labeling",
-  "version": "0.0.32",
+  "version": "0.0.33",
   "publisher": "andaoai",
   "license": "MIT",
   "icon": "docs/images/icon.png",
