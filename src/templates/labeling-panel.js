@@ -9,43 +9,139 @@ const CONFIG = {
     MAX_SEARCH_RESULTS: 10,
     MIN_ZOOM: 0.1,
     MAX_ZOOM: 10,
-    ZOOM_SPEED: 0.1
+    ZOOM_SPEED: 0.1,
+    SCROLL_SPEED: 30,
+    POINT_RADIUS: 3,
+    HIGHLIGHT_RADIUS: 5,
+    CLOSE_HIGHLIGHT_RADIUS: 8,
+    MIN_BOX_SIZE: 0.01, // 1% of image size
+    LINE_WIDTH: 2,
+    CROSSHAIR_COLOR: 'rgba(0, 255, 0, 0.94)',
+    CROSSHAIR_CENTER_COLOR: 'rgba(255, 255, 255, 0.9)',
+    BACKGROUND_COLOR: '#1e1e1e',
+    LABEL_FONT_SIZE: 14,
+    LABEL_PADDING: 5,
+    LABEL_HEIGHT: 20
 };
 
-// State Management
+// State Management - Using ES6+ class fields
 class LabelingState {
+    // Use class fields for better organization and readability
+    vscode = acquireVsCodeApi();
+    currentImage = window.initialImageData;
+    initialLabels = window.initialLabels;
+    isDrawing = false;
+    startX = 0;
+    startY = 0;
+    currentLabel = 0;
+    classNamesList = window.classNames || [];
+    currentMode = 'box';
+    polygonPoints = [];
+    isDrawingPolygon = false;
+    showLabels = true;
+    allImagePaths = [];
+    selectedSearchIndex = -1;
+    currentMousePos = null;
+    searchTimeout = null;
+    
+    // Zoom and pan related state
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    isPanning = false;
+    lastPanPoint = { x: 0, y: 0 };
+    
+    // Image dimensions for coordinate calculations
+    originalImageWidth = 0;
+    originalImageHeight = 0;
+    
+    // Canvas and image relationship
+    canvasRect = null;
+    imageRect = null;
+    
+    // Animation related
+    animationFrameId = null;
+    needsRedraw = false;
+    
+    // For throttling mousemove events
+    lastRenderTime = 0;
+    throttleDelay = 16; // ~60fps
+    
+    // undo/redo history
+    history = [];
+    historyIndex = -1;
+    maxHistorySize = 50;
+    
     constructor() {
-        this.vscode = acquireVsCodeApi();
-        this.currentImage = window.initialImageData;
-        this.initialLabels = window.initialLabels;
-        this.isDrawing = false;
-        this.startX = 0;
-        this.startY = 0;
-        this.currentLabel = 0;
-        this.classNamesList = window.classNames || [];
-        this.currentMode = 'box';
-        this.polygonPoints = [];
-        this.isDrawingPolygon = false;
-        this.showLabels = true;
-        this.allImagePaths = [];
-        this.selectedSearchIndex = -1;
-        this.currentMousePos = null;
-        this.searchTimeout = null;
+        // Store initial labels in history
+        this.pushHistory();
+    }
+    
+    // Add undo/redo functionality
+    pushHistory() {
+        // Remove any future history if we're in the middle of the history stack
+        if (this.historyIndex < this.history.length - 1) {
+            this.history = this.history.slice(0, this.historyIndex + 1);
+        }
         
-        // Zoom and pan related state
-        this.scale = 1;
-        this.translateX = 0;
-        this.translateY = 0;
-        this.isPanning = false;
-        this.lastPanPoint = { x: 0, y: 0 };
+        // Clone current labels for history
+        const labelsCopy = JSON.parse(JSON.stringify(this.initialLabels));
         
-        // 原始图像尺寸 - 用于坐标计算
-        this.originalImageWidth = 0;
-        this.originalImageHeight = 0;
+        // Add to history
+        this.history.push(labelsCopy);
         
-        // 新增: 画布与图像之间的关系
-        this.canvasRect = null;
-        this.imageRect = null;
+        // Limit history size
+        if (this.history.length > this.maxHistorySize) {
+            this.history.shift();
+        }
+        
+        // Update index
+        this.historyIndex = this.history.length - 1;
+    }
+    
+    undo() {
+        if (this.historyIndex > 0) {
+            this.historyIndex--;
+            this.initialLabels = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
+            return true;
+        }
+        return false;
+    }
+    
+    redo() {
+        if (this.historyIndex < this.history.length - 1) {
+            this.historyIndex++;
+            this.initialLabels = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
+            return true;
+        }
+        return false;
+    }
+    
+    // Request animation frame for efficient rendering
+    requestRedraw() {
+        this.needsRedraw = true;
+        if (!this.animationFrameId) {
+            this.animationFrameId = requestAnimationFrame(() => {
+                if (this.needsRedraw) {
+                    this.needsRedraw = false;
+                    this.animationFrameId = null;
+                    // The actual redraw will be called by the manager
+                    if (this.onRedrawRequested) {
+                        this.onRedrawRequested();
+                    }
+                }
+            });
+        }
+    }
+    
+    // Throttle function for mousemove events
+    shouldUpdate() {
+        const now = performance.now();
+        if (now - this.lastRenderTime >= this.throttleDelay) {
+            this.lastRenderTime = now;
+            return true;
+        }
+        return false;
     }
 }
 
@@ -56,17 +152,30 @@ class CanvasManager {
         this.canvas = document.getElementById('imageCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.coordinates = document.getElementById('coordinates');
+        
+        // Set callback for animation frame based redraw
+        this.state.onRedrawRequested = this.redrawWithTransform.bind(this);
+        
         this.setupEventListeners();
     }
 
     setupEventListeners() {
+        // Use object method reference with bind for better readability
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
         this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
         this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        this.canvas.addEventListener('contextmenu', this.handleContextMenu.bind(this));
+        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
+        window.addEventListener('resize', this.handleResize.bind(this));
+        window.addEventListener('keydown', this.handleKeyDown.bind(this));
+        window.addEventListener('keyup', this.handleKeyUp.bind(this));
+        window.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
+        
+        // Handle mouse leave with arrow function for conciseness
         this.canvas.addEventListener('mouseleave', () => {
             if (this.state.isDrawing) {
                 this.state.isDrawing = false;
-                this.redrawWithTransform();
+                this.state.requestRedraw();
             }
             if (this.state.isPanning) {
                 this.state.isPanning = false;
@@ -74,54 +183,60 @@ class CanvasManager {
             }
             this.canvas.classList.remove('grabable');
         });
-        this.canvas.addEventListener('contextmenu', this.handleContextMenu.bind(this));
-        window.addEventListener('resize', this.handleResize.bind(this));
-
-        // Add wheel event for zooming
-        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
-
-        // Add keyboard events for cursor updates
-        window.addEventListener('keydown', this.handleKeyDown.bind(this));
-        window.addEventListener('keyup', this.handleKeyUp.bind(this));
         
-        // Add keyboard shortcuts for navigation and saving
-        window.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
+        // Clean up event listeners when window is unloaded
+        window.addEventListener('unload', this.cleanupEventListeners.bind(this));
+    }
+    
+    // Cleanup method to prevent memory leaks
+    cleanupEventListeners() {
+        this.canvas.removeEventListener('mousedown', this.handleMouseDown);
+        this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+        this.canvas.removeEventListener('mouseup', this.handleMouseUp);
+        this.canvas.removeEventListener('contextmenu', this.handleContextMenu);
+        this.canvas.removeEventListener('wheel', this.handleWheel);
+        window.removeEventListener('resize', this.handleResize);
+        window.removeEventListener('keydown', this.handleKeyDown);
+        window.removeEventListener('keyup', this.handleKeyUp);
+        window.removeEventListener('keydown', this.handleKeyboardShortcuts);
     }
 
-    // 新增: 更新画布与图像的关系矩形
+    // Update canvas and image rectangles for coordinate calculations
     updateRects() {
-        // 获取当前画布的客户端矩形
+        // Get current canvas client rectangle
         this.state.canvasRect = this.canvas.getBoundingClientRect();
         
-        // 计算图像在画布中的实际显示区域
+        // Calculate aspect ratios
         const imageAspectRatio = this.state.originalImageWidth / this.state.originalImageHeight;
         const canvasAspectRatio = this.state.canvasRect.width / this.state.canvasRect.height;
         
+        // Calculate image dimensions within canvas
         let imageWidth, imageHeight, imageLeft, imageTop;
         
         if (this.state.scale === 1) {
-            // 标准缩放下，计算图像在画布中的实际位置和尺寸
+            // At standard scale, calculate image position based on aspect ratio
             if (imageAspectRatio > canvasAspectRatio) {
-                // 图像比画布更宽
+                // Image is wider than canvas
                 imageWidth = this.state.canvasRect.width;
                 imageHeight = imageWidth / imageAspectRatio;
                 imageLeft = 0;
                 imageTop = (this.state.canvasRect.height - imageHeight) / 2;
             } else {
-                // 图像比画布更高
+                // Image is taller than canvas
                 imageHeight = this.state.canvasRect.height;
                 imageWidth = imageHeight * imageAspectRatio;
                 imageLeft = (this.state.canvasRect.width - imageWidth) / 2;
                 imageTop = 0;
             }
         } else {
-            // 缩放时，使用整个画布区域
+            // When zoomed, use entire canvas
             imageWidth = this.state.canvasRect.width;
             imageHeight = this.state.canvasRect.height;
             imageLeft = 0;
             imageTop = 0;
         }
         
+        // Store image rectangle for calculations
         this.state.imageRect = {
             left: imageLeft,
             top: imageTop,
@@ -132,71 +247,64 @@ class CanvasManager {
         };
     }
 
-    // 修改: 获取鼠标位置转换为图像坐标的算法
+    // Convert mouse position to image coordinates
     getMousePos(evt) {
-        // 确保已更新矩形信息
+        // Ensure rectangles are updated
         this.updateRects();
         
-        // 计算鼠标在画布元素中的像素位置
+        // Calculate mouse position in canvas element pixels
         const mouseX = evt.clientX - this.state.canvasRect.left;
         const mouseY = evt.clientY - this.state.canvasRect.top;
         
-        // 转换为画布坐标系统中的位置
+        // Convert to canvas coordinate system
         let canvasX, canvasY;
         
         if (this.state.scale === 1) {
-            // 标准缩放下，需要考虑图像可能不填满画布的情况
-            // 调整相对于图像显示区域的坐标
+            // Standard scale: consider image might not fill canvas
             canvasX = (mouseX - this.state.imageRect.left) / this.state.imageRect.width * this.canvas.width;
             canvasY = (mouseY - this.state.imageRect.top) / this.state.imageRect.height * this.canvas.height;
         } else {
-            // 缩放时，直接使用画布比例
+            // When zoomed: use canvas proportions directly
             canvasX = mouseX / this.state.canvasRect.width * this.canvas.width;
             canvasY = mouseY / this.state.canvasRect.height * this.canvas.height;
         }
         
-        // 应用缩放和平移的逆变换得到图像坐标
+        // Apply inverse transform to get image coordinates
         const imageX = (canvasX - this.state.translateX) / this.state.scale;
         const imageY = (canvasY - this.state.translateY) / this.state.scale;
         
-        return { 
-            x: imageX, 
-            y: imageY 
-        };
+        return { x: imageX, y: imageY };
     }
 
-    // 获取未考虑缩放和平移的原始画布坐标
+    // Get raw canvas coordinates without considering zoom/pan
     getRawMousePos(evt) {
-        // 确保已更新矩形信息
+        // Ensure rectangles are updated
         this.updateRects();
         
-        // 计算鼠标在Canvas元素上的位置，并转换为Canvas内部坐标
+        // Calculate mouse position in canvas element
         const mouseX = evt.clientX - this.state.canvasRect.left;
         const mouseY = evt.clientY - this.state.canvasRect.top;
         
         let canvasX, canvasY;
         
         if (this.state.scale === 1) {
-            // 标准缩放下，考虑图像可能不填满画布
+            // Standard scale: adjust for image position
             canvasX = (mouseX - this.state.imageRect.left) / this.state.imageRect.width * this.canvas.width;
             canvasY = (mouseY - this.state.imageRect.top) / this.state.imageRect.height * this.canvas.height;
         } else {
-            // 缩放时，直接使用画布比例
+            // When zoomed: use canvas proportions
             canvasX = mouseX / this.state.canvasRect.width * this.canvas.width;
             canvasY = mouseY / this.state.canvasRect.height * this.canvas.height;
         }
         
-        return {
-            x: canvasX,
-            y: canvasY
-        };
+        return { x: canvasX, y: canvasY };
     }
 
     handleMouseDown(e) {
-        // 确保矩形信息最新
+        // Ensure rectangles are up to date
         this.updateRects();
         
-        // Check if alt key is pressed for panning
+        // Check for panning mode (alt key pressed)
         if (e.altKey) {
             this.state.isPanning = true;
             this.state.lastPanPoint = this.getRawMousePos(e);
@@ -204,273 +312,278 @@ class CanvasManager {
             return;
         }
         
-        // Get mouse position in image coordinates
+        // Get normalized mouse position (0-1 range)
         const pos = this.getMousePos(e);
-        
-        // Calculate normalized coordinates (0-1 range)
         const x = pos.x / this.state.originalImageWidth;
         const y = pos.y / this.state.originalImageHeight;
 
         if (this.state.currentMode === 'box') {
-            this.state.isDrawing = true;
-            this.state.startX = x;
-            this.state.startY = y;
+            this.startBoxDrawing(x, y);
         } else if (this.state.currentMode === 'seg') {
-            if (!this.state.isDrawingPolygon) {
-                // Start new polygon
-                this.state.isDrawingPolygon = true;
-                this.state.polygonPoints = [x, y];
-            } else {
-                // Check if closing the polygon
-                if (this.state.polygonPoints.length >= 6 && this.isNearFirstPoint(x, y)) {
-                    this.completePolygon();
-                } else {
-                    // Add new point
-                    this.state.polygonPoints.push(x, y);
-                }
-            }
-            this.redrawWithTransform();
+            this.handleSegmentationClick(x, y);
         }
+    }
+    
+    // Handle start of box drawing
+    startBoxDrawing(x, y) {
+        this.state.isDrawing = true;
+        this.state.startX = x;
+        this.state.startY = y;
+    }
+    
+    // Handle click in segmentation mode
+    handleSegmentationClick(x, y) {
+        if (!this.state.isDrawingPolygon) {
+            // Start new polygon
+            this.state.isDrawingPolygon = true;
+            this.state.polygonPoints = [x, y];
+        } else {
+            // Check if closing the polygon
+            if (this.state.polygonPoints.length >= 6 && this.isNearFirstPoint(x, y)) {
+                this.completePolygon();
+            } else {
+                // Add new point
+                this.state.polygonPoints.push(x, y);
+            }
+        }
+        this.state.requestRedraw();
     }
 
     handleMouseMove(e) {
-        // 确保矩形信息最新
+        // Throttle updates for better performance
+        if (!this.state.shouldUpdate()) return;
+        
+        // Update rectangles
         this.updateRects();
         
         // Update cursor based on alt key
+        this.updateCursorStyle(e);
+        
+        // Handle panning if active
+        if (this.state.isPanning) {
+            this.handlePanning(e);
+            return;
+        }
+        
+        // Get normalized mouse position and update state
+        const pos = this.getMousePos(e);
+        const normalizedX = pos.x / this.state.originalImageWidth;
+        const normalizedY = pos.y / this.state.originalImageHeight;
+        
+        this.state.currentMousePos = { x: normalizedX, y: normalizedY };
+        
+        // Update coordinate display
+        this.updateCoordinateDisplay(normalizedX, normalizedY);
+        
+        // Redraw canvas with current mouse position
+        this.state.requestRedraw();
+    }
+    
+    // Update cursor style based on current state
+    updateCursorStyle(e) {
         if (e.altKey && !this.state.isPanning) {
             this.canvas.classList.add('grabable');
         } else if (!e.altKey && !this.state.isPanning) {
             this.canvas.classList.remove('grabable');
         }
-
-        // If panning is active, handle pan movement
-        if (this.state.isPanning) {
-            const currentPoint = this.getRawMousePos(e);
-            const deltaX = currentPoint.x - this.state.lastPanPoint.x;
-            const deltaY = currentPoint.y - this.state.lastPanPoint.y;
-            
-            this.state.translateX += deltaX;
-            this.state.translateY += deltaY;
-            this.state.lastPanPoint = currentPoint;
-            
-            this.redrawWithTransform();
-            return;
-        }
-        
-        // Get mouse position in image coordinates
-        const pos = this.getMousePos(e);
-        
-        // Calculate normalized coordinates (0-1 range for display)
-        const normalizedX = pos.x / this.state.originalImageWidth;
-        const normalizedY = pos.y / this.state.originalImageHeight;
-        
-        // Store current mouse position for drawing
-        this.state.currentMousePos = { x: normalizedX, y: normalizedY };
-        
-        // Update coordinate display in status bar
-        this.coordinates.textContent = `X: ${Math.round(normalizedX * 100)}%, Y: ${Math.round(normalizedY * 100)}%`;
-
-        // Update canvas with current mouse position
-        this.updateCanvasOnMouseMove(pos);
     }
-
-    updateCanvasOnMouseMove(pos) {
-        // Calculate normalized coordinates (0-1 range)
-        const x = pos.x / this.state.originalImageWidth;
-        const y = pos.y / this.state.originalImageHeight;
-
-        // Always redraw to ensure clean canvas
-        this.redrawWithTransform();
+    
+    // Handle panning logic
+    handlePanning(e) {
+        const currentPoint = this.getRawMousePos(e);
+        const deltaX = currentPoint.x - this.state.lastPanPoint.x;
+        const deltaY = currentPoint.y - this.state.lastPanPoint.y;
         
-        // Save current context and apply transformations
-        this.ctx.save();
-        this.ctx.translate(this.state.translateX, this.state.translateY);
-        this.ctx.scale(this.state.scale, this.state.scale);
-
-        if (this.state.currentMode === 'box' && this.state.isDrawing) {
-            this.drawPreviewBox(x, y);
-        } else if (this.state.currentMode === 'seg' && this.state.isDrawingPolygon) {
-            this.drawCurrentPolygon();
-            
-            // Highlight if near first point
-            if (this.state.polygonPoints.length >= 6 && 
-                this.isNearFirstPoint(x, y)) {
-                const firstX = this.state.polygonPoints[0] * this.state.originalImageWidth;
-                const firstY = this.state.polygonPoints[1] * this.state.originalImageHeight;
-                
-                this.ctx.strokeStyle = '#ffffff';
-                this.ctx.lineWidth = 3 / this.state.scale;
-                this.ctx.beginPath();
-                this.ctx.arc(firstX, firstY, 8 / this.state.scale, 0, Math.PI * 2);
-                this.ctx.stroke();
-            }
-        }
+        this.state.translateX += deltaX;
+        this.state.translateY += deltaY;
+        this.state.lastPanPoint = currentPoint;
         
-        // Draw crosshairs at mouse position (using raw image coordinates)
-        this.drawCrosshairs(pos.x, pos.y);
-        
-        this.ctx.restore();
+        this.state.requestRedraw();
+    }
+    
+    // Update coordinate display in status bar
+    updateCoordinateDisplay(x, y) {
+        this.coordinates.textContent = `X: ${Math.round(x * 100)}%, Y: ${Math.round(y * 100)}%`;
     }
 
     handleMouseUp(e) {
-        // 确保矩形信息最新
+        // Update rectangles
         this.updateRects();
         
+        // Handle pan end
         if (this.state.isPanning) {
             this.state.isPanning = false;
             this.canvas.classList.remove('grabbing');
             return;
         }
         
+        // Handle box completion
         if (this.state.currentMode === 'box' && this.state.isDrawing) {
-            const pos = this.getMousePos(e);
-            
-            // Calculate normalized coordinates (0-1 range)
-            const x = pos.x / this.state.originalImageWidth;
-            const y = pos.y / this.state.originalImageHeight;
-            
-            // Only create a box if there's a minimum size
-            const width = Math.abs(x - this.state.startX);
-            const height = Math.abs(y - this.state.startY);
-            
-            // Minimum size check (0.01 = 1% of image size)
-            if (width > 0.01 && height > 0.01) {
-                // Calculate the center of the box
-                const boxX = Math.min(this.state.startX, x) + width/2;
-                const boxY = Math.min(this.state.startY, y) + height/2;
-                
-                // Add the new bounding box to labels
-                this.state.initialLabels.push({
-                    class: this.state.currentLabel,
-                    x: boxX,
-                    y: boxY,
-                    width: width,
-                    height: height,
-                    isSegmentation: false
-                });
-                
-                // Update the UI
-                this.updateLabelList();
-            }
-            
-            this.state.isDrawing = false;
-            this.redrawWithTransform();
+            this.completeBoxDrawing(e);
         }
+    }
+    
+    // Complete box drawing and add to labels
+    completeBoxDrawing(e) {
+        const pos = this.getMousePos(e);
+        
+        // Get normalized coordinates
+        const x = pos.x / this.state.originalImageWidth;
+        const y = pos.y / this.state.originalImageHeight;
+        
+        // Calculate box dimensions
+        const width = Math.abs(x - this.state.startX);
+        const height = Math.abs(y - this.state.startY);
+        
+        // Only create box if minimum size is met
+        if (width > CONFIG.MIN_BOX_SIZE && height > CONFIG.MIN_BOX_SIZE) {
+            // Calculate box center
+            const boxX = Math.min(this.state.startX, x) + width/2;
+            const boxY = Math.min(this.state.startY, y) + height/2;
+            
+            // Add the new bounding box
+            this.state.initialLabels.push({
+                class: this.state.currentLabel,
+                x: boxX,
+                y: boxY,
+                width: width,
+                height: height,
+                isSegmentation: false
+            });
+            
+            // Add to history
+            this.state.pushHistory();
+            
+            // Update UI
+            this.updateLabelList();
+        }
+        
+        this.state.isDrawing = false;
+        this.state.requestRedraw();
     }
 
     handleWheel(e) {
-        // Only handle zooming when ctrl key is pressed
+        // Handle zooming with ctrl key
         if (e.ctrlKey) {
-            e.preventDefault();
-            
-            // 确保矩形信息最新
-            this.updateRects();
-            
-            // Get mouse position before zoom
-            const mousePos = this.getRawMousePos(e);
-            
-            // Calculate zoom factor
-            const delta = e.deltaY > 0 ? -1 : 1;
-            const zoom = delta * CONFIG.ZOOM_SPEED;
-            const newScale = Math.max(
-                CONFIG.MIN_ZOOM,
-                Math.min(CONFIG.MAX_ZOOM, this.state.scale + zoom)
-            );
-            
-            // Adjust translation to zoom towards mouse position
-            if (newScale !== this.state.scale) {
-                const scaleRatio = newScale / this.state.scale;
-                
-                // Calculate new offsets to zoom towards mouse position
-                this.state.translateX = mousePos.x - (mousePos.x - this.state.translateX) * scaleRatio;
-                this.state.translateY = mousePos.y - (mousePos.y - this.state.translateY) * scaleRatio;
-                
-                // Apply new scale
-                this.state.scale = newScale;
-                
-                // Update info in status bar to show zoom level
-                const zoomPercent = Math.round(this.state.scale * 100);
-                document.getElementById('zoom-info').textContent = `Zoom: ${zoomPercent}%`;
-                
-                // 调整画布大小以充分利用空间
-                this.resizeCanvas();
-                
-                this.redrawWithTransform();
-            }
+            this.handleZoom(e);
         }
-        // Add scrolling when zoomed in (scale > 1)
+        // Handle scrolling when zoomed in
         else if (this.state.scale > 1) {
-            e.preventDefault();
-            
-            // 计算滚动距离
-            const scrollSpeed = 30; // 滚动速度
-            const delta = e.deltaY > 0 ? 1 : -1;
-            
-            if (e.shiftKey) {
-                // Shift+滚轮实现水平滚动
-                this.state.translateX -= delta * scrollSpeed;
-            } else {
-                // 普通滚轮实现垂直滚动
-                this.state.translateY -= delta * scrollSpeed;
-            }
-            
-            // 重绘画布
-            this.redrawWithTransform();
+            this.handleScroll(e);
         }
+    }
+    
+    // Handle zoom with wheel
+    handleZoom(e) {
+        e.preventDefault();
+        
+        // Update rectangles
+        this.updateRects();
+        
+        // Get mouse position before zoom
+        const mousePos = this.getRawMousePos(e);
+        
+        // Calculate new scale
+        const delta = e.deltaY > 0 ? -1 : 1;
+        const zoom = delta * CONFIG.ZOOM_SPEED;
+        const newScale = Math.max(
+            CONFIG.MIN_ZOOM,
+            Math.min(CONFIG.MAX_ZOOM, this.state.scale + zoom)
+        );
+        
+        // Only proceed if scale actually changed
+        if (newScale !== this.state.scale) {
+            // Calculate zoom towards mouse position
+            const scaleRatio = newScale / this.state.scale;
+            
+            // Update translation to zoom toward mouse cursor
+            this.state.translateX = mousePos.x - (mousePos.x - this.state.translateX) * scaleRatio;
+            this.state.translateY = mousePos.y - (mousePos.y - this.state.translateY) * scaleRatio;
+            
+            // Apply new scale
+            this.state.scale = newScale;
+            
+            // Update zoom info display
+            this.updateZoomDisplay();
+            
+            // Resize canvas and redraw
+            this.resizeCanvas();
+            this.state.requestRedraw();
+        }
+    }
+    
+    // Handle scrolling when zoomed in
+    handleScroll(e) {
+        e.preventDefault();
+        
+        // Calculate scroll distance
+        const delta = e.deltaY > 0 ? 1 : -1;
+        
+        if (e.shiftKey) {
+            // Horizontal scroll with shift key
+            this.state.translateX -= delta * CONFIG.SCROLL_SPEED;
+        } else {
+            // Vertical scroll normally
+            this.state.translateY -= delta * CONFIG.SCROLL_SPEED;
+        }
+        
+        // Redraw canvas
+        this.state.requestRedraw();
+    }
+    
+    // Update zoom display in UI
+    updateZoomDisplay() {
+        const zoomPercent = Math.round(this.state.scale * 100);
+        document.getElementById('zoom-info').textContent = `Zoom: ${zoomPercent}%`;
     }
 
     handleContextMenu(e) {
         e.preventDefault();
+        // Cancel polygon drawing on right click
         if (this.state.currentMode === 'seg' && this.state.isDrawingPolygon) {
             this.state.isDrawingPolygon = false;
             this.state.polygonPoints = [];
-            this.redrawWithTransform();
+            this.state.requestRedraw();
         }
     }
 
     handleResize() {
         if (this.state.currentImage) {
             this.resizeCanvas();
-            this.redrawWithTransform();
+            this.state.requestRedraw();
         }
     }
 
     resizeCanvas() {
         const container = this.canvas.parentElement;
-        const containerStyle = window.getComputedStyle(container);
-        
-        // 直接获取容器的完整尺寸，不减去内边距（因为我们已经将内边距设置为0）
         const maxWidth = container.clientWidth;
         const maxHeight = container.clientHeight;
         
-        // 使用画布大小而不是图像大小，使缩放时可以充分利用空间
-        // 当缩放比例不为1时，不保持原始宽高比，而是填充整个容器
         if (this.state.scale !== 1) {
-            // 放大时，直接使用容器的最大尺寸，不保持宽高比
+            // When zoomed, fill container without maintaining aspect ratio
             this.canvas.style.width = `${maxWidth}px`;
             this.canvas.style.height = `${maxHeight}px`;
             
-            // 设置canvas的原生宽高为容器宽高
+            // Set canvas dimensions if needed
             if (this.canvas.width !== maxWidth || this.canvas.height !== maxHeight) {
-                // 保存当前画布内容
+                // Cache current canvas content
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = this.canvas.width;
                 tempCanvas.height = this.canvas.height;
                 const tempCtx = tempCanvas.getContext('2d');
                 tempCtx.drawImage(this.canvas, 0, 0);
                 
-                // 调整canvas尺寸
+                // Resize canvas
                 this.canvas.width = maxWidth;
                 this.canvas.height = maxHeight;
                 
-                // 恢复画布内容
+                // Restore content
                 this.ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 
                                   0, 0, this.canvas.width, this.canvas.height);
             }
         } else {
-            // 正常比例时，保持图像宽高比
-            const imageAspectRatio = this.state.currentImage.width / this.state.currentImage.height;
+            // At normal scale, maintain image aspect ratio
+            const imageAspectRatio = this.state.originalImageWidth / this.state.originalImageHeight;
             const containerAspectRatio = maxWidth / maxHeight;
             
             let newWidth, newHeight;
@@ -486,7 +599,7 @@ class CanvasManager {
             this.canvas.style.height = `${newHeight}px`;
         }
         
-        // 更新矩形信息以反映新的尺寸
+        // Update rectangles to reflect new dimensions
         this.updateRects();
     }
 
@@ -494,68 +607,117 @@ class CanvasManager {
         if (!imagePath) return;
         
         const img = new Image();
+        
+        // Show loading indicator
+        this.showLoadingState(true);
+        
         img.onload = () => {
+            // Hide loading indicator
+            this.showLoadingState(false);
+            
             const container = this.canvas.parentElement;
             const maxWidth = container.clientWidth;
             const maxHeight = container.clientHeight;
             
-            // 保存原始图像尺寸
+            // Store original image dimensions
             this.state.originalImageWidth = img.width;
             this.state.originalImageHeight = img.height;
             
-            // 使用图像的尺寸作为canvas的基础尺寸
+            // Set canvas to image dimensions
             this.canvas.width = img.width;
             this.canvas.height = img.height;
             
-            // 同时将canvas显示尺寸调整为容器尺寸
+            // Adjust display size to container
             this.canvas.style.width = `${maxWidth}px`;
             this.canvas.style.height = `${maxHeight}px`;
             
-            // Reset zoom and pan when loading a new image
+            // Reset zoom and pan
             this.state.scale = 1;
             this.state.translateX = 0;
             this.state.translateY = 0;
-            document.getElementById('zoom-info').textContent = 'Zoom: 100%';
+            this.updateZoomDisplay();
             
-            // 调用resizeCanvas以确保画布尺寸正确
+            // Ensure canvas dimensions are correct
             this.resizeCanvas();
             
-            // 更新矩形信息
+            // Update rectangles
             this.updateRects();
             
-            this.redrawWithTransform();
+            // Draw image and labels
+            this.state.requestRedraw();
             this.updateLabelList();
         };
+        
+        img.onerror = () => {
+            this.showLoadingState(false);
+            // Show error message
+            this.showImageError();
+        };
+        
         img.src = imagePath;
         this.state.currentImage = img;
     }
+    
+    // Show loading state UI
+    showLoadingState(isLoading) {
+        const canvas = this.canvas;
+        if (isLoading) {
+            canvas.classList.add('loading');
+            // Could add a loading spinner if desired
+        } else {
+            canvas.classList.remove('loading');
+        }
+    }
+    
+    // Show image loading error
+    showImageError() {
+        // Display error message on canvas
+        this.ctx.fillStyle = CONFIG.BACKGROUND_COLOR;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillStyle = '#ff5252';
+        this.ctx.font = '16px sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Error loading image', this.canvas.width / 2, this.canvas.height / 2);
+    }
 
     redrawWithTransform() {
-        // Clear the entire canvas to prevent ghosting effects
+        // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Draw background (fill entire canvas area)
+        // Draw background
         this.ctx.save();
-        this.ctx.fillStyle = '#1e1e1e'; // Use background color
+        this.ctx.fillStyle = CONFIG.BACKGROUND_COLOR;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.restore();
         
-        // Only draw the image and labels if we have a valid image
+        // Draw image and annotations if image is loaded
         if (this.state.currentImage && this.state.currentImage.complete) {
-            // Save context, apply transformations, draw, then restore
+            // Apply transformations
             this.ctx.save();
             this.ctx.translate(this.state.translateX, this.state.translateY);
             this.ctx.scale(this.state.scale, this.state.scale);
             
-            // Draw the image
+            // Draw image
             this.ctx.drawImage(this.state.currentImage, 0, 0);
             
-            // Always draw labels, the label text visibility is controlled inside the drawLabels methods
+            // Draw labels
             this.drawLabels();
             
-            // Draw current polygon if in polygon mode
+            // Draw current polygon if in segmentation mode
             if (this.state.currentMode === 'seg' && this.state.isDrawingPolygon) {
                 this.drawCurrentPolygon();
+            }
+            
+            // Draw active box if in box mode and drawing
+            if (this.state.currentMode === 'box' && this.state.isDrawing && this.state.currentMousePos) {
+                this.drawPreviewBox(this.state.currentMousePos.x, this.state.currentMousePos.y);
+            }
+            
+            // Draw crosshairs at mouse position
+            if (this.state.currentMousePos) {
+                const mouseX = this.state.currentMousePos.x * this.state.originalImageWidth;
+                const mouseY = this.state.currentMousePos.y * this.state.originalImageHeight;
+                this.drawCrosshairs(mouseX, mouseY);
             }
             
             this.ctx.restore();
@@ -569,8 +731,6 @@ class CanvasManager {
         
         this.state.initialLabels.forEach((label, index) => {
             const color = CONFIG.COLORS[label.class % CONFIG.COLORS.length];
-            this.ctx.strokeStyle = color;
-            this.ctx.lineWidth = 2 / this.state.scale;
             
             if (label.isSegmentation && label.points) {
                 this.drawSegmentationLabel(label, color);
@@ -581,12 +741,12 @@ class CanvasManager {
     }
 
     drawSegmentationLabel(label, color) {
-        // Set appropriate line styles
+        // Set styles
         this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = 2 / this.state.scale;
-        this.ctx.fillStyle = `${color}33`; // Add transparency to fill color
+        this.ctx.lineWidth = CONFIG.LINE_WIDTH / this.state.scale;
+        this.ctx.fillStyle = `${color}33`; // Add transparency
         
-        // Draw segmentation polygon
+        // Draw polygon
         this.ctx.beginPath();
         for (let i = 0; i < label.points.length; i += 2) {
             const x = label.points[i] * this.state.originalImageWidth;
@@ -598,79 +758,68 @@ class CanvasManager {
             }
         }
         this.ctx.closePath();
+        this.ctx.fill();
         this.ctx.stroke();
-        this.ctx.fill(); // Add semi-transparent fill
         
-        // Draw the label text only if showLabels is enabled
+        // Draw label text if enabled
         if (this.state.showLabels && label.points.length >= 2) {
-            // Find a good position for the label (use the first point)
+            // Use first point for label position
             const labelX = label.points[0] * this.state.originalImageWidth;
             const labelY = label.points[1] * this.state.originalImageHeight;
             
             const text = `${this.state.classNamesList[label.class] || label.class.toString()} (SEG)`;
-            
-            // Adjust font size for zoom level
-            this.ctx.font = `${14 / Math.max(1, this.state.scale)}px sans-serif`;
-            const textWidth = this.ctx.measureText(text).width;
-            
-            // Draw text background
-            this.ctx.fillStyle = color;
-            this.ctx.fillRect(
-                labelX,
-                labelY - 20 / this.state.scale,
-                textWidth + 10 / this.state.scale,
-                20 / this.state.scale
-            );
-            
-            // Draw text
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.fillText(
-                text,
-                labelX + 5 / this.state.scale,
-                labelY - 5 / this.state.scale
-            );
+            this.drawLabelText(text, labelX, labelY, color);
         }
     }
 
     drawBoundingBoxLabel(label, color) {
-        // Calculate pixel positions using normalized coordinates and image dimensions
+        // Calculate pixel coordinates
         const x = label.x * this.state.originalImageWidth;
         const y = label.y * this.state.originalImageHeight;
         const width = label.width * this.state.originalImageWidth;
         const height = label.height * this.state.originalImageHeight;
         
-        // Always draw the bounding box
+        // Draw box
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = CONFIG.LINE_WIDTH / this.state.scale;
         this.ctx.strokeRect(x - width/2, y - height/2, width, height);
         
-        // Draw the label text only if showLabels is enabled
+        // Draw label text if enabled
         if (this.state.showLabels) {
             const text = `${this.state.classNamesList[label.class] || label.class.toString()} (BOX)`;
-            
-            // Measure text and set font size based on zoom level
-            this.ctx.font = `${14 / Math.max(1, this.state.scale)}px sans-serif`;
-            const textWidth = this.ctx.measureText(text).width;
-            
-            // Draw text background
-            this.ctx.fillStyle = color;
-            this.ctx.fillRect(
-                x - width/2,
-                y - height/2 - 20 / this.state.scale,
-                textWidth + 10 / this.state.scale,
-                20 / this.state.scale
-            );
-            
-            // Draw text
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.fillText(
-                text,
-                x - width/2 + 5 / this.state.scale,
-                y - height/2 - 5 / this.state.scale
-            );
+            this.drawLabelText(text, x - width/2, y - height/2 - CONFIG.LABEL_HEIGHT / this.state.scale, color);
         }
+    }
+    
+    // Helper method for drawing label text
+    drawLabelText(text, x, y, color) {
+        // Set font size based on zoom
+        const fontSize = CONFIG.LABEL_FONT_SIZE / Math.max(1, this.state.scale);
+        this.ctx.font = `${fontSize}px sans-serif`;
+        
+        // Measure text width
+        const textWidth = this.ctx.measureText(text).width;
+        
+        // Draw text background
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(
+            x,
+            y,
+            textWidth + (CONFIG.LABEL_PADDING * 2) / this.state.scale,
+            CONFIG.LABEL_HEIGHT / this.state.scale
+        );
+        
+        // Draw text
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillText(
+            text,
+            x + CONFIG.LABEL_PADDING / this.state.scale,
+            y + (CONFIG.LABEL_HEIGHT - CONFIG.LABEL_PADDING) / this.state.scale
+        );
     }
 
     drawPreviewBox(currentX, currentY) {
-        // Calculate normalized dimensions for the preview box
+        // Calculate normalized dimensions
         const width = Math.abs(currentX - this.state.startX);
         const height = Math.abs(currentY - this.state.startY);
         
@@ -678,50 +827,50 @@ class CanvasManager {
         const boxX = Math.min(this.state.startX, currentX) + width/2;
         const boxY = Math.min(this.state.startY, currentY) + height/2;
         
-        // Set stroke style based on current label
+        // Set styles
         this.ctx.strokeStyle = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
-        this.ctx.lineWidth = 2 / this.state.scale; // Adjust line width for zoom level
+        this.ctx.lineWidth = CONFIG.LINE_WIDTH / this.state.scale;
         
-        // Calculate pixel positions using the image dimensions
+        // Convert to pixel coordinates
         const boxLeft = (boxX - width/2) * this.state.originalImageWidth;
         const boxTop = (boxY - height/2) * this.state.originalImageHeight;
         const boxWidth = width * this.state.originalImageWidth;
         const boxHeight = height * this.state.originalImageHeight;
         
-        // Draw the rectangle
+        // Draw rectangle
         this.ctx.strokeRect(boxLeft, boxTop, boxWidth, boxHeight);
     }
 
     drawCrosshairs(x, y) {
-        // 计算图像坐标对应的Canvas上的位置（考虑缩放和平移）
+        // Calculate canvas positions
         const canvasX = x * this.state.scale + this.state.translateX;
         const canvasY = y * this.state.scale + this.state.translateY;
         
-        // 在Canvas坐标系中绘制十字线
+        // Draw in canvas coordinate space
         this.ctx.save();
-        // 重置变换矩阵，确保在Canvas空间中绘制
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         
-        this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.94)';
+        // Set crosshair style
+        this.ctx.strokeStyle = CONFIG.CROSSHAIR_COLOR;
         this.ctx.lineWidth = 1;
         this.ctx.setLineDash([5, 5]);
         
-        // 绘制水平线
+        // Draw horizontal line
         this.ctx.beginPath();
         this.ctx.moveTo(0, canvasY);
         this.ctx.lineTo(this.canvas.width, canvasY);
         this.ctx.stroke();
         
-        // 绘制垂直线
+        // Draw vertical line
         this.ctx.beginPath();
         this.ctx.moveTo(canvasX, 0);
         this.ctx.lineTo(canvasX, this.canvas.height);
         this.ctx.stroke();
         
-        // 在交叉点绘制小圆圈
+        // Draw center point
         this.ctx.beginPath();
         this.ctx.arc(canvasX, canvasY, 3, 0, Math.PI * 2);
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.strokeStyle = CONFIG.CROSSHAIR_CENTER_COLOR;
         this.ctx.stroke();
         
         this.ctx.restore();
@@ -730,50 +879,67 @@ class CanvasManager {
     drawCurrentPolygon() {
         if (!this.state.isDrawingPolygon || this.state.polygonPoints.length < 2) return;
 
-        this.ctx.strokeStyle = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
-        this.ctx.lineWidth = 2 / this.state.scale;
+        const color = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = CONFIG.LINE_WIDTH / this.state.scale;
         
-        // Draw the complete polygon including the preview line
+        // Draw existing polygon lines
         this.ctx.beginPath();
+        
+        // Get first point
         const firstX = this.state.polygonPoints[0] * this.state.originalImageWidth;
         const firstY = this.state.polygonPoints[1] * this.state.originalImageHeight;
         this.ctx.moveTo(firstX, firstY);
         
-        // Draw all existing lines
+        // Draw connected lines
         for (let i = 2; i < this.state.polygonPoints.length; i += 2) {
             const x = this.state.polygonPoints[i] * this.state.originalImageWidth;
             const y = this.state.polygonPoints[i + 1] * this.state.originalImageHeight;
             this.ctx.lineTo(x, y);
         }
         
-        // Draw preview line
-        if (this.state.currentMousePos) {
-            const lastX = this.state.polygonPoints[this.state.polygonPoints.length - 2] * this.state.originalImageWidth;
-            const lastY = this.state.polygonPoints[this.state.polygonPoints.length - 1] * this.state.originalImageHeight;
-            this.ctx.moveTo(lastX, lastY);
-
-            if (this.isNearFirstPoint(this.state.currentMousePos.x, this.state.currentMousePos.y)) {
-                this.ctx.lineTo(firstX, firstY);
-            } else {
-                this.ctx.lineTo(
-                    this.state.currentMousePos.x * this.state.originalImageWidth,
-                    this.state.currentMousePos.y * this.state.originalImageHeight
-                );
-            }
-        }
-        
         this.ctx.stroke();
+        
+        // Draw preview line if mouse position is available
+        if (this.state.currentMousePos) {
+            this.drawPreviewLine(firstX, firstY, color);
+        }
         
         // Draw points
         this.drawPolygonPoints();
     }
+    
+    // Draw preview line from last point to current mouse or first point if closing
+    drawPreviewLine(firstX, firstY, color) {
+        const lastX = this.state.polygonPoints[this.state.polygonPoints.length - 2] * this.state.originalImageWidth;
+        const lastY = this.state.polygonPoints[this.state.polygonPoints.length - 1] * this.state.originalImageHeight;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(lastX, lastY);
+        
+        if (this.isNearFirstPoint(this.state.currentMousePos.x, this.state.currentMousePos.y)) {
+            // If near first point, snap preview line to first point
+            this.ctx.lineTo(firstX, firstY);
+        } else {
+            // Otherwise draw to current mouse position
+            this.ctx.lineTo(
+                this.state.currentMousePos.x * this.state.originalImageWidth,
+                this.state.currentMousePos.y * this.state.originalImageHeight
+            );
+        }
+        
+        this.ctx.strokeStyle = color;
+        this.ctx.stroke();
+    }
 
     drawPolygonPoints() {
-        this.ctx.fillStyle = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
+        const color = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
+        this.ctx.fillStyle = color;
         
-        // Adjust point size based on zoom level
-        const pointRadius = 3 / this.state.scale;
+        // Calculate point radius based on zoom
+        const pointRadius = CONFIG.POINT_RADIUS / this.state.scale;
         
+        // Draw all points
         for (let i = 0; i < this.state.polygonPoints.length; i += 2) {
             const x = this.state.polygonPoints[i] * this.state.originalImageWidth;
             const y = this.state.polygonPoints[i + 1] * this.state.originalImageHeight;
@@ -784,57 +950,71 @@ class CanvasManager {
 
         // Highlight first point if we have enough points
         if (this.state.polygonPoints.length >= 4) {
-            const firstX = this.state.polygonPoints[0] * this.state.originalImageWidth;
-            const firstY = this.state.polygonPoints[1] * this.state.originalImageHeight;
-            
-            // Draw outer white circle
+            this.highlightFirstPoint(color, pointRadius);
+        }
+    }
+    
+    // Highlight the first point of polygon
+    highlightFirstPoint(color, pointRadius) {
+        const firstX = this.state.polygonPoints[0] * this.state.originalImageWidth;
+        const firstY = this.state.polygonPoints[1] * this.state.originalImageHeight;
+        
+        // Draw outer white circle
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = CONFIG.LINE_WIDTH / this.state.scale;
+        this.ctx.beginPath();
+        this.ctx.arc(firstX, firstY, CONFIG.HIGHLIGHT_RADIUS / this.state.scale, 0, Math.PI * 2);
+        this.ctx.stroke();
+
+        // Draw inner colored circle
+        this.ctx.fillStyle = color;
+        this.ctx.beginPath();
+        this.ctx.arc(firstX, firstY, pointRadius, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Add extra highlight when mouse is near
+        if (this.state.currentMousePos && 
+            this.isNearFirstPoint(this.state.currentMousePos.x, this.state.currentMousePos.y)) {
             this.ctx.strokeStyle = '#ffffff';
-            this.ctx.lineWidth = 2 / this.state.scale;
+            this.ctx.lineWidth = 3 / this.state.scale;
             this.ctx.beginPath();
-            this.ctx.arc(firstX, firstY, 5 / this.state.scale, 0, Math.PI * 2);
+            this.ctx.arc(firstX, firstY, CONFIG.CLOSE_HIGHLIGHT_RADIUS / this.state.scale, 0, Math.PI * 2);
             this.ctx.stroke();
-
-            // Draw inner colored circle
-            this.ctx.fillStyle = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
-            this.ctx.beginPath();
-            this.ctx.arc(firstX, firstY, pointRadius, 0, Math.PI * 2);
-            this.ctx.fill();
-
-            // Extra highlight when mouse is near
-            if (this.state.currentMousePos && 
-                this.isNearFirstPoint(this.state.currentMousePos.x, this.state.currentMousePos.y)) {
-                this.ctx.strokeStyle = '#ffffff';
-                this.ctx.lineWidth = 3 / this.state.scale;
-                this.ctx.beginPath();
-                this.ctx.arc(firstX, firstY, 8 / this.state.scale, 0, Math.PI * 2);
-                this.ctx.stroke();
-            }
         }
     }
 
     isNearFirstPoint(x, y) {
         if (this.state.polygonPoints.length < 2) return false;
+        
         const firstX = this.state.polygonPoints[0];
         const firstY = this.state.polygonPoints[1];
         const distance = Math.sqrt(Math.pow(x - firstX, 2) + Math.pow(y - firstY, 2));
+        
         return distance < CONFIG.CLOSE_POINT_THRESHOLD;
     }
 
     completePolygon() {
         if (this.state.polygonPoints.length >= 6) {
+            // Add new segmentation label
             this.state.initialLabels.push({
                 class: this.state.currentLabel,
-                x: 0,  // These will be calculated from points
+                x: 0,
                 y: 0,
                 width: 0,
                 height: 0,
                 isSegmentation: true,
-                points: [...this.state.polygonPoints]  // All values after classId are points
+                points: [...this.state.polygonPoints]
             });
             
+            // Add to history
+            this.state.pushHistory();
+            
+            // Reset polygon state
             this.state.isDrawingPolygon = false;
             this.state.polygonPoints = [];
-            this.redrawWithTransform();
+            
+            // Update UI
+            this.state.requestRedraw();
             this.updateLabelList();
         }
     }
@@ -843,14 +1023,25 @@ class CanvasManager {
         const labelList = document.getElementById('labelList');
         labelList.innerHTML = '';
         
+        if (!this.state.initialLabels.length) {
+            // Show empty state if no labels
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'empty-state';
+            emptyDiv.textContent = 'No labels yet. Draw on the image to add labels.';
+            labelList.appendChild(emptyDiv);
+            return;
+        }
+        
         this.state.initialLabels.forEach((label, index) => {
             const div = document.createElement('div');
             div.className = 'label-item';
             
+            // Create color indicator
             const colorDiv = document.createElement('div');
             colorDiv.className = 'label-color';
             colorDiv.style.backgroundColor = CONFIG.COLORS[label.class % CONFIG.COLORS.length];
             
+            // Create class selector
             const select = document.createElement('select');
             select.className = 'class-select';
             select.innerHTML = this.state.classNamesList.map((name, i) => 
@@ -859,22 +1050,29 @@ class CanvasManager {
             select.onchange = () => {
                 this.state.initialLabels[index].class = parseInt(select.value);
                 colorDiv.style.backgroundColor = CONFIG.COLORS[label.class % CONFIG.COLORS.length];
-                this.redrawWithTransform();
+                this.state.pushHistory();
+                this.state.requestRedraw();
             };
 
+            // Create type indicator
             const typeSpan = document.createElement('span');
             typeSpan.className = 'label-type';
             typeSpan.textContent = label.isSegmentation ? 'SEG' : 'BOX';
             
+            // Create delete button
             const deleteBtn = document.createElement('button');
             deleteBtn.innerHTML = '×';
+            deleteBtn.title = 'Delete label';
+            deleteBtn.className = 'delete-button';
             deleteBtn.style.marginLeft = 'auto';
             deleteBtn.onclick = () => {
                 this.state.initialLabels.splice(index, 1);
-                this.redrawWithTransform();
+                this.state.pushHistory();
+                this.state.requestRedraw();
                 this.updateLabelList();
             };
             
+            // Assemble label item
             div.appendChild(colorDiv);
             div.appendChild(select);
             div.appendChild(typeSpan);
@@ -890,27 +1088,46 @@ class CanvasManager {
     }
 
     handleKeyUp(e) {
-        // If alt key is released and not panning
         if (!e.altKey && !this.state.isPanning) {
             this.canvas.classList.remove('grabable');
         }
     }
 
-    // Handle keyboard shortcuts for navigation and saving
+    // Handle keyboard shortcuts
     handleKeyboardShortcuts(e) {
-        // Ignore keyboard shortcuts when typing in input fields
+        // Skip if target is input element
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
             return;
         }
         
-        // Save labels with Ctrl+S
+        // Save with Ctrl+S
         if (e.ctrlKey && e.key.toLowerCase() === 's') {
-            e.preventDefault(); // Prevent browser's save dialog
+            e.preventDefault();
             this.state.vscode.postMessage({ command: 'save', labels: this.state.initialLabels });
             return;
         }
         
-        // Navigate with A and D keys (without modifiers)
+        // Undo with Ctrl+Z
+        if (e.ctrlKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            if (this.state.undo()) {
+                this.state.requestRedraw();
+                this.updateLabelList();
+            }
+            return;
+        }
+        
+        // Redo with Ctrl+Shift+Z only (removed Ctrl+Y to avoid conflict)
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            if (this.state.redo()) {
+                this.state.requestRedraw();
+                this.updateLabelList();
+            }
+            return;
+        }
+        
+        // Navigation with A and D keys (without modifiers)
         if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
             switch (e.key.toLowerCase()) {
                 case 'a':
@@ -926,59 +1143,143 @@ class CanvasManager {
     }
 }
 
-// UI Manager
+// UI Manager with improved event handling
 class UIManager {
     constructor(state, canvasManager) {
         this.state = state;
         this.canvasManager = canvasManager;
+        
+        // Store DOM elements for better performance
+        this.elements = {
+            prevButton: document.getElementById('prevImage'),
+            nextButton: document.getElementById('nextImage'),
+            saveButton: document.getElementById('saveLabels'),
+            labelMode: document.getElementById('labelMode'),
+            toggleLabels: document.getElementById('toggleLabels'),
+            searchInput: document.getElementById('imageSearch'),
+            searchResults: document.getElementById('searchResults'),
+            undoButton: this.createUndoRedoButtons()
+        };
+        
         this.setupEventListeners();
+    }
+    
+    // Create undo/redo buttons and add to toolbar
+    createUndoRedoButtons() {
+        const toolbar = document.querySelector('.right-controls');
+        
+        // Create undo button
+        const undoButton = document.createElement('button');
+        undoButton.id = 'undoButton';
+        undoButton.className = 'secondary';
+        undoButton.title = 'Undo (Ctrl+Z)';
+        undoButton.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 10h10c4 0 7 3 7 7v0c0 4-3 7-7 7H9"></path>
+                <path d="M9 17l-6-7 6-7"></path>
+            </svg>
+        `;
+        
+        // Create redo button (updated tooltip to only show Ctrl+Shift+Z)
+        const redoButton = document.createElement('button');
+        redoButton.id = 'redoButton';
+        redoButton.className = 'secondary';
+        redoButton.title = 'Redo (Ctrl+Shift+Z)';
+        redoButton.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10h-10c-4 0-7 3-7 7v0c0 4 3 7 7 7h4"></path>
+                <path d="M15 17l6-7-6-7"></path>
+            </svg>
+        `;
+        
+        // Add buttons to toolbar
+        toolbar.insertBefore(redoButton, toolbar.firstChild);
+        toolbar.insertBefore(undoButton, toolbar.firstChild);
+        
+        return { undo: undoButton, redo: redoButton };
     }
 
     setupEventListeners() {
-        // Navigation buttons
-        document.getElementById('prevImage').addEventListener('click', () => {
-            this.state.vscode.postMessage({ command: 'previous' });
-        });
-
-        document.getElementById('nextImage').addEventListener('click', () => {
-            this.state.vscode.postMessage({ command: 'next' });
-        });
-
-        // Save button
-        document.getElementById('saveLabels').addEventListener('click', () => {
-            this.state.vscode.postMessage({ command: 'save', labels: this.state.initialLabels });
-        });
-
-        // Label mode selector
-        document.getElementById('labelMode').addEventListener('change', (e) => {
-            this.state.currentMode = e.target.value;
-            this.state.polygonPoints = [];
-            this.state.isDrawingPolygon = false;
-            this.canvasManager.redrawWithTransform();
-        });
-
-        // Toggle labels button
-        document.getElementById('toggleLabels').addEventListener('click', () => {
-            this.state.showLabels = !this.state.showLabels;
-            document.getElementById('toggleLabels').classList.toggle('active', this.state.showLabels);
-            this.canvasManager.redrawWithTransform();
-        });
-
-        // Search functionality
+        // Add listeners with bound methods for better organization
+        this.setupNavigationListeners();
+        this.setupModeListeners();
+        this.setupActionListeners();
         this.setupSearch();
+    }
+    
+    setupNavigationListeners() {
+        // Previous and next buttons
+        this.elements.prevButton.addEventListener('click', this.navigatePrevious.bind(this));
+        this.elements.nextButton.addEventListener('click', this.navigateNext.bind(this));
+    }
+    
+    setupModeListeners() {
+        // Label mode selector
+        this.elements.labelMode.addEventListener('change', this.changeMode.bind(this));
+        
+        // Toggle labels button
+        this.elements.toggleLabels.addEventListener('click', this.toggleLabels.bind(this));
+    }
+    
+    setupActionListeners() {
+        // Save button
+        this.elements.saveButton.addEventListener('click', this.saveLabels.bind(this));
+        
+        // Undo/redo buttons
+        this.elements.undoButton.undo.addEventListener('click', this.handleUndo.bind(this));
+        this.elements.undoButton.redo.addEventListener('click', this.handleRedo.bind(this));
+    }
+    
+    // Navigation handlers
+    navigatePrevious() {
+        this.state.vscode.postMessage({ command: 'previous' });
+    }
+    
+    navigateNext() {
+        this.state.vscode.postMessage({ command: 'next' });
+    }
+    
+    // Mode change handler
+    changeMode(e) {
+        this.state.currentMode = e.target.value;
+        this.state.polygonPoints = [];
+        this.state.isDrawingPolygon = false;
+        this.state.requestRedraw();
+    }
+    
+    // Toggle labels display
+    toggleLabels() {
+        this.state.showLabels = !this.state.showLabels;
+        this.elements.toggleLabels.classList.toggle('active', this.state.showLabels);
+        this.state.requestRedraw();
+    }
+    
+    // Save labels
+    saveLabels() {
+        this.state.vscode.postMessage({ command: 'save', labels: this.state.initialLabels });
+    }
+    
+    // Undo/Redo handlers
+    handleUndo() {
+        if (this.state.undo()) {
+            this.state.requestRedraw();
+            this.canvasManager.updateLabelList();
+        }
+    }
+    
+    handleRedo() {
+        if (this.state.redo()) {
+            this.state.requestRedraw();
+            this.canvasManager.updateLabelList();
+        }
     }
 
     setupSearch() {
-        const searchInput = document.getElementById('imageSearch');
-        const resultsDiv = document.getElementById('searchResults');
+        const searchInput = this.elements.searchInput;
+        const resultsDiv = this.elements.searchResults;
 
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(this.state.searchTimeout);
-            this.state.searchTimeout = setTimeout(() => {
-                this.handleSearch(e.target.value);
-            }, CONFIG.DEBOUNCE_DELAY);
-        });
-
+        // Use debounced event handler for better performance
+        searchInput.addEventListener('input', this.debounce(this.handleSearchInput.bind(this), CONFIG.DEBOUNCE_DELAY));
         searchInput.addEventListener('keydown', this.handleSearchKeydown.bind(this));
 
         // Close search results when clicking outside
@@ -990,10 +1291,22 @@ class UIManager {
             }
         });
     }
+    
+    // Debounce function to limit event handling frequency
+    debounce(func, delay) {
+        return (e) => {
+            clearTimeout(this.state.searchTimeout);
+            this.state.searchTimeout = setTimeout(() => func(e), delay);
+        };
+    }
+    
+    handleSearchInput(e) {
+        this.handleSearch(e.target.value);
+    }
 
     handleSearch(query) {
         if (!query) {
-            document.getElementById('searchResults').style.display = 'none';
+            this.elements.searchResults.style.display = 'none';
             return;
         }
 
@@ -1010,7 +1323,7 @@ class UIManager {
     }
 
     handleSearchKeydown(e) {
-        const results = document.getElementById('searchResults');
+        const results = this.elements.searchResults;
         const items = results.getElementsByClassName('search-result-item');
         
         switch(e.key) {
@@ -1034,20 +1347,25 @@ class UIManager {
                 e.preventDefault();
                 if (this.state.selectedSearchIndex >= 0 && items[this.state.selectedSearchIndex]) {
                     const path = items[this.state.selectedSearchIndex].getAttribute('data-path');
-                    this.state.vscode.postMessage({ command: 'loadImage', path: path });
-                    results.style.display = 'none';
-                    this.state.selectedSearchIndex = -1;
+                    this.loadImage(path);
                 }
                 break;
             case 'Escape':
+                e.preventDefault();
                 results.style.display = 'none';
                 this.state.selectedSearchIndex = -1;
                 break;
         }
     }
+    
+    loadImage(path) {
+        this.state.vscode.postMessage({ command: 'loadImage', path: path });
+        this.elements.searchResults.style.display = 'none';
+        this.state.selectedSearchIndex = -1;
+    }
 
     updateSearchResults(results) {
-        const resultsDiv = document.getElementById('searchResults');
+        const resultsDiv = this.elements.searchResults;
         resultsDiv.innerHTML = '';
         
         if (results.length > 0) {
@@ -1066,11 +1384,8 @@ class UIManager {
                 div.appendChild(filename);
                 div.appendChild(filepath);
                 div.setAttribute('data-path', path);
-                div.onclick = () => {
-                    this.state.vscode.postMessage({ command: 'loadImage', path: path });
-                    resultsDiv.style.display = 'none';
-                    this.state.selectedSearchIndex = -1;
-                };
+                div.onclick = () => this.loadImage(path);
+                
                 resultsDiv.appendChild(div);
             });
             resultsDiv.style.display = 'block';
@@ -1091,7 +1406,7 @@ class UIManager {
     }
 }
 
-// Message Handler
+// Improved Message Handler
 class MessageHandler {
     constructor(state, canvasManager) {
         this.state = state;
@@ -1100,53 +1415,80 @@ class MessageHandler {
     }
 
     setupMessageListener() {
-        window.addEventListener('message', event => {
-            const message = event.data;
-            switch (message.command) {
-                case 'imageList':
-                    this.state.allImagePaths = message.paths;
-                    break;
-                case 'updateImage':
-                    this.handleImageUpdate(message);
-                    break;
-            }
-        });
+        window.addEventListener('message', this.handleMessage.bind(this));
+    }
+    
+    handleMessage(event) {
+        const message = event.data;
+        
+        switch (message.command) {
+            case 'imageList':
+                this.handleImageList(message);
+                break;
+            case 'updateImage':
+                this.handleImageUpdate(message);
+                break;
+            case 'error':
+                this.handleError(message);
+                break;
+        }
+    }
+    
+    handleImageList(message) {
+        this.state.allImagePaths = message.paths;
     }
 
     handleImageUpdate(message) {
         this.state.currentImage = message.imageData;
-        this.state.initialLabels = message.labels;
+        this.state.initialLabels = message.labels || [];
+        
+        // Reset history
+        this.state.history = [];
+        this.state.historyIndex = -1;
+        this.state.pushHistory();
+        
+        // Update UI
         document.getElementById('imageInfo').textContent = message.imageInfo;
         document.getElementById('imageSearch').value = message.currentPath || '';
         this.canvasManager.loadImage(this.state.currentImage);
     }
+    
+    handleError(message) {
+        // Show error message
+        console.error(message.error);
+        // Could add UI notification here
+    }
 }
 
-// Initialize the application
-const state = new LabelingState();
-const canvasManager = new CanvasManager(state);
-const uiManager = new UIManager(state, canvasManager);
-new MessageHandler(state, canvasManager);
-
-// Initialize UI elements
+// Initialize application
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize toggle button state
+    const state = new LabelingState();
+    const canvasManager = new CanvasManager(state);
+    const uiManager = new UIManager(state, canvasManager);
+    const messageHandler = new MessageHandler(state, canvasManager);
+    
+    // Initialize UI states
     document.getElementById('toggleLabels').classList.toggle('active', state.showLabels);
-    
-    // Initialize label mode selector
     document.getElementById('labelMode').value = state.currentMode;
-    
-    // Initialize zoom info
     document.getElementById('zoom-info').textContent = 'Zoom: 100%';
     
-    // 初始化时更新矩形信息
+    // Initialize rectangles
     canvasManager.updateRects();
-});
-
-// Request initial image list
-state.vscode.postMessage({ command: 'getImageList' });
-
-// Initialize with current image if available
-if (state.currentImage) {
-    canvasManager.loadImage(state.currentImage);
-} 
+    
+    // Request initial image list
+    state.vscode.postMessage({ command: 'getImageList' });
+    
+    // Initialize with current image if available
+    if (state.currentImage) {
+        canvasManager.loadImage(state.currentImage);
+    }
+    
+    // Add window resizing with throttle
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            canvasManager.handleResize();
+        }, 100);
+    });
+}); 
