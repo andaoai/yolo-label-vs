@@ -7,6 +7,19 @@
 
 ![YOLO Label VS 演示](./images/demo.gif)
 
+## 主题支持
+
+我们的扩展无缝集成了所有 VS Code 主题，提供一致的用户体验：
+
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, auto); gap: 10px;">
+  <img src="../docs/images/themes/1746183912332.jpg" style="width: 100%; height: auto;" alt="默认浅色主题">
+  <img src="../docs/images/themes/1746183969990.jpg" style="width: 100%; height: auto;" alt="默认深色主题">
+  <img src="../docs/images/themes/1746183996831.jpg" style="width: 100%; height: auto;" alt="高对比度主题">
+  <img src="../docs/images/themes/1746184077610.jpg" style="width: 100%; height: auto;" alt="Monokai主题">
+  <img src="../docs/images/themes/1746184138365.jpg" style="width: 100%; height: auto;" alt="GitHub浅色主题">
+  <img src="../docs/images/themes/1746184166688.jpg" style="width: 100%; height: auto;" alt="Night Owl主题">
+</div>
+
 ## 相关文档
 
 - 中文文档
