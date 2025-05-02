@@ -8,6 +8,9 @@ on:
       - 'src/**'
       - 'package.json'
 
+permissions:
+  contents: write
+
 jobs:
   publish-to-marketplace:
     runs-on: ubuntu-latest
@@ -49,12 +52,43 @@ jobs:
           git commit -m "Bump minor version to ${{ steps.new_version.outputs.version }} for marketplace release"
           git push
       
-      - name: Install dependencies
-        run: npm ci
+      - name: Delete package-lock.json and install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install --no-package-lock --ignore-scripts
         
       - name: Compile extension
         run: npm run compile
         
+      - name: Package extension
+        run: |
+          npm install -g @vscode/vsce
+          vsce package
+          
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.new_version.outputs.version }}
+          release_name: Release v${{ steps.new_version.outputs.version }}
+          draft: false
+          prerelease: false
+          body: |
+            New version released to VS Code Marketplace.
+            Version: ${{ steps.new_version.outputs.version }}
+      
+      - name: Upload VSIX to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./yolo-labeling-vs-${{ steps.new_version.outputs.version }}.vsix
+          asset_name: yolo-labeling-vs-${{ steps.new_version.outputs.version }}.vsix
+          asset_content_type: application/octet-stream
+      
       - name: Publish to Visual Studio Marketplace
         uses: HaaLeo/publish-vscode-extension@v1
         with:
