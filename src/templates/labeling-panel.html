@@ -22,10 +22,31 @@
                     </svg>
                 </button>
             </nav>
+            <div class="file-actions">
+                <button id="openImageTab" title="Open image in new tab">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                </button>
+                <button id="openTxtTab" title="Open text file in new tab">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </button>
+            </div>
             <div class="search-container">
                 <div class="search-box">
                     <input type="text" id="imageSearch" placeholder="Search images..." autocomplete="off" title="Search images (Use ↑/↓ to navigate, Enter to select)">
                     <div id="searchResults" class="search-results"></div>
+                </div>
+                <div class="search-actions">
+                    <!-- File action buttons moved to file-actions section -->
                 </div>
             </div>
             <div class="right-controls">

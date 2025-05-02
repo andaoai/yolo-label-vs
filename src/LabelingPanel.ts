@@ -163,7 +163,8 @@ export class LabelingPanel {
             initialImageData,
             initialLabels: labels,
             imageInfoText,
-            webview
+            webview,
+            currentPath: currentImage || undefined
         });
     }
 

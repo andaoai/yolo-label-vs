@@ -40,6 +40,7 @@ class LabelingState {
     isDrawingPolygon = false;
     showLabels = true;
     allImagePaths = [];
+    currentPath = window.currentPath || '';
     selectedSearchIndex = -1;
     currentMousePos = null;
     searchTimeout = null;
@@ -1178,6 +1179,8 @@ class UIManager {
             toggleLabels: document.getElementById('toggleLabels'),
             searchInput: document.getElementById('imageSearch'),
             searchResults: document.getElementById('searchResults'),
+            openImageTabButton: document.getElementById('openImageTab'),
+            openTxtTabButton: document.getElementById('openTxtTab'),
             undoButton: this.createUndoRedoButtons()
         };
         
@@ -1212,6 +1215,7 @@ class UIManager {
         this.setupModeListeners();
         this.setupActionListeners();
         this.setupSearch();
+        this.setupTabButtons();
     }
     
     setupNavigationListeners() {
@@ -1416,6 +1420,102 @@ class UIManager {
             }
         });
     }
+
+    setupTabButtons() {
+        // 添加打开图片新标签页的按钮事件
+        this.elements.openImageTabButton.addEventListener('click', () => {
+            var currentPath = this.elements.searchInput.value || this.state.currentPath;
+            if (currentPath) {
+                this.state.vscode.postMessage({ 
+                    command: 'openImageInNewTab', 
+                    path: currentPath 
+                });
+            }
+        });
+
+        // 添加打开文本文件新标签页的按钮事件
+        this.elements.openTxtTabButton.addEventListener('click', () => {
+            var currentPath = this.elements.searchInput.value || this.state.currentPath;
+            if (currentPath) {
+                // 将图片路径转换为对应的txt文件路径
+                var txtPath = this.convertToTxtPath(currentPath);
+                this.state.vscode.postMessage({
+                    command: 'openTxtInNewTab',
+                    path: txtPath
+                });
+            }
+        });
+
+        // 监听搜索框变化和图片加载，更新按钮状态
+        this.elements.searchInput.addEventListener('input', this.updateButtonStates.bind(this));
+
+        // 初始化按钮状态
+        this.updateButtonStates();
+    }
+
+    // 更新按钮状态
+    updateButtonStates() {
+        var hasPath = !!this.elements.searchInput.value || !!this.state.currentPath;
+        
+        if (hasPath) {
+            this.elements.openImageTabButton.removeAttribute('disabled');
+            this.elements.openTxtTabButton.removeAttribute('disabled');
+            this.elements.openImageTabButton.classList.remove('disabled');
+            this.elements.openTxtTabButton.classList.remove('disabled');
+        } else {
+            this.elements.openImageTabButton.setAttribute('disabled', 'disabled');
+            this.elements.openTxtTabButton.setAttribute('disabled', 'disabled');
+            this.elements.openImageTabButton.classList.add('disabled');
+            this.elements.openTxtTabButton.classList.add('disabled');
+        }
+    }
+
+    // 将图片路径转换为对应的txt文件路径
+    convertToTxtPath(imagePath) {
+        if (!imagePath) return null;
+        
+        // 处理路径分隔符，确保跨平台兼容性
+        var normalizedPath = imagePath.replace(/\\/g, '/');
+        
+        // 方法1: 检查路径中是否有/images/目录
+        var imagesPattern = /\/images\//i;
+        if (imagesPattern.test(normalizedPath)) {
+            // 如果包含/images/目录，将其替换为/labels/目录
+            return normalizedPath.replace(imagesPattern, '/labels/').replace(/\.(jpg|jpeg|png|gif|bmp|webp)$/i, '.txt');
+        }
+        
+        // 方法2: 检查路径是否包含images子目录
+        var pathParts = normalizedPath.split('/');
+        var imagesIndex = pathParts.findIndex(function(part) { 
+            return part.toLowerCase() === 'images'; 
+        });
+        
+        if (imagesIndex >= 0) {
+            // 找到了images目录，替换为labels
+            pathParts[imagesIndex] = 'labels';
+            // 替换文件扩展名为.txt
+            var filename = pathParts[pathParts.length - 1];
+            var dotIndex = filename.lastIndexOf('.');
+            if (dotIndex > 0) {
+                pathParts[pathParts.length - 1] = filename.substring(0, dotIndex) + '.txt';
+            } else {
+                pathParts[pathParts.length - 1] = filename + '.txt';
+            }
+            return pathParts.join('/');
+        }
+        
+        // 方法3: 如果以上方法都未成功，只替换扩展名
+        var lastDotIndex = normalizedPath.lastIndexOf('.');
+        var lastSlashIndex = normalizedPath.lastIndexOf('/');
+        
+        // 确保有扩展名且不是路径的一部分
+        if (lastDotIndex > lastSlashIndex && lastDotIndex > 0) {
+            return normalizedPath.substring(0, lastDotIndex) + '.txt';
+        }
+        
+        // 如果没有扩展名，直接添加.txt
+        return normalizedPath + '.txt';
+    }
 }
 
 // Improved Message Handler
@@ -1448,11 +1548,24 @@ class MessageHandler {
     
     handleImageList(message) {
         this.state.allImagePaths = message.paths || [];
+        
+        // Update the search input with the current image path if available
+        if (this.state.currentPath && document.getElementById('imageSearch')) {
+            document.getElementById('imageSearch').value = this.state.currentPath;
+        }
+        
+        // If we have a UIManager instance, update button states
+        const uiManager = window.uiManager;
+        if (uiManager && typeof uiManager.updateButtonStates === 'function') {
+            uiManager.updateButtonStates();
+        }
     }
 
     handleImageUpdate(message) {
         this.state.currentImage = message.imageData;
         this.state.initialLabels = message.labels || [];
+        // 保存当前图片路径
+        this.state.currentPath = message.currentPath || '';
         
         // Reset history
         this.state.history = [];
@@ -1463,6 +1576,12 @@ class MessageHandler {
         document.getElementById('imageInfo').textContent = message.imageInfo || '';
         document.getElementById('imageSearch').value = message.currentPath || '';
         this.canvasManager.loadImage(this.state.currentImage);
+        
+        // 如果存在UI管理器实例，更新按钮状态
+        const uiManager = window.uiManager;
+        if (uiManager && typeof uiManager.updateButtonStates === 'function') {
+            uiManager.updateButtonStates();
+        }
     }
     
     handleError(message) {
@@ -1561,6 +1680,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const uiManager = new UIManager(state, canvasManager);
         const messageHandler = new MessageHandler(state, canvasManager);
         
+        // 保存UIManager实例为全局变量，以便其他类能够访问
+        window.uiManager = uiManager;
+        
         // Initialize UI states
         document.getElementById('toggleLabels').classList.toggle('active', state.showLabels);
         document.getElementById('modeControl').querySelectorAll('.segmented-button').forEach(btn => {
@@ -1580,6 +1702,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initialize with current image if available
         if (state.currentImage) {
             canvasManager.loadImage(state.currentImage);
+            // If we have a current path, set it in the search input
+            if (state.currentPath) {
+                document.getElementById('imageSearch').value = state.currentPath;
+                uiManager.updateButtonStates();
+            }
         }
         
         // Add window resizing with throttle
