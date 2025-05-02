@@ -30,6 +30,14 @@
        - Publish
        - Manage
 
+## 自动发布
+
+我们已经使用 GitHub Actions 设置了自动发布到 VS Code Marketplace 的功能。详细说明请参阅：
+
+* [VS Code Marketplace CI 指南](./CI_CD_WORKFLOW.md)
+
+通过此设置，每当创建新的 GitHub Release 时，扩展将自动发布。
+
 ## 发布步骤
 
 1. 使用访问令牌登录

@@ -1,0 +1,63 @@
+name: Update Version for Dev Branch
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - 'src/**'
+      - 'package.json'
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+      
+      - name: Get current version
+        id: current_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        
+      - name: Bump patch version (third number)
+        id: new_version
+        run: |
+          CURRENT=${{ steps.current_version.outputs.version }}
+          MAJOR=$(echo $CURRENT | cut -d. -f1)
+          MINOR=$(echo $CURRENT | cut -d. -f2)
+          PATCH=$(echo $CURRENT | cut -d. -f3)
+          NEWPATCH=$((PATCH + 1))
+          NEWVERSION="$MAJOR.$MINOR.$NEWPATCH"
+          echo "version=$NEWVERSION" >> $GITHUB_OUTPUT
+          
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.new_version.outputs.version }} --no-git-tag-version
+          
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add package.json
+          git commit -m "Bump patch version to ${{ steps.new_version.outputs.version }} for dev release"
+          git push
+          
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.new_version.outputs.version }}
+          release_name: Dev Release v${{ steps.new_version.outputs.version }}
+          draft: false
+          prerelease: true
+          body: |
+            Dev build automatically generated from the latest dev branch changes.
+            Version: ${{ steps.new_version.outputs.version }} 
