@@ -1,4 +1,4 @@
-# VS Code 插件发布指南
+# <img src="./images/icon.svg" width="32" height="32" alt="YOLO标注工具图标"> 发布指南
 
 ## 准备工作
 

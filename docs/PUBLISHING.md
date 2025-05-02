@@ -1,4 +1,4 @@
-# VS Code Extension Publishing Guide
+# <img src="./images/icon.svg" width="32" height="32" alt="YOLO Label Tool Icon"> Publishing Guide
 
 ## Prerequisites
 

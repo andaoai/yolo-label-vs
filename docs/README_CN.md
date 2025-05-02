@@ -1,4 +1,4 @@
-# YOLO 标注工具
+# <img src="./images/icon.svg" width="32" height="32" alt="YOLO标注工具图标"> YOLO 标注工具
 
 一个专门用于快速浏览和编辑 YOLO 数据集标注的 VS Code 扩展。通过 YAML 配置文件，您可以直接在 VS Code 中高效地查看和修改 YOLO 格式的标注数据，让数据集管理变得轻松简单。
 
