@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [dev]
+    paths-ignore:
+      - 'package.json'
 
 permissions:
   contents: write
@@ -11,7 +13,7 @@ permissions:
 jobs:
   update-version:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev'
+    if: github.ref == 'refs/heads/dev' && !contains(github.event.head_commit.message, '[skip ci]')
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,7 +48,7 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add package.json
-          git commit -m "Bump patch version to ${{ steps.new_version.outputs.version }} for dev release"
+          git commit -m "Bump patch version to ${{ steps.new_version.outputs.version }} for dev release [skip ci]"
           git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}
           git push
       

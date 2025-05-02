@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - 'src/**'
+    paths-ignore:
+      - '**/*.md'
       - 'package.json'
 
 permissions:
@@ -14,7 +14,7 @@ permissions:
 jobs:
   publish-to-marketplace:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,7 +49,7 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add package.json
-          git commit -m "Bump minor version to ${{ steps.new_version.outputs.version }} for marketplace release"
+          git commit -m "Bump minor version to ${{ steps.new_version.outputs.version }} for marketplace release [skip ci]"
           git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}
           git push
       
