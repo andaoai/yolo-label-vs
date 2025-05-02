@@ -1210,7 +1210,9 @@ class UIManager {
             prevButton: document.getElementById('prevImage'),
             nextButton: document.getElementById('nextImage'),
             saveButton: document.getElementById('saveLabels'),
-            labelMode: document.getElementById('labelMode'),
+            modeControl: document.getElementById('modeControl'),
+            boxModeButton: document.getElementById('boxMode'),
+            segModeButton: document.getElementById('segMode'),
             toggleLabels: document.getElementById('toggleLabels'),
             searchInput: document.getElementById('imageSearch'),
             searchResults: document.getElementById('searchResults'),
@@ -1257,8 +1259,11 @@ class UIManager {
     }
     
     setupModeListeners() {
-        // Label mode selector
-        this.elements.labelMode.addEventListener('change', this.changeMode.bind(this));
+        // Mode control buttons
+        const segmentedButtons = this.elements.modeControl.querySelectorAll('.segmented-button');
+        segmentedButtons.forEach(button => {
+            button.addEventListener('click', this.changeMode.bind(this));
+        });
         
         // Toggle labels button
         this.elements.toggleLabels.addEventListener('click', this.toggleLabels.bind(this));
@@ -1283,7 +1288,17 @@ class UIManager {
     
     // Mode change handler
     changeMode(e) {
-        this.state.currentMode = e.target.value;
+        const button = e.currentTarget;
+        const mode = button.dataset.mode;
+        
+        // Update UI
+        this.elements.modeControl.querySelectorAll('.segmented-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        button.classList.add('active');
+        
+        // Update state
+        this.state.currentMode = mode;
         this.state.polygonPoints = [];
         this.state.isDrawingPolygon = false;
         this.state.requestRedraw();
@@ -1583,7 +1598,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Initialize UI states
         document.getElementById('toggleLabels').classList.toggle('active', state.showLabels);
-        document.getElementById('labelMode').value = state.currentMode;
+        document.getElementById('modeControl').querySelectorAll('.segmented-button').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.mode === state.currentMode) {
+                btn.classList.add('active');
+            }
+        });
         document.getElementById('zoom-info').textContent = 'Zoom: 100%';
         
         // Initialize rectangles
