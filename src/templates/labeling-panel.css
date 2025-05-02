@@ -1,21 +1,21 @@
 /* =================== 主题色与全局变量 =================== */
 :root {
-    --primary-color: #0098ff;
-    --secondary-color: #73c991;
-    --danger-color: #f14c4c;
-    --background-color: #1e1e1e;
-    --surface-color: #252526;
-    --surface-color-hover: #2d2d2d;
-    --border-color: #454545;
-    --text-color: #cccccc;
-    --text-color-secondary: #8a8a8a;
+    --primary-color: var(--vscode-button-background);
+    --secondary-color: var(--vscode-statusBarItem-prominentBackground);
+    --danger-color: var(--vscode-errorForeground);
+    --background-color: var(--vscode-editor-background);
+    --surface-color: var(--vscode-sideBar-background);
+    --surface-color-hover: var(--vscode-list-hoverBackground);
+    --border-color: var(--vscode-panel-border);
+    --text-color: var(--vscode-editor-foreground);
+    --text-color-secondary: var(--vscode-descriptionForeground);
 }
 
 /* =================== 全局基础样式 =================== */
 body {
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: var(--vscode-font-family);
     background-color: var(--background-color);
     color: var(--text-color);
     overflow: hidden;
@@ -34,10 +34,10 @@ body {
 .toolbar {
     display: flex;
     align-items: center;
-    background-color: var(--surface-color);
+    background-color: var(--vscode-editor-background);
     padding: 8px;
     border-radius: 4px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--vscode-panel-border);
     margin-bottom: 10px;
     flex-shrink: 0;
     gap: 12px;
@@ -61,16 +61,16 @@ body {
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
-    background-color: var(--surface-color);
-    border: 1px solid var(--border-color);
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
     border-radius: 2px;
     cursor: pointer;
     font-size: 13px;
-    color: var(--text-color);
+    color: var(--vscode-editor-foreground);
 }
 .toggle-button.active {
-    background-color: var(--primary-color);
-    color: #ffffff;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
 }
 .toggle-button svg {
     width: 16px;
@@ -88,9 +88,9 @@ body {
 /* =================== 画布区 =================== */
 .canvas-container {
     flex: 1;
-    background-color: var(--surface-color);
+    background-color: var(--vscode-editor-background);
     border-radius: 4px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--vscode-panel-border);
     padding: 0;
     position: relative;
     overflow: hidden;
@@ -105,7 +105,7 @@ body {
     max-width: none;
     max-height: none;
     border-radius: 0;
-    background-color: var(--background-color);
+    background-color: var(--vscode-editor-background);
     object-fit: contain;
     cursor: crosshair;
     box-sizing: border-box;
@@ -121,9 +121,9 @@ body {
 /* =================== 侧边栏 =================== */
 .sidebar {
     width: 280px;
-    background-color: var(--surface-color);
+    background-color: var(--vscode-sideBar-background);
     border-radius: 4px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--vscode-panel-border);
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -165,8 +165,8 @@ body {
     display: flex;
     align-items: center;
     padding: 8px;
-    background-color: var(--background-color);
-    border: 1px solid var(--border-color);
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
     border-radius: 2px;
     margin-bottom: 8px;
     gap: 8px;
@@ -188,11 +188,11 @@ body {
     padding: 2px 6px;
     background: transparent;
     border: none;
-    color: var(--text-color-secondary);
+    color: var(--vscode-descriptionForeground);
     opacity: 0.7;
 }
 .label-item button:hover {
-    color: var(--danger-color);
+    color: var(--vscode-errorForeground);
     opacity: 1;
 }
 .label-color {
@@ -206,16 +206,16 @@ body {
     font-size: 12px;
     padding: 2px 6px;
     border-radius: 2px;
-    background-color: var(--surface-color);
-    color: var(--text-color-secondary);
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-descriptionForeground);
     font-weight: 500;
 }
 
 /* =================== 按钮和选择器 =================== */
 button {
-    background-color: var(--surface-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: 1px solid transparent;
     padding: 6px 12px;
     border-radius: 2px;
     cursor: pointer;
@@ -226,25 +226,27 @@ button {
     transition: background-color 0.2s;
 }
 button:hover {
-    background-color: var(--surface-color-hover);
+    background-color: var(--vscode-button-hoverBackground);
 }
 button:active {
-    background-color: var(--border-color);
+    background-color: var(--vscode-button-background);
+    opacity: 0.9;
 }
 button.secondary {
-    background-color: var(--surface-color);
-    border-color: var(--border-color);
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border-color: transparent;
 }
 button.secondary:hover {
-    background-color: var(--surface-color-hover);
+    background-color: var(--vscode-button-secondaryHoverBackground);
 }
 select {
     padding: 6px 8px;
     border-radius: 2px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--vscode-dropdown-border);
     font-size: 13px;
-    background-color: var(--surface-color);
-    color: var(--text-color);
+    background-color: var(--vscode-dropdown-background);
+    color: var(--vscode-dropdown-foreground);
     margin: 0 12px;
     min-width: 150px;
 }
@@ -287,76 +289,76 @@ select:focus {
 .search-box input {
     width: 100%;
     padding: 6px 12px;
-    background-color: var(--surface-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: 2px;
+    border: 1px solid var(--vscode-input-border);
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    outline: none;
     font-size: 13px;
 }
 .search-box input:focus {
-    outline: none;
-    border-color: var(--primary-color);
+    border-color: var(--vscode-focusBorder);
 }
 .search-results {
-    display: none;
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    max-height: 200px;
+    max-height: 300px;
     overflow-y: auto;
-    background-color: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    margin-top: 4px;
-    z-index: 1000;
+    background-color: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-dropdown-border);
+    border-top: none;
+    z-index: 100;
+    display: none;
+    border-radius: 0 0 4px 4px;
 }
 .search-result-item {
-    padding: 12px;
+    padding: 8px 12px;
     cursor: pointer;
-    color: var(--text-color);
-    font-size: 13px;
+    border-bottom: 1px solid var(--vscode-dropdown-border);
     display: flex;
     flex-direction: column;
     gap: 4px;
-    border-bottom: 1px solid var(--border-color);
 }
 .search-result-item:last-child {
     border-bottom: none;
 }
 .search-result-item .filename {
-    color: var(--text-color);
+    color: var(--vscode-dropdown-foreground);
 }
 .search-result-item .filepath {
-    color: var(--text-color-secondary);
+    color: var(--vscode-descriptionForeground);
     font-size: 12px;
 }
+.search-result-item:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
 .search-result-item.selected {
-    background-color: var(--primary-color);
-    color: #ffffff;
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
 }
 
 /* =================== 状态栏 =================== */
 .status-bar {
     display: flex;
     align-items: center;
-    background-color: var(--surface-color);
-    padding: 6px 12px;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-    margin-top: 10px;
+    justify-content: space-between;
+    background-color: var(--vscode-statusBar-background);
+    color: var(--vscode-statusBar-foreground);
+    padding: 4px 12px;
     font-size: 12px;
-    gap: 20px;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    margin-top: 10px;
     flex-shrink: 0;
-    height: 20px;
 }
 .status-bar span {
-    color: var(--text-color-secondary);
+    opacity: 0.9;
 }
 .shortcuts-info {
+    color: var(--vscode-descriptionForeground);
     margin-left: auto;
-    font-style: italic;
-    font-size: 11px;
 }
 
 /* =================== 工具提示 =================== */
