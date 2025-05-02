@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -50,6 +50,7 @@ jobs:
           git config --global user.email "action@github.com"
           git add package.json
           git commit -m "Bump minor version to ${{ steps.new_version.outputs.version }} for marketplace release"
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}
           git push
       
       - name: Delete package-lock.json and install dependencies
@@ -69,7 +70,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
           tag_name: v${{ steps.new_version.outputs.version }}
           release_name: Release v${{ steps.new_version.outputs.version }}
@@ -82,7 +83,7 @@ jobs:
       - name: Upload VSIX to Release
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./yolo-labeling-vs-${{ steps.new_version.outputs.version }}.vsix
