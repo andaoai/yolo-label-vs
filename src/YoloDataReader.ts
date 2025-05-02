@@ -123,6 +123,7 @@ export class YoloDataReader {
 
             // 使用 Set 来存储唯一的文件路径
             const imageFilesSet = new Set<string>();
+            let directoriesChecked = 0;
 
             // 处理训练集路径
             const trainPaths = Array.isArray(this.config.train) 
@@ -134,6 +135,8 @@ export class YoloDataReader {
                 if (!trainPath) continue;
 
                 const fullPath = path.join(imagesPath, trainPath);
+                directoriesChecked++;
+                
                 if (!fs.existsSync(fullPath)) {
                     console.warn(`Warning: Directory does not exist: ${fullPath}`);
                     continue;
@@ -161,6 +164,8 @@ export class YoloDataReader {
                 if (!valPath) continue;
 
                 const fullPath = path.join(imagesPath, valPath);
+                directoriesChecked++;
+                
                 if (!fs.existsSync(fullPath)) {
                     console.warn(`Warning: Directory does not exist: ${fullPath}`);
                     continue;
@@ -182,10 +187,11 @@ export class YoloDataReader {
             this.imageFiles = Array.from(imageFilesSet).sort();
 
             if (this.imageFiles.length === 0) {
-                throw new Error('No supported image files found in any of the directories');
+                console.warn(`No supported image files found in any of the ${directoriesChecked} directories checked.`);
+                // 不立即抛出错误，允许初始化继续
+            } else {
+                console.log(`Loaded ${this.imageFiles.length} unique images from ${trainPaths.length} train and ${valPaths.length} val directories`);
             }
-
-            console.log(`Loaded ${this.imageFiles.length} unique images from ${trainPaths.length} train and ${valPaths.length} val directories`);
         } catch (error: any) {
             console.error('Error loading image files:', error);
             throw new Error(`Failed to load image files: ${error.message}`);
