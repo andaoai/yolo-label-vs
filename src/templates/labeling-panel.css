@@ -344,8 +344,8 @@ select:focus {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background-color: var(--vscode-statusBar-background);
-    color: var(--vscode-statusBar-foreground);
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
     padding: 4px 12px;
     font-size: 12px;
     border: 1px solid var(--vscode-panel-border);
