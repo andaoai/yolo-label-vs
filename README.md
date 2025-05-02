@@ -113,6 +113,14 @@ Please report issues on our [GitHub repository](https://github.com/andaoai/yolo-
 
 ## Release Notes
 
+### 0.0.9
+
+- Added visual feedback for unsaved changes with pulsing save button animation
+- Added tooltip showing "Changes need saving" when hovering over save button
+- Improved UI button states with better visual feedback
+- Enhanced error handling with more detailed suggestions
+- Added image dimensions and label counts to UI for better information display
+
 ### 0.0.8
 
 - Fixed theme showcase display in GitHub readme (changed from grid to table layout)
