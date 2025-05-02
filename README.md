@@ -71,6 +71,7 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 - `D`: Go to next image
 - `A`: Go to previous image
 - `Ctrl+S`: Save labels
+- `Ctrl+Z`: Undo the last labeling action
 - `Ctrl+Wheel`: Zoom in/out at mouse position
 - `Alt+Drag`: Pan the image when zoomed in
 - `Wheel`: Scroll vertically when zoomed in
