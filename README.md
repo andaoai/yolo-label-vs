@@ -109,6 +109,14 @@ Please report issues on our [GitHub repository](https://github.com/andaoai/yolo-
 
 ## Release Notes
 
+### 0.0.6
+
+- Added seamless VSCode theme integration with proper button styling
+- Added theme showcase with support for multiple VSCode themes
+- Improved UI responsiveness across all theme variants
+- Fixed button styling issues to properly follow VSCode theme changes
+- Enhanced visual consistency across light and dark themes
+
 ### 0.0.5
 
 - Removed redo functionality button to avoid conflicts with Ctrl+Y shortcut
