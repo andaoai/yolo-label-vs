@@ -6,6 +6,19 @@ A VS Code extension for quickly browsing and editing YOLO dataset annotations. T
 
 ![YOLO Label VS 演示](./docs/images/demo.gif)
 
+## Theme Support
+
+Our extension seamlessly integrates with all VS Code themes for a consistent experience:
+
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, auto); gap: 10px;">
+  <img src="./docs/images/themes/1746183912332.jpg" style="width: 100%; height: auto;" alt="Default Light Theme">
+  <img src="./docs/images/themes/1746183969990.jpg" style="width: 100%; height: auto;" alt="Default Dark Theme">
+  <img src="./docs/images/themes/1746183996831.jpg" style="width: 100%; height: auto;" alt="High Contrast Theme">
+  <img src="./docs/images/themes/1746184077610.jpg" style="width: 100%; height: auto;" alt="Monokai Theme">
+  <img src="./docs/images/themes/1746184138365.jpg" style="width: 100%; height: auto;" alt="GitHub Light Theme">
+  <img src="./docs/images/themes/1746184166688.jpg" style="width: 100%; height: auto;" alt="Night Owl Theme">
+</div>
+
 ## Documentation
 
 - English
@@ -14,7 +27,7 @@ A VS Code extension for quickly browsing and editing YOLO dataset annotations. T
 - 中文文档
   - [打包指南](./docs/PACKAGING_CN.md)
   - [发布指南](./docs/PUBLISHING_CN.md)
-  - [README 中文版](./README_CN.md)
+  - [README 中文版](./docs/README_CN.md)
 
 ## Key Features
 
