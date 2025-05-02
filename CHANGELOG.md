@@ -5,6 +5,17 @@ All notable changes to the "yolo-labeling-vs" extension will be documented in th
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.6] - 2024-09-01
+
+### Added
+- Seamless VSCode theme integration with proper button styling
+- Theme showcase with support for multiple VSCode themes
+- Visual consistency across light and dark themes
+
+### Fixed
+- Button styling issues to properly follow VSCode theme changes
+- UI responsiveness across all theme variants
+
 ## [0.0.5] - 2024-05-17
 
 ### Changed
