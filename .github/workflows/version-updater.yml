@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [dev]
+    paths-ignore:
+      - 'package.json'
 
 permissions:
   contents: write
@@ -11,11 +13,11 @@ permissions:
 jobs:
   update-version:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev'
+    if: github.ref == 'refs/heads/dev' && !contains(github.event.head_commit.message, '[skip ci]')
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -46,11 +48,14 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add package.json
-          git commit -m "Bump patch version to ${{ steps.new_version.outputs.version }} for dev release"
+          git commit -m "Bump patch version to ${{ steps.new_version.outputs.version }} for dev release [skip ci]"
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}
           git push
       
-      - name: Install dependencies
-        run: npm ci
+      - name: Delete package-lock.json and install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install --no-package-lock --ignore-scripts
         
       - name: Compile extension
         run: npm run compile
@@ -58,28 +63,4 @@ jobs:
       - name: Package extension
         run: |
           npm install -g @vscode/vsce
-          vsce package
-        
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.new_version.outputs.version }}
-          release_name: Dev Release v${{ steps.new_version.outputs.version }}
-          draft: false
-          prerelease: true
-          body: |
-            Dev build automatically generated from the latest dev branch changes.
-            Version: ${{ steps.new_version.outputs.version }}
-      
-      - name: Upload VSIX to Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./yolo-labeling-vs-${{ steps.new_version.outputs.version }}.vsix
-          asset_name: yolo-labeling-vs-${{ steps.new_version.outputs.version }}.vsix
-          asset_content_type: application/octet-stream 
+          vsce package 
