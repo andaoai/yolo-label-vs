@@ -1,5 +1,18 @@
 # <img src="./images/icon.png" width="32" height="32" alt="YOLO标注工具图标"> YOLO 标注工具
 
+[![发布到VS Code插件市场](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml/badge.svg)](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml)
+[![VS插件市场版本](https://img.shields.io/visual-studio-marketplace/v/andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS插件市场下载量](https://img.shields.io/visual-studio-marketplace/d/andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS插件市场评分](https://img.shields.io/visual-studio-marketplace/r/andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![许可证: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![贡献者数量](https://img.shields.io/github/contributors/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/graphs/contributors)
+[![仓库大小](https://img.shields.io/github/repo-size/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs)
+[![最后更新](https://img.shields.io/github/last-commit/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/commits)
+[![问题数量](https://img.shields.io/github/issues/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/issues)
+[![VS Code引擎版本](https://img.shields.io/badge/vscode-%5E1.85.0-blue)](https://code.visualstudio.com/)
+[![Node.js版本](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
+[![赞助支持](https://img.shields.io/badge/赞助-支持-brightgreen)](https://github.com/andaoai/yolo-label-vs/blob/main/docs/README_CN.md#赞助支持)
+
 一个专门用于快速浏览和编辑 YOLO 数据集标注的 VS Code 扩展。通过 YAML 配置文件，您可以直接在 VS Code 中高效地查看和修改 YOLO 格式的标注数据，让数据集管理变得轻松简单。
 
 
@@ -172,6 +185,21 @@ YOLO 标注工具首次发布：
 ## 贡献代码
 
 我们欢迎您的贡献！请随时提交 Pull Request。
+
+## 赞助支持
+
+如果您觉得这个扩展有帮助，可以考虑赞助支持开发：
+
+<table>
+  <tr>
+    <th>微信支付</th>
+    <th>支付宝</th>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/微信支付_20250503021350.jpg" width="300" alt="微信支付"></td>
+    <td><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/支付宝支付_20250503021444.jpg" width="300" alt="支付宝"></td>
+  </tr>
+</table>
 
 ## 许可证
 
