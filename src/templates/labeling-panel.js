@@ -18,7 +18,7 @@ const CONFIG = {
     LINE_WIDTH: 2,
     CROSSHAIR_COLOR: 'rgba(0, 255, 0, 0.94)',
     CROSSHAIR_CENTER_COLOR: 'rgba(255, 255, 255, 0.9)',
-    BACKGROUND_COLOR: '#1e1e1e',
+    BACKGROUND_COLOR: getComputedStyle(document.documentElement).getPropertyValue('--vscode-editor-background') || '#1e1e1e',
     LABEL_FONT_SIZE: 14,
     LABEL_PADDING: 5,
     LABEL_HEIGHT: 20
@@ -159,6 +159,11 @@ class CanvasManager {
         this.setupEventListeners();
     }
 
+    // 获取当前VS Code主题背景色
+    getCurrentBackgroundColor() {
+        return getComputedStyle(document.documentElement).getPropertyValue('--vscode-editor-background') || CONFIG.BACKGROUND_COLOR;
+    }
+
     setupEventListeners() {
         // Use object method reference with bind for better readability
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
@@ -257,17 +262,8 @@ class CanvasManager {
         const mouseY = evt.clientY - this.state.canvasRect.top;
         
         // Convert to canvas coordinate system
-        let canvasX, canvasY;
-        
-        if (this.state.scale === 1) {
-            // Standard scale: consider image might not fill canvas
-            canvasX = (mouseX - this.state.imageRect.left) / this.state.imageRect.width * this.canvas.width;
-            canvasY = (mouseY - this.state.imageRect.top) / this.state.imageRect.height * this.canvas.height;
-        } else {
-            // When zoomed: use canvas proportions directly
-            canvasX = mouseX / this.state.canvasRect.width * this.canvas.width;
-            canvasY = mouseY / this.state.canvasRect.height * this.canvas.height;
-        }
+        const canvasX = mouseX / this.state.canvasRect.width * this.canvas.width;
+        const canvasY = mouseY / this.state.canvasRect.height * this.canvas.height;
         
         // Apply inverse transform to get image coordinates
         const imageX = (canvasX - this.state.translateX) / this.state.scale;
@@ -285,17 +281,9 @@ class CanvasManager {
         const mouseX = evt.clientX - this.state.canvasRect.left;
         const mouseY = evt.clientY - this.state.canvasRect.top;
         
-        let canvasX, canvasY;
-        
-        if (this.state.scale === 1) {
-            // Standard scale: adjust for image position
-            canvasX = (mouseX - this.state.imageRect.left) / this.state.imageRect.width * this.canvas.width;
-            canvasY = (mouseY - this.state.imageRect.top) / this.state.imageRect.height * this.canvas.height;
-        } else {
-            // When zoomed: use canvas proportions
-            canvasX = mouseX / this.state.canvasRect.width * this.canvas.width;
-            canvasY = mouseY / this.state.canvasRect.height * this.canvas.height;
-        }
+        // Convert to canvas coordinate system
+        const canvasX = mouseX / this.state.canvasRect.width * this.canvas.width;
+        const canvasY = mouseY / this.state.canvasRect.height * this.canvas.height;
         
         return { x: canvasX, y: canvasY };
     }
@@ -559,44 +547,26 @@ class CanvasManager {
         const maxWidth = container.clientWidth;
         const maxHeight = container.clientHeight;
         
-        if (this.state.scale !== 1) {
-            // When zoomed, fill container without maintaining aspect ratio
-            this.canvas.style.width = `${maxWidth}px`;
-            this.canvas.style.height = `${maxHeight}px`;
+        // Always fill container without maintaining aspect ratio
+        this.canvas.style.width = `${maxWidth}px`;
+        this.canvas.style.height = `${maxHeight}px`;
+        
+        // Set canvas dimensions if needed
+        if (this.canvas.width !== maxWidth || this.canvas.height !== maxHeight) {
+            // Cache current canvas content
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = this.canvas.width;
+            tempCanvas.height = this.canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(this.canvas, 0, 0);
             
-            // Set canvas dimensions if needed
-            if (this.canvas.width !== maxWidth || this.canvas.height !== maxHeight) {
-                // Cache current canvas content
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = this.canvas.width;
-                tempCanvas.height = this.canvas.height;
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.drawImage(this.canvas, 0, 0);
-                
-                // Resize canvas
-                this.canvas.width = maxWidth;
-                this.canvas.height = maxHeight;
-                
-                // Restore content
-                this.ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 
-                                  0, 0, this.canvas.width, this.canvas.height);
-            }
-        } else {
-            // At normal scale, maintain image aspect ratio
-            const imageAspectRatio = this.state.originalImageWidth / this.state.originalImageHeight;
-            const containerAspectRatio = maxWidth / maxHeight;
+            // Resize canvas
+            this.canvas.width = maxWidth;
+            this.canvas.height = maxHeight;
             
-            let newWidth, newHeight;
-            if (imageAspectRatio > containerAspectRatio) {
-                newWidth = maxWidth;
-                newHeight = maxWidth / imageAspectRatio;
-            } else {
-                newHeight = maxHeight;
-                newWidth = maxHeight * imageAspectRatio;
-            }
-            
-            this.canvas.style.width = `${newWidth}px`;
-            this.canvas.style.height = `${newHeight}px`;
+            // Restore content
+            this.ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 
+                              0, 0, this.canvas.width, this.canvas.height);
         }
         
         // Update rectangles to reflect new dimensions
@@ -615,26 +585,19 @@ class CanvasManager {
             // Hide loading indicator
             this.showLoadingState(false);
             
-            const container = this.canvas.parentElement;
-            const maxWidth = container.clientWidth;
-            const maxHeight = container.clientHeight;
-            
             // Store original image dimensions
             this.state.originalImageWidth = img.width;
             this.state.originalImageHeight = img.height;
             
-            // Set canvas to image dimensions
-            this.canvas.width = img.width;
-            this.canvas.height = img.height;
+            // Set canvas dimensions to container size
+            const container = this.canvas.parentElement;
+            this.canvas.width = container.clientWidth;
+            this.canvas.height = container.clientHeight;
             
-            // Adjust display size to container
-            this.canvas.style.width = `${maxWidth}px`;
-            this.canvas.style.height = `${maxHeight}px`;
-            
-            // Reset zoom and pan
+            // Reset zoom and pan, center image
             this.state.scale = 1;
-            this.state.translateX = 0;
-            this.state.translateY = 0;
+            this.state.translateX = (this.canvas.width - img.width) / 2;
+            this.state.translateY = (this.canvas.height - img.height) / 2;
             this.updateZoomDisplay();
             
             // Ensure canvas dimensions are correct
@@ -672,7 +635,7 @@ class CanvasManager {
     // Show image loading error
     showImageError() {
         // Display error message on canvas
-        this.ctx.fillStyle = CONFIG.BACKGROUND_COLOR;
+        this.ctx.fillStyle = this.getCurrentBackgroundColor();
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.fillStyle = '#ff5252';
         this.ctx.font = '16px sans-serif';
@@ -686,7 +649,7 @@ class CanvasManager {
         
         // Draw background
         this.ctx.save();
-        this.ctx.fillStyle = CONFIG.BACKGROUND_COLOR;
+        this.ctx.fillStyle = this.getCurrentBackgroundColor();
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.restore();
         
@@ -713,14 +676,14 @@ class CanvasManager {
                 this.drawPreviewBox(this.state.currentMousePos.x, this.state.currentMousePos.y);
             }
             
-            // Draw crosshairs at mouse position
-            if (this.state.currentMousePos) {
-                const mouseX = this.state.currentMousePos.x * this.state.originalImageWidth;
-                const mouseY = this.state.currentMousePos.y * this.state.originalImageHeight;
-                this.drawCrosshairs(mouseX, mouseY);
-            }
-            
             this.ctx.restore();
+            
+            // Draw crosshairs at mouse position - after restore to ensure they span the entire canvas
+            if (this.state.currentMousePos) {
+                const canvasX = this.state.currentMousePos.x * this.state.originalImageWidth * this.state.scale + this.state.translateX;
+                const canvasY = this.state.currentMousePos.y * this.state.originalImageHeight * this.state.scale + this.state.translateY;
+                this.drawCrosshairs(canvasX, canvasY);
+            }
         }
     }
 
@@ -847,9 +810,8 @@ class CanvasManager {
     }
 
     drawCrosshairs(x, y) {
-        // Calculate canvas positions
-        const canvasX = x * this.state.scale + this.state.translateX;
-        const canvasY = y * this.state.scale + this.state.translateY;
+        // Now the x,y parameters are already in canvas coordinate space
+        // So we don't need to transform them
         
         // Draw in canvas coordinate space
         this.ctx.save();
@@ -862,19 +824,19 @@ class CanvasManager {
         
         // Draw horizontal line
         this.ctx.beginPath();
-        this.ctx.moveTo(0, canvasY);
-        this.ctx.lineTo(this.canvas.width, canvasY);
+        this.ctx.moveTo(0, y);
+        this.ctx.lineTo(this.canvas.width, y);
         this.ctx.stroke();
         
         // Draw vertical line
         this.ctx.beginPath();
-        this.ctx.moveTo(canvasX, 0);
-        this.ctx.lineTo(canvasX, this.canvas.height);
+        this.ctx.moveTo(x, 0);
+        this.ctx.lineTo(x, this.canvas.height);
         this.ctx.stroke();
         
         // Draw center point
         this.ctx.beginPath();
-        this.ctx.arc(canvasX, canvasY, 3, 0, Math.PI * 2);
+        this.ctx.arc(x, y, 3, 0, Math.PI * 2);
         this.ctx.strokeStyle = CONFIG.CROSSHAIR_CENTER_COLOR;
         this.ctx.stroke();
         
@@ -1591,6 +1553,9 @@ class MessageHandler {
 // Initialize application
 document.addEventListener('DOMContentLoaded', () => {
     try {
+        // 确保在DOM内容加载后更新背景色配置
+        CONFIG.BACKGROUND_COLOR = getComputedStyle(document.documentElement).getPropertyValue('--vscode-editor-background') || '#1e1e1e';
+        
         const state = new LabelingState();
         const canvasManager = new CanvasManager(state);
         const uiManager = new UIManager(state, canvasManager);
@@ -1624,6 +1589,17 @@ document.addEventListener('DOMContentLoaded', () => {
             resizeTimeout = setTimeout(() => {
                 canvasManager.handleResize();
             }, 100);
+        });
+        
+        // 监听VS Code主题变化
+        const observer = new MutationObserver(() => {
+            // VS Code主题变化时重绘画布
+            state.requestRedraw();
+        });
+        
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class', 'style']
         });
         
         // Add global error handler
