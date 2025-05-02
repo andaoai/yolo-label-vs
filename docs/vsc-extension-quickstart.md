@@ -1,4 +1,4 @@
-# <img src="./images/icon.svg" width="32" height="32" alt="YOLO Label Tool Icon"> Extension Development Quickstart
+# <img src="./images/icon.png" width="32" height="32" alt="YOLO Label Tool Icon"> Extension Development Quickstart
 
 ## What's in the folder
 

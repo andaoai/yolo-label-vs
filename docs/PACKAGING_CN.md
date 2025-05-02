@@ -1,4 +1,4 @@
-# <img src="./images/icon.svg" width="32" height="32" alt="YOLO标注工具图标"> 打包指南
+# <img src="./images/icon.png" width="32" height="32" alt="YOLO标注工具图标"> 打包指南
 
 ## 环境准备
 1. 确保已安装 Node.js (建议版本 >= 14.0.0)
