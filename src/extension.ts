@@ -55,6 +55,7 @@ export function activate(context: vscode.ExtensionContext) {
 			return;
 		}
 		
+		// Always create a new panel instead of reusing the existing one
 		LabelingPanel.createOrShow(context.extensionUri, uri);
 	});
 
