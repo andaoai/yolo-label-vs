@@ -715,4 +715,28 @@ svg {
     .right-controls {
         min-width: auto;
     }
-} 
+}
+
+/* File info area styles */
+/* File info area styles - removing this section
+.file-info {
+    display: flex;
+    align-items: center;
+    margin: 0 10px;
+    max-width: 200px;
+    overflow: hidden;
+}
+
+#yaml-file-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #e0e0e0;
+    background-color: rgba(70, 70, 70, 0.5);
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+*/ 

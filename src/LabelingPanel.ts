@@ -16,9 +16,12 @@ import { UiService } from './services/UiService';
 import { WebviewMessageHandler } from './services/WebviewMessageHandler';
 
 export class LabelingPanel {
-    public static currentPanel: LabelingPanel | undefined;
+    // Store multiple panel instances in a Map with the YAML path as key
+    public static activePanels: Map<string, LabelingPanel> = new Map<string, LabelingPanel>();
+    
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
+    private readonly _yamlUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
     private _yoloReader?: YoloDataReader;
     private _imageCache: CacheManager<string>;
@@ -32,19 +35,28 @@ export class LabelingPanel {
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
 
-        if (LabelingPanel.currentPanel) {
-            if (LabelingPanel.currentPanel._hasError) {
-                LabelingPanel.currentPanel.dispose();
-                LabelingPanel.currentPanel = undefined;
+        // Get the YAML file name for the panel title
+        const yamlFileName = path.basename(yamlUri.fsPath);
+        
+        // Check if a panel for this YAML file already exists
+        const existingPanel = LabelingPanel.activePanels.get(yamlUri.fsPath);
+        
+        if (existingPanel) {
+            if (existingPanel._hasError) {
+                existingPanel.dispose();
+                LabelingPanel.activePanels.delete(yamlUri.fsPath);
             } else {
-                LabelingPanel.currentPanel._panel.reveal(column);
+                existingPanel._panel.reveal(column);
                 return;
             }
         }
 
+        // 创建自定义SVG图标URI
+        const iconPath = vscode.Uri.joinPath(extensionUri, 'docs', 'images', 'icon.svg');
+
         const panel = vscode.window.createWebviewPanel(
             'yoloLabeling',
-            'YOLO Labeling',
+            `YOLO Labeling - ${yamlFileName}`,
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -53,12 +65,17 @@ export class LabelingPanel {
             }
         );
 
-        LabelingPanel.currentPanel = new LabelingPanel(panel, extensionUri, yamlUri);
+        // 设置自定义SVG图标
+        panel.iconPath = iconPath;
+
+        const newPanel = new LabelingPanel(panel, extensionUri, yamlUri);
+        LabelingPanel.activePanels.set(yamlUri.fsPath, newPanel);
     }
 
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, yamlUri: vscode.Uri) {
         this._panel = panel;
         this._extensionUri = extensionUri;
+        this._yamlUri = yamlUri;
         
         // 创建缓存管理器，使用更具描述性的配置参数
         const CACHE_CONFIG = {
@@ -71,7 +88,7 @@ export class LabelingPanel {
         
         // 初始化服务类
         this._imageService = new ImageService(this._imageCache);
-        this._uiService = new UiService(extensionUri);
+        this._uiService = new UiService(this._extensionUri);
         
         try {
             this._yoloReader = new YoloDataReader(yamlUri.fsPath);
@@ -200,6 +217,11 @@ export class LabelingPanel {
     }
 
     public dispose() {
+        // Remove from active panels map
+        if (this._yamlUri) {
+            LabelingPanel.activePanels.delete(this._yamlUri.fsPath);
+        }
+        
         // 清理面板资源
         if (this._panel) {
             this._panel.dispose();
@@ -208,8 +230,5 @@ export class LabelingPanel {
         // 清理订阅
         this._disposables.forEach(d => d.dispose());
         this._disposables = [];
-
-        // 重置静态引用
-        LabelingPanel.currentPanel = undefined;
     }
 } 

@@ -1933,7 +1933,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 uiManager.updateButtonStates();
             }
         }
-        
+
         // Add window resizing with throttle
         let resizeTimeout;
         window.addEventListener('resize', () => {
