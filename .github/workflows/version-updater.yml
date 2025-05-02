@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -47,6 +47,7 @@ jobs:
           git config --global user.email "action@github.com"
           git add package.json
           git commit -m "Bump patch version to ${{ steps.new_version.outputs.version }} for dev release"
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}
           git push
       
       - name: Delete package-lock.json and install dependencies
