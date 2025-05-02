@@ -108,22 +108,29 @@ body {
     border-radius: 3px;
     cursor: pointer;
     color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+    transition: all 0.2s ease;
+    opacity: 0.65;
 }
 .toggle-button.active {
     background-color: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
     border-color: var(--vscode-button-background);
+    opacity: 1;
+    box-shadow: inset 0 0 0 1px var(--vscode-focusBorder, var(--primary-color));
 }
 .toggle-button:hover {
     background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
+    opacity: 0.8;
 }
 .toggle-button svg {
     width: 16px;
     height: 16px;
     color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+    opacity: 0.65;
 }
 .toggle-button.active svg {
     color: var(--vscode-button-foreground);
+    opacity: 1;
 }
 
 /* =================== 主体内容区 =================== */
@@ -343,14 +350,16 @@ select:focus {
     border-right: 1px solid var(--vscode-button-border);
     margin: 0;
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 0.65;
 }
 
 .segmented-button svg {
     color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+    opacity: 0.65;
 }
 
 .segmented-button:last-child {
@@ -359,15 +368,19 @@ select:focus {
 
 .segmented-button:hover {
     background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
+    opacity: 0.8;
 }
 
 .segmented-button.active {
     background-color: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
+    opacity: 1;
+    box-shadow: inset 0 0 0 1px var(--vscode-focusBorder, var(--primary-color));
 }
 
 .segmented-button.active svg {
     color: var(--vscode-button-foreground);
+    opacity: 1;
 }
 
 /* =================== 搜索框 =================== */
