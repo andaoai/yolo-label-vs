@@ -1,4 +1,4 @@
-# VS Code Extension Packaging Guide
+# <img src="./images/icon.svg" width="32" height="32" alt="YOLO Label Tool Icon"> Packaging Guide
 
 ## Environment Setup
 1. Ensure Node.js is installed (recommended version >= 14.0.0)

@@ -1,4 +1,4 @@
-# YOLO Labeling
+# <img src="docs/images/icon.svg" width="32" height="32" alt="YOLO Label Tool Icon"> YOLO Labeling
 
 A VS Code extension for quickly browsing and editing YOLO dataset annotations. This extension allows you to efficiently view and modify YOLO-formatted labels through YAML configuration files, making it easy to manage your computer vision datasets directly within VS Code.
 
