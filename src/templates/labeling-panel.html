@@ -11,13 +11,13 @@
         <!-- 顶部工具栏 -->
         <header class="toolbar">
             <nav class="nav-buttons">
-                <button id="prevImage">
+                <button id="prevImage" title="Previous Image (A)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M15 18l-6-6 6-6"/>
                     </svg>
                     Previous
                 </button>
-                <button id="nextImage">
+                <button id="nextImage" title="Next Image (D)">
                     Next
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 18l6-6-6-6"/>
@@ -26,25 +26,25 @@
             </nav>
             <div class="search-container">
                 <div class="search-box">
-                    <input type="text" id="imageSearch" placeholder="Search images..." autocomplete="off">
+                    <input type="text" id="imageSearch" placeholder="Search images..." autocomplete="off" title="Search images (Use ↑/↓ to navigate, Enter to select)">
                     <div id="searchResults" class="search-results"></div>
                 </div>
             </div>
             <div class="right-controls">
                 <div class="mode-selector">
                     <label for="labelMode">Mode:</label>
-                    <select id="labelMode">
+                    <select id="labelMode" title="Select labeling mode (Box or Segmentation)">
                         <option value="box">Box</option>
                         <option value="seg">Segmentation</option>
                     </select>
                 </div>
-                <button class="toggle-button" id="toggleLabels">
+                <button class="toggle-button" id="toggleLabels" title="Toggle labels visibility">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                     </svg>
                     Show Labels
                 </button>
-                <button id="saveLabels" class="secondary">
+                <button id="saveLabels" class="secondary" title="Save Labels (Ctrl+S)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
                         <polyline points="17 21 17 13 7 13 7 21"/>
@@ -58,7 +58,7 @@
         <main class="main-content">
             <!-- 画布区 -->
             <section class="canvas-container">
-                <canvas id="imageCanvas"></canvas>
+                <canvas id="imageCanvas" title="Mouse wheel: Scroll | Ctrl+Wheel: Zoom | Alt+Drag: Pan"></canvas>
             </section>
             <!-- 侧边栏 -->
             <aside class="sidebar">
