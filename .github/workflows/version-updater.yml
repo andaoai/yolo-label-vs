@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   push:
     branches: [dev]
-    paths:
-      - 'src/**'
-      - 'package.json'
 
 permissions:
   contents: write
