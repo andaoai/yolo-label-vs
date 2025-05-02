@@ -1,22 +1,17 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
+import { BoundingBox, ImageInfo } from './model/types';
+import { ErrorHandler, ErrorType } from './ErrorHandler';
 
+export { BoundingBox } from './model/types';
+
+// 本地定义YoloConfig，确保类型安全
 export interface YoloConfig {
     path: string;      // 数据集根目录
     train: string | string[];     // 训练图片目录（相对于path）
     val: string | string[];       // 验证图片目录（相对于path）
-    names: string[];   // 标签类别名称列表
-}
-
-export interface BoundingBox {
-    class: number;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    isSegmentation?: boolean;
-    points?: number[];  // For segmentation format: [x1,y1,x2,y2,...]
+    names: string[];   // 标签类别名称列表，始终保存为数组形式
 }
 
 export class YoloDataReader {
@@ -103,6 +98,15 @@ export class YoloDataReader {
 
             this.loadImageFiles();
         } catch (error: any) {
+            const errorDetails = ErrorHandler.handleError(
+                error,
+                'Failed to load YOLO configuration',
+                {
+                    type: ErrorType.CONFIG_ERROR,
+                    filePath: this.yamlPath,
+                    showNotification: false
+                }
+            );
             console.error('Error loading config:', error);
             throw new Error(`Failed to load configuration: ${error.message}`);
         }
@@ -217,42 +221,67 @@ export class YoloDataReader {
     }
 
     public readLabels(imagePath: string): BoundingBox[] {
-        const labelPath = this.getLabelFile(imagePath);
-        if (!fs.existsSync(labelPath)) {
-            return [];
-        }
-
         try {
-            const labelContent = fs.readFileSync(labelPath, 'utf8');
-            return labelContent
-                .split('\n')
-                .filter(line => line.trim())
-                .map(line => {
-                    const values = line.split(' ').map(Number);
-                    const classId = values[0];
+            const labelPath = this.getLabelFile(imagePath);
+            if (!fs.existsSync(labelPath)) {
+                return [];
+            }
+            
+            const content = fs.readFileSync(labelPath, 'utf8');
+            const lines = content.split('\n').filter(line => line.trim() !== '');
+            
+            const labels: BoundingBox[] = [];
+            for (const line of lines) {
+                const parts = line.trim().split(/\s+/);
+                
+                // Standard YOLO format: class x y width height
+                if (parts.length === 5) {
+                    const classIndex = parseInt(parts[0], 10);
+                    const x = parseFloat(parts[1]);
+                    const y = parseFloat(parts[2]);
+                    const width = parseFloat(parts[3]);
+                    const height = parseFloat(parts[4]);
                     
-                    // Check if it's a segmentation format (more than 5 values)
-                    if (values.length > 5) {
-                        return {
-                            class: classId,
-                            x: 0,  // These will be calculated from points
-                            y: 0,
-                            width: 0,
-                            height: 0,
-                            isSegmentation: true,
-                            points: values.slice(1)  // All values after classId are points
-                        };
-                    } else {
-                        // Regular bounding box format
-                        const [_, x, y, width, height] = values;
-                    if (isNaN(classId) || isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height)) {
-                        throw new Error(`Invalid label format in line: ${line}`);
-                        }
-                        return { class: classId, x, y, width, height, isSegmentation: false };
+                    if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
+                        labels.push({
+                            class: classIndex,
+                            x, y, width, height
+                        });
                     }
-                });
+                } 
+                // YOLO-Segmentation format: class x y width height [points...]
+                else if (parts.length > 5) {
+                    const classIndex = parseInt(parts[0], 10);
+                    const x = parseFloat(parts[1]);
+                    const y = parseFloat(parts[2]);
+                    const width = parseFloat(parts[3]);
+                    const height = parseFloat(parts[4]);
+                    
+                    // Parse points as floats
+                    const points = parts.slice(5).map(p => parseFloat(p));
+                    
+                    if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height) && 
+                        points.every(p => !isNaN(p))) {
+                        labels.push({
+                            class: classIndex,
+                            x, y, width, height,
+                            isSegmentation: true,
+                            points: points
+                        });
+                    }
+                }
+            }
+            
+            return labels;
         } catch (error: any) {
-            console.error(`Error reading labels from ${labelPath}:`, error);
+            ErrorHandler.handleError(
+                error,
+                'Failed to read label file',
+                {
+                    type: ErrorType.LABEL_PARSE_ERROR,
+                    filePath: imagePath
+                }
+            );
             return [];
         }
     }
@@ -260,26 +289,36 @@ export class YoloDataReader {
     public saveLabels(imagePath: string, labels: BoundingBox[]) {
         try {
             const labelPath = this.getLabelFile(imagePath);
-            const labelContent = labels
-                .map(label => {
-                    if (label.isSegmentation && label.points) {
-                        return `${label.class} ${label.points.join(' ')}`;
-                    } else {
-                        return `${label.class} ${label.x} ${label.y} ${label.width} ${label.height}`;
-                    }
-                })
-                .join('\n');
             
-            // 确保标签目录存在
+            // Format the labels according to YOLO format
+            let content = '';
+            for (const label of labels) {
+                if (label.isSegmentation && label.points && label.points.length > 0) {
+                    // Segmentation format
+                    content += `${label.class} ${label.x} ${label.y} ${label.width} ${label.height} ${label.points.join(' ')}\n`;
+                } else {
+                    // Standard format
+                    content += `${label.class} ${label.x} ${label.y} ${label.width} ${label.height}\n`;
+                }
+            }
+            
+            // Ensure the directory exists
             const labelDir = path.dirname(labelPath);
             if (!fs.existsSync(labelDir)) {
                 fs.mkdirSync(labelDir, { recursive: true });
             }
             
-            fs.writeFileSync(labelPath, labelContent);
+            fs.writeFileSync(labelPath, content);
         } catch (error: any) {
-            console.error(`Error saving labels to ${imagePath}:`, error);
-            throw new Error(`Failed to save labels: ${error.message}`);
+            ErrorHandler.handleError(
+                error,
+                'Failed to save label file',
+                {
+                    type: ErrorType.LABEL_SAVE_ERROR,
+                    filePath: imagePath
+                }
+            );
+            throw error;
         }
     }
 
