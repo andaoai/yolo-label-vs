@@ -63,11 +63,10 @@ body {
 .file-actions button,
 .search-action-button,
 .toolbar .right-controls button {
-    background-color: var(--vscode-button-secondaryBackground, var(--vscode-editor-background));
-    border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
+    background-color: var(--vscode-button-background);
+    border: 1px solid var(--vscode-button-border);
+    color: var(--vscode-button-foreground);
     padding: 5px 10px;
-    opacity: 0.9;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -80,21 +79,14 @@ body {
 
 .nav-buttons button svg,
 .file-actions button svg {
-    opacity: 0.8;
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
+    color: var(--vscode-button-foreground);
 }
 
 .nav-buttons button:hover,
 .file-actions button:hover,
 .search-action-button:hover,
 .toolbar .right-controls button:hover {
-    background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
-    opacity: 1;
-}
-
-.nav-buttons button:hover svg,
-.file-actions button:hover svg {
-    opacity: 1;
+    background-color: var(--vscode-button-hoverBackground);
 }
 
 .right-controls {
@@ -111,12 +103,11 @@ body {
     align-items: center;
     justify-content: center;
     padding: 5px 8px;
-    background-color: var(--vscode-button-secondaryBackground, var(--vscode-editor-background));
-    border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
+    background-color: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+    border: 1px solid var(--vscode-button-border);
     border-radius: 3px;
     cursor: pointer;
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
-    opacity: 0.9;
+    color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
 }
 .toggle-button.active {
     background-color: var(--vscode-button-background);
@@ -124,20 +115,14 @@ body {
     border-color: var(--vscode-button-background);
 }
 .toggle-button:hover {
-    opacity: 1;
     background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
 }
 .toggle-button svg {
     width: 16px;
     height: 16px;
-    opacity: 0.8;
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
-}
-.toggle-button:hover svg {
-    opacity: 1;
+    color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
 }
 .toggle-button.active svg {
-    opacity: 1;
     color: var(--vscode-button-foreground);
 }
 
@@ -252,14 +237,14 @@ body {
     padding: 2px 4px;
     background: transparent;
     border: none;
-    color: var(--vscode-button-secondaryForeground, var(--vscode-descriptionForeground));
+    color: var(--vscode-button-secondaryForeground);
     opacity: 0.7;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 .label-item button:hover {
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
+    color: var(--vscode-button-secondaryForeground);
     opacity: 1;
     background-color: transparent;
 }
@@ -267,13 +252,13 @@ body {
     color: var(--vscode-errorForeground);
 }
 .label-item .visibility-button {
-    color: var(--vscode-button-secondaryForeground, var(--vscode-descriptionForeground));
+    color: var(--vscode-button-secondaryForeground);
     padding: 2px;
     border: none;
     background: transparent;
 }
 .label-item .visibility-button:hover {
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
+    color: var(--vscode-button-secondaryForeground);
     background-color: transparent;
 }
 .label-color {
@@ -296,7 +281,7 @@ body {
 button {
     background-color: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
-    border: 1px solid var(--vscode-button-border, transparent);
+    border: 1px solid var(--vscode-button-border);
     padding: 4px 10px;
     border-radius: 2px;
     cursor: pointer;
@@ -311,12 +296,11 @@ button:hover {
 }
 button:active {
     background-color: var(--vscode-button-background);
-    opacity: 0.9;
 }
 button.secondary {
-    background-color: var(--vscode-button-secondaryBackground, var(--vscode-editor-background));
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
-    border-color: var(--vscode-button-border, var(--vscode-panel-border));
+    background-color: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+    color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+    border-color: var(--vscode-button-border);
 }
 button.secondary:hover {
     background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
@@ -346,29 +330,27 @@ select:focus {
 /* 分段控制按钮 */
 .segmented-control {
     display: flex;
-    border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
+    border: 1px solid var(--vscode-button-border);
     border-radius: 3px;
     overflow: hidden;
 }
 
 .segmented-button {
     padding: 5px 8px;
-    background-color: var(--vscode-button-secondaryBackground, var(--vscode-editor-background));
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
+    background-color: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+    color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
     border: none;
-    border-right: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
+    border-right: 1px solid var(--vscode-button-border);
     margin: 0;
     cursor: pointer;
     transition: background-color 0.15s ease;
-    opacity: 0.9;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .segmented-button svg {
-    opacity: 0.8;
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
+    color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
 }
 
 .segmented-button:last-child {
@@ -377,21 +359,14 @@ select:focus {
 
 .segmented-button:hover {
     background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
-    opacity: 1;
-}
-
-.segmented-button:hover svg {
-    opacity: 1;
 }
 
 .segmented-button.active {
     background-color: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
-    opacity: 1;
 }
 
 .segmented-button.active svg {
-    opacity: 1;
     color: var(--vscode-button-foreground);
 }
 
@@ -516,20 +491,14 @@ select:focus {
 /* =================== SVG 图标 =================== */
 svg {
     color: currentColor;
-    opacity: 0.8;
-}
-
-button:hover svg {
-    opacity: 1;
 }
 
 /* 保存按钮样式 */
 .toolbar button#saveLabels {
-    background-color: var(--vscode-button-secondaryBackground, var(--vscode-editor-background));
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
-    border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: 1px solid var(--vscode-button-border);
     padding: 5px 8px;
-    opacity: 0.9;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -537,27 +506,16 @@ button:hover svg {
 }
 
 .toolbar button#saveLabels svg {
-    opacity: 0.8;
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
+    color: var(--vscode-button-foreground);
 }
 
 .toolbar button#saveLabels:hover {
-    background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
-    opacity: 1;
-}
-
-.toolbar button#saveLabels:hover svg {
-    opacity: 1;
+    background-color: var(--vscode-button-hoverBackground);
 }
 
 /* 右侧工具栏按钮 */
 .toolbar .right-controls button svg {
-    opacity: 0.8;
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
-}
-
-.toolbar .right-controls button:hover svg {
-    opacity: 1;
+    color: var(--vscode-button-foreground);
 }
 
 /* 搜索框旁边的操作按钮 */
@@ -570,15 +528,9 @@ button:hover svg {
 
 .file-actions button svg,
 .search-action-button svg {
-    opacity: 0.8;
-    color: var(--vscode-button-secondaryForeground, var(--vscode-editor-foreground));
+    color: var(--vscode-button-foreground);
     width: 16px;
     height: 16px;
-}
-
-.file-actions button:hover svg,
-.search-action-button:hover svg {
-    opacity: 1;
 }
 
 .file-actions button:disabled,
