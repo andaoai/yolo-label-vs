@@ -21,6 +21,8 @@ export class CacheManager<T extends CacheableData> {
     ttl: 5 * 60 * 1000   // 5分钟
   };
   private config: CacheConfig;
+  private lastCleanup: number = Date.now();
+  private readonly CLEANUP_INTERVAL: number = 60 * 1000; // 清理间隔为1分钟
 
   /**
    * 创建缓存管理器
@@ -69,8 +71,17 @@ export class CacheManager<T extends CacheableData> {
     this.cache.set(key, item);
     this.totalSize += size;
 
-    // 如果超过最大大小或最大数量，清理缓存
-    this.cleanup();
+    // 实现惰性清理，只在达到清理间隔或触发阈值时清理缓存
+    const now = Date.now();
+    const needsCleanup = 
+      now - this.lastCleanup > this.CLEANUP_INTERVAL || // 时间间隔到了
+      this.cache.size > this.config.maxItems * 1.5 ||   // 缓存项数超过阈值150%
+      this.totalSize > this.config.maxSize * 1.2;       // 缓存大小超过阈值120%
+      
+    if (needsCleanup) {
+      this.cleanup();
+      this.lastCleanup = now;
+    }
   }
 
   /**
