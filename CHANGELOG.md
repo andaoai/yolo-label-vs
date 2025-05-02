@@ -5,6 +5,21 @@ All notable changes to the "yolo-labeling-vs" extension will be documented in th
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.5] - 2024-05-17
+
+### Changed
+- Removed redo functionality button to fix conflict with Ctrl+Y shortcut
+- Improved error handling when YAML image paths fail to load
+- Added error tracking with a `_hasError` flag
+- Implemented proper cleanup in the `dispose()` method
+- Added a reload button on error pages
+- Added more detailed error messages
+- Created a recovery mechanism to reset the panel state
+
+### Added
+- Tooltips for toolbar buttons to show keyboard shortcuts
+- Better error messaging and recovery options
+
 ## [0.0.4] - 2024-05-10
 
 ### Changed

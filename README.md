@@ -95,6 +95,17 @@ Please report issues on our [GitHub repository](https://github.com/andaoai/yolo-
 
 ## Release Notes
 
+### 0.0.5
+
+- Removed redo functionality button to avoid conflicts with Ctrl+Y shortcut
+- Improved error handling when YAML image paths fail to load
+  - Added error tracking with recovery mechanisms
+  - Implemented proper resource cleanup
+  - Added reload button on error pages
+  - Enhanced error messages with troubleshooting guidance
+- Added tooltips for all toolbar buttons showing keyboard shortcuts
+- Added better error messaging and recovery options
+
 ### 0.0.4
 
 - Simplified keyboard shortcuts for better usability
