@@ -108,15 +108,6 @@ class LabelingState {
         return false;
     }
     
-    redo() {
-        if (this.historyIndex < this.history.length - 1) {
-            this.historyIndex++;
-            this.initialLabels = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
-            return true;
-        }
-        return false;
-    }
-    
     // Request animation frame for efficient rendering
     requestRedraw() {
         this.needsRedraw = true;
@@ -1117,16 +1108,6 @@ class CanvasManager {
             return;
         }
         
-        // Redo with Ctrl+Shift+Z only (removed Ctrl+Y to avoid conflict)
-        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
-            e.preventDefault();
-            if (this.state.redo()) {
-                this.state.requestRedraw();
-                this.updateLabelList();
-            }
-            return;
-        }
-        
         // Navigation with A and D keys (without modifiers)
         if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
             switch (e.key.toLowerCase()) {
@@ -1180,23 +1161,10 @@ class UIManager {
             </svg>
         `;
         
-        // Create redo button (updated tooltip to only show Ctrl+Shift+Z)
-        const redoButton = document.createElement('button');
-        redoButton.id = 'redoButton';
-        redoButton.className = 'secondary';
-        redoButton.title = 'Redo (Ctrl+Shift+Z)';
-        redoButton.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 10h-10c-4 0-7 3-7 7v0c0 4 3 7 7 7h4"></path>
-                <path d="M15 17l6-7-6-7"></path>
-            </svg>
-        `;
-        
-        // Add buttons to toolbar
-        toolbar.insertBefore(redoButton, toolbar.firstChild);
+        // Add button to toolbar
         toolbar.insertBefore(undoButton, toolbar.firstChild);
         
-        return { undo: undoButton, redo: redoButton };
+        return { undo: undoButton };
     }
 
     setupEventListeners() {
@@ -1225,9 +1193,8 @@ class UIManager {
         // Save button
         this.elements.saveButton.addEventListener('click', this.saveLabels.bind(this));
         
-        // Undo/redo buttons
+        // Undo button
         this.elements.undoButton.undo.addEventListener('click', this.handleUndo.bind(this));
-        this.elements.undoButton.redo.addEventListener('click', this.handleRedo.bind(this));
     }
     
     // Navigation handlers
@@ -1262,13 +1229,6 @@ class UIManager {
     // Undo/Redo handlers
     handleUndo() {
         if (this.state.undo()) {
-            this.state.requestRedraw();
-            this.canvasManager.updateLabelList();
-        }
-    }
-    
-    handleRedo() {
-        if (this.state.redo()) {
             this.state.requestRedraw();
             this.canvasManager.updateLabelList();
         }
