@@ -5,6 +5,20 @@ All notable changes to the "yolo-labeling-vs" extension will be documented in th
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.9] - 2024-09-05
+
+### Added
+- Save button status tracking with visual feedback for unsaved changes
+- Pulsing animation on save button when changes need to be saved
+- Tooltip displaying "Changes need saving" when hovering over active save button
+- Improved UI feedback with disabled state when no changes are present
+
+### Changed
+- Enhanced button styles with improved opacity and transition effects
+- Updated active and hover states for toggle and segmented buttons 
+- Improved error handling with actionable suggestions
+- Added image dimensions and label counts to UI
+
 ## [0.0.8] - 2024-09-01
 
 ### Fixed
