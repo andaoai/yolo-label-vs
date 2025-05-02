@@ -44,6 +44,7 @@ class LabelingState {
     selectedSearchIndex = -1;
     currentMousePos = null;
     searchTimeout = null;
+    hasUnsavedChanges = false;
     
     // Zoom and pan related state
     scale = 1;
@@ -130,6 +131,14 @@ class LabelingState {
         
         // Update the state's imageHistories
         this.imageHistories.set(this.currentPath, currentHistory);
+        
+        // Mark as having unsaved changes
+        this.hasUnsavedChanges = true;
+        
+        // Update save button state if UI manager exists
+        if (window.uiManager) {
+            window.uiManager.updateSaveButtonState();
+        }
     }
     
     undo() {
@@ -146,9 +155,28 @@ class LabelingState {
             
             // Update the state's imageHistories
             this.imageHistories.set(this.currentPath, currentHistory);
+            
+            // Mark as having unsaved changes
+            this.hasUnsavedChanges = true;
+            
+            // Update save button state if UI manager exists
+            if (window.uiManager) {
+                window.uiManager.updateSaveButtonState();
+            }
+            
             return true;
         }
         return false;
+    }
+    
+    // Mark changes as saved
+    markChangesSaved() {
+        this.hasUnsavedChanges = false;
+        
+        // Update save button state if UI manager exists
+        if (window.uiManager) {
+            window.uiManager.updateSaveButtonState();
+        }
     }
     
     // Request animation frame for efficient rendering
@@ -1148,6 +1176,9 @@ class CanvasManager {
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>' : 
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
                 
+                // Mark as having unsaved changes
+                this.state.pushHistory();
+                
                 // Redraw canvas
                 this.state.requestRedraw();
             };
@@ -1200,8 +1231,10 @@ class CanvasManager {
         // Save with Ctrl+S
         if (e.ctrlKey && e.key.toLowerCase() === 's') {
             e.preventDefault();
-            this.state.vscode.postMessage({ command: 'save', labels: this.state.initialLabels });
-            return;
+            if (this.state.hasUnsavedChanges) {
+                this.state.vscode.postMessage({ command: 'save', labels: this.state.initialLabels });
+                this.state.markChangesSaved();
+            }
         }
         
         // Undo with Ctrl+Z
@@ -1268,6 +1301,9 @@ class UIManager {
         };
         
         this.setupEventListeners();
+        
+        // Initialize save button state
+        this.updateSaveButtonState();
     }
     
     // Create undo/redo buttons and add to toolbar
@@ -1363,6 +1399,7 @@ class UIManager {
     // Save labels
     saveLabels() {
         this.state.vscode.postMessage({ command: 'save', labels: this.state.initialLabels });
+        this.state.markChangesSaved();
     }
     
     // Undo/Redo handlers
@@ -1599,6 +1636,19 @@ class UIManager {
         // 如果没有扩展名，直接添加.txt
         return normalizedPath + '.txt';
     }
+
+    // Update save button state based on whether there are unsaved changes
+    updateSaveButtonState() {
+        const saveButton = this.elements.saveButton;
+        
+        if (this.state.hasUnsavedChanges) {
+            saveButton.removeAttribute('disabled');
+            saveButton.classList.remove('disabled');
+        } else {
+            saveButton.setAttribute('disabled', 'disabled');
+            saveButton.classList.add('disabled');
+        }
+    }
 }
 
 // Improved Message Handler
@@ -1657,6 +1707,8 @@ class MessageHandler {
         if (!this.state.imageHistories.has(this.state.currentPath)) {
             // Push initial state to history
             this.state.pushHistory();
+            // No unsaved changes for newly loaded image
+            this.state.markChangesSaved();
         } else {
             // Ensure the labels are from the latest history for this image
             const currentHistory = this.state.imageHistories.get(this.state.currentPath);
@@ -1666,6 +1718,8 @@ class MessageHandler {
                     JSON.stringify(currentHistory.history[currentHistory.historyIndex])
                 );
             }
+            // No unsaved changes for newly loaded image
+            this.state.markChangesSaved();
         }
         
         // 设置图像对象并加载
@@ -1825,6 +1879,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('zoom-info').textContent = '缩放: 100%';
         
+        // Ensure save button starts disabled
+        const saveButton = document.getElementById('saveLabels');
+        if (saveButton) {
+            saveButton.setAttribute('disabled', 'disabled');
+            saveButton.classList.add('disabled');
+        }
+        
         // Initialize rectangles
         canvasManager.updateRects();
         
@@ -1859,6 +1920,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 canvasManager.updateZoomDisplay();
                 canvasManager.updateLabelList();
                 state.requestRedraw();
+                
+                // Make sure hasUnsavedChanges starts as false
+                state.hasUnsavedChanges = false;
+                uiManager.updateSaveButtonState();
             };
             img.src = state.currentImage;
             

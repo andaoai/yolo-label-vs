@@ -9,6 +9,9 @@
     --border-color: var(--vscode-panel-border);
     --text-color: var(--vscode-editor-foreground);
     --text-color-secondary: var(--vscode-descriptionForeground);
+    /* RGB values for animations */
+    --button-background-rgb: 0, 122, 204; /* Default VS Code blue */
+    --save-button-highlight-color: rgba(75, 210, 143, 0.5); /* Green highlight for save button */
 }
 
 /* =================== 全局基础样式 =================== */
@@ -536,6 +539,7 @@ svg {
     align-items: center;
     justify-content: center;
     border-radius: 3px;
+    transition: all 0.2s ease;
 }
 
 .toolbar button#saveLabels svg {
@@ -544,6 +548,98 @@ svg {
 
 .toolbar button#saveLabels:hover {
     background-color: var(--vscode-button-hoverBackground);
+}
+
+/* Save button pulse animation when enabled */
+@keyframes pulse-save-button {
+    0% {
+        box-shadow: 0 0 0 0 var(--save-button-highlight-color);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(75, 210, 143, 0);
+        transform: scale(1.03);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(75, 210, 143, 0);
+        transform: scale(1);
+    }
+}
+
+/* Save button state animation and tooltip */
+.toolbar button#saveLabels:not(:disabled):not(.disabled) {
+    animation: pulse-save-button 2s infinite;
+    position: relative;
+    overflow: visible;
+}
+
+/* Extra status indicator that appears when enabled */
+.toolbar button#saveLabels:not(:disabled):not(.disabled)::before {
+    content: 'Changes need saving';
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+    color: var(--vscode-editorWidget-foreground, var(--vscode-editor-foreground));
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 3px;
+    padding: 3px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.toolbar button#saveLabels:not(:disabled):not(.disabled):hover::before {
+    opacity: 1;
+}
+
+/* Extra highlight element for save button */
+.toolbar button#saveLabels:not(:disabled):not(.disabled)::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    border-radius: 5px;
+    z-index: -1;
+    background: transparent;
+    border: 2px solid transparent;
+    animation: save-button-border-pulse 2s infinite;
+}
+
+@keyframes save-button-border-pulse {
+    0% {
+        border-color: rgba(75, 210, 143, 0);
+    }
+    50% {
+        border-color: rgba(75, 210, 143, 0.6);
+    }
+    100% {
+        border-color: rgba(75, 210, 143, 0);
+    }
+}
+
+/* Save button disabled state */
+.toolbar button#saveLabels:disabled,
+.toolbar button#saveLabels.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--vscode-disabledForeground, var(--vscode-button-secondaryBackground, #3a3a3a));
+    border-color: var(--vscode-panel-border);
+    color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+    animation: none;
+}
+
+.toolbar button#saveLabels:disabled svg,
+.toolbar button#saveLabels.disabled svg {
+    opacity: 0.5;
+    color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
 }
 
 /* 右侧工具栏按钮 */
@@ -572,6 +668,8 @@ svg {
 .search-action-button.disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    background-color: var(--vscode-disabledForeground, var(--vscode-button-secondaryBackground, #3a3a3a));
+    border-color: var(--vscode-panel-border);
 }
 
 .file-actions button:disabled svg,
@@ -579,6 +677,7 @@ svg {
 .search-action-button:disabled svg,
 .search-action-button.disabled svg {
     opacity: 0.5;
+    color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
 }
 
 /* Make toolbar more responsive */
