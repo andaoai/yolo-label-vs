@@ -82,6 +82,7 @@ export interface YoloConfig {
   path: string;
   train: string | string[];
   val: string | string[];
+  test: string | string[];
   names: string[] | Record<string, string>;
 }
 

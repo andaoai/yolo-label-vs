@@ -11,6 +11,7 @@ export interface YoloConfig {
     path: string;      // 数据集根目录
     train: string | string[];     // 训练图片目录（相对于path）
     val: string | string[];       // 验证图片目录（相对于path）
+    test: string | string[];      // 测试图片目录（相对于path）
     names: string[];   // 标签类别名称列表，始终保存为数组形式
 }
 
@@ -60,13 +61,17 @@ export class YoloDataReader {
             }
         });
 
-        // Validate train and val paths
+        // Validate train, val and test paths
         if (config.train && !this._isValidPath(config.train)) {
             throw new Error('Train path must be a string or an array of strings');
         }
 
         if (config.val && !this._isValidPath(config.val)) {
             throw new Error('Val path must be a string or an array of strings');
+        }
+
+        if (config.test && !this._isValidPath(config.test)) {
+            throw new Error('Test path must be a string or an array of strings');
         }
 
         return true;
@@ -93,6 +98,7 @@ export class YoloDataReader {
                 path: rawConfig.path,
                 train: rawConfig.train || '',
                 val: rawConfig.val || '',
+                test: rawConfig.test || '',
                 names: rawConfig.names
             };
 
@@ -183,6 +189,35 @@ export class YoloDataReader {
                 files.forEach(file => imageFilesSet.add(file));
             }
 
+            // 处理测试集路径
+            const testPaths = Array.isArray(this.config.test)
+                ? this.config.test
+                : [this.config.test];
+
+            // 遍历所有测试集路径
+            for (const testPath of testPaths) {
+                if (!testPath) continue;
+
+                const fullPath = path.join(imagesPath, testPath);
+                directoriesChecked++;
+                
+                if (!fs.existsSync(fullPath)) {
+                    console.warn(`Warning: Directory does not exist: ${fullPath}`);
+                    continue;
+                }
+
+                // 读取当前目录下的所有文件
+                const files = fs.readdirSync(fullPath)
+                    .filter(file => {
+                        const ext = path.extname(file).toLowerCase();
+                        return this.SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
+                    })
+                    .map(file => path.join(fullPath, file));
+
+                // 添加到 Set 中以去重
+                files.forEach(file => imageFilesSet.add(file));
+            }
+
             // 转换 Set 为数组并排序
             this.imageFiles = Array.from(imageFilesSet).sort();
 
@@ -190,7 +225,7 @@ export class YoloDataReader {
                 console.warn(`No supported image files found in any of the ${directoriesChecked} directories checked.`);
                 // 不立即抛出错误，允许初始化继续
             } else {
-                console.log(`Loaded ${this.imageFiles.length} unique images from ${trainPaths.length} train and ${valPaths.length} val directories`);
+                console.log(`Loaded ${this.imageFiles.length} unique images from ${trainPaths.length} train, ${valPaths.length} val, and ${testPaths.length} test directories`);
             }
         } catch (error: any) {
             console.error('Error loading image files:', error);
