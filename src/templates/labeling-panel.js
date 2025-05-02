@@ -73,6 +73,9 @@ class LabelingState {
     historyIndex = -1;
     maxHistorySize = 50;
     
+    // Store histories for each image path
+    imageHistories = new Map();
+    
     constructor() {
         // Ensure all labels have a visibility property
         if (this.initialLabels) {
@@ -83,36 +86,66 @@ class LabelingState {
             });
         }
         
-        // Store initial labels in history
-        this.pushHistory();
+        // Initialize history for the initial path if it exists
+        if (this.currentPath) {
+            this.imageHistories.set(this.currentPath, {
+                history: [],
+                historyIndex: -1
+            });
+            // Store initial labels in history
+            this.pushHistory();
+        }
     }
     
     // Add undo/redo functionality
     pushHistory() {
+        // Get or initialize history for current image
+        if (!this.imageHistories.has(this.currentPath)) {
+            this.imageHistories.set(this.currentPath, {
+                history: [],
+                historyIndex: -1
+            });
+        }
+        
+        const currentHistory = this.imageHistories.get(this.currentPath);
+        
         // Remove any future history if we're in the middle of the history stack
-        if (this.historyIndex < this.history.length - 1) {
-            this.history = this.history.slice(0, this.historyIndex + 1);
+        if (currentHistory.historyIndex < currentHistory.history.length - 1) {
+            currentHistory.history = currentHistory.history.slice(0, currentHistory.historyIndex + 1);
         }
         
         // Clone current labels for history
         const labelsCopy = JSON.parse(JSON.stringify(this.initialLabels));
         
         // Add to history
-        this.history.push(labelsCopy);
+        currentHistory.history.push(labelsCopy);
         
         // Limit history size
-        if (this.history.length > this.maxHistorySize) {
-            this.history.shift();
+        if (currentHistory.history.length > this.maxHistorySize) {
+            currentHistory.history.shift();
         }
         
         // Update index
-        this.historyIndex = this.history.length - 1;
+        currentHistory.historyIndex = currentHistory.history.length - 1;
+        
+        // Update the state's imageHistories
+        this.imageHistories.set(this.currentPath, currentHistory);
     }
     
     undo() {
-        if (this.historyIndex > 0) {
-            this.historyIndex--;
-            this.initialLabels = JSON.parse(JSON.stringify(this.history[this.historyIndex]));
+        // Get history for current image
+        if (!this.imageHistories.has(this.currentPath)) {
+            return false;
+        }
+        
+        const currentHistory = this.imageHistories.get(this.currentPath);
+        
+        if (currentHistory.historyIndex > 0) {
+            currentHistory.historyIndex--;
+            this.initialLabels = JSON.parse(JSON.stringify(currentHistory.history[currentHistory.historyIndex]));
+            
+            // Update the state's imageHistories
+            this.imageHistories.set(this.currentPath, currentHistory);
             return true;
         }
         return false;
@@ -153,6 +186,9 @@ class CanvasManager {
         this.canvas = document.getElementById('imageCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.coordinates = document.getElementById('coordinates');
+        this.imageDimension = document.getElementById('image-dimension');
+        this.labelsCount = document.getElementById('labels-count');
+        this.zoomInfo = document.getElementById('zoom-info');
         
         // Set callback for animation frame based redraw
         this.state.onRedrawRequested = this.redrawWithTransform.bind(this);
@@ -392,7 +428,17 @@ class CanvasManager {
     
     // Update coordinate display in status bar
     updateCoordinateDisplay(x, y) {
-        this.coordinates.textContent = `X: ${Math.round(x * 100)}%, Y: ${Math.round(y * 100)}%`;
+        // 转换为图像坐标（归一化）
+        const normalizedX = x.toFixed(3);
+        const normalizedY = y.toFixed(3);
+        this.coordinates.textContent = `位置: ${normalizedX}, ${normalizedY}`;
+        
+        // 如果有图像尺寸信息，也显示实际像素位置
+        if (this.state.originalImageWidth && this.state.originalImageHeight) {
+            const pixelX = Math.round(x * this.state.originalImageWidth);
+            const pixelY = Math.round(y * this.state.originalImageHeight);
+            this.coordinates.textContent = `位置: ${normalizedX}, ${normalizedY} (${pixelX}px, ${pixelY}px)`;
+        }
     }
 
     handleMouseUp(e) {
@@ -414,40 +460,45 @@ class CanvasManager {
     
     // Complete box drawing and add to labels
     completeBoxDrawing(e) {
+        if (!this.state.isDrawing) return;
+        
+        this.state.isDrawing = false;
+        
+        const { startX, startY } = this.state;
         const pos = this.getMousePos(e);
         
-        // Get normalized coordinates
+        // 计算归一化坐标 (0-1 范围)
         const x = pos.x / this.state.originalImageWidth;
         const y = pos.y / this.state.originalImageHeight;
         
-        // Calculate box dimensions
-        const width = Math.abs(x - this.state.startX);
-        const height = Math.abs(y - this.state.startY);
+        // 计算宽度和高度（归一化）
+        const width = Math.abs(x - startX);
+        const height = Math.abs(y - startY);
         
-        // Only create box if minimum size is met
+        // 计算左上角坐标
+        const boxX = Math.min(startX, x) + width/2;
+        const boxY = Math.min(startY, y) + height/2;
+        
+        // 只有当框足够大时才添加
         if (width > CONFIG.MIN_BOX_SIZE && height > CONFIG.MIN_BOX_SIZE) {
-            // Calculate box center
-            const boxX = Math.min(this.state.startX, x) + width/2;
-            const boxY = Math.min(this.state.startY, y) + height/2;
-            
-            // Add the new bounding box
             this.state.initialLabels.push({
-                class: this.state.currentLabel,
                 x: boxX,
                 y: boxY,
-                width: width,
-                height: height,
-                isSegmentation: false
+                width,
+                height,
+                class: parseInt(this.state.currentLabel),
+                visible: true
             });
             
-            // Add to history
+            // 更新历史记录
             this.state.pushHistory();
             
-            // Update UI
+            // 更新标签列表和计数
             this.updateLabelList();
+            this.updateLabelsCountDisplay();
         }
         
-        this.state.isDrawing = false;
+        // 重绘画布
         this.state.requestRedraw();
     }
 
@@ -523,7 +574,7 @@ class CanvasManager {
     // Update zoom display in UI
     updateZoomDisplay() {
         const zoomPercent = Math.round(this.state.scale * 100);
-        document.getElementById('zoom-info').textContent = `Zoom: ${zoomPercent}%`;
+        this.zoomInfo.textContent = `缩放: ${zoomPercent}%`;
     }
 
     handleContextMenu(e) {
@@ -537,7 +588,7 @@ class CanvasManager {
     }
 
     handleResize() {
-        if (this.state.currentImage) {
+        if (this.state.image) {
             this.resizeCanvas();
             this.state.requestRedraw();
         }
@@ -575,51 +626,61 @@ class CanvasManager {
     }
 
     loadImage(imagePath) {
-        if (!imagePath) return;
+        if (!imagePath) {
+            this.showImageError();
+            return Promise.reject("No image path provided");
+        }
         
-        const img = new Image();
-        
-        // Show loading indicator
         this.showLoadingState(true);
         
-        img.onload = () => {
-            // Hide loading indicator
-            this.showLoadingState(false);
+        return new Promise((resolve, reject) => {
+            const img = new Image();
             
-            // Store original image dimensions
-            this.state.originalImageWidth = img.width;
-            this.state.originalImageHeight = img.height;
+            img.onload = () => {
+                // 存储原始图像尺寸
+                this.state.originalImageWidth = img.width;
+                this.state.originalImageHeight = img.height;
+                this.state.image = img;
+                
+                // 获取画布容器尺寸
+                const container = this.canvas.parentElement;
+                const containerWidth = container.clientWidth;
+                const containerHeight = container.clientHeight;
+                
+                // 重设缩放为1（原始大小）
+                this.state.scale = 1;
+                
+                // 计算图片居中位置
+                this.state.translateX = (containerWidth - img.width) / 2;
+                this.state.translateY = (containerHeight - img.height) / 2;
+                
+                // 更新矩形区域
+                this.updateRects();
+                
+                // 更新所有状态栏信息
+                this.updateImageDimensionDisplay();
+                this.updateLabelsCountDisplay();
+                this.updateZoomDisplay();
+                
+                // 更新标签列表
+                this.updateLabelList();
+                
+                // 重绘画布
+                this.state.requestRedraw();
+                
+                this.showLoadingState(false);
+                resolve(img);
+            };
             
-            // Set canvas dimensions to container size
-            const container = this.canvas.parentElement;
-            this.canvas.width = container.clientWidth;
-            this.canvas.height = container.clientHeight;
+            img.onerror = (err) => {
+                this.showImageError();
+                console.error("Failed to load image:", err);
+                this.showLoadingState(false);
+                reject("Failed to load image");
+            };
             
-            // Reset zoom and pan, center image
-            this.state.scale = 1;
-            this.state.translateX = (this.canvas.width - img.width) / 2;
-            this.state.translateY = (this.canvas.height - img.height) / 2;
-            this.updateZoomDisplay();
-            
-            // Ensure canvas dimensions are correct
-            this.resizeCanvas();
-            
-            // Update rectangles
-            this.updateRects();
-            
-            // Draw image and labels
-            this.state.requestRedraw();
-            this.updateLabelList();
-        };
-        
-        img.onerror = () => {
-            this.showLoadingState(false);
-            // Show error message
-            this.showImageError();
-        };
-        
-        img.src = imagePath;
-        this.state.currentImage = img;
+            img.src = imagePath;
+        });
     }
     
     // Show loading state UI
@@ -655,14 +716,14 @@ class CanvasManager {
         this.ctx.restore();
         
         // Draw image and annotations if image is loaded
-        if (this.state.currentImage && this.state.currentImage.complete) {
+        if (this.state.image && this.state.image.complete) {
             // Apply transformations
             this.ctx.save();
             this.ctx.translate(this.state.translateX, this.state.translateY);
             this.ctx.scale(this.state.scale, this.state.scale);
             
             // Draw image
-            this.ctx.drawImage(this.state.currentImage, 0, 0);
+            this.ctx.drawImage(this.state.image, 0, 0);
             
             // Draw labels
             this.drawLabels();
@@ -1025,15 +1086,19 @@ class CanvasManager {
     }
 
     updateLabelList() {
-        const labelList = document.getElementById('labelList');
-        labelList.innerHTML = '';
+        const labelListContainer = document.getElementById('labelList');
+        if (!labelListContainer) return;
         
-        if (!this.state.initialLabels.length) {
-            // Show empty state if no labels
-            const emptyDiv = document.createElement('div');
-            emptyDiv.className = 'empty-state';
-            emptyDiv.textContent = 'No labels yet. Draw on the image to add labels.';
-            labelList.appendChild(emptyDiv);
+        labelListContainer.innerHTML = '';
+        
+        if (!this.state.initialLabels || this.state.initialLabels.length === 0) {
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'empty-label-message';
+            emptyMessage.textContent = '无标签 - 点击并拖动添加';
+            labelListContainer.appendChild(emptyMessage);
+            
+            // 更新标签计数
+            this.updateLabelsCountDisplay();
             return;
         }
         
@@ -1106,8 +1171,11 @@ class CanvasManager {
             div.appendChild(typeSpan);
             div.appendChild(visibilityBtn);
             div.appendChild(deleteBtn);
-            labelList.appendChild(div);
+            labelListContainer.appendChild(div);
         });
+        
+        // 更新标签计数显示
+        this.updateLabelsCountDisplay();
     }
 
     handleKeyDown(e) {
@@ -1159,6 +1227,21 @@ class CanvasManager {
                     break;
             }
         }
+    }
+
+    // 更新图像尺寸显示
+    updateImageDimensionDisplay() {
+        if (this.state.originalImageWidth && this.state.originalImageHeight) {
+            this.imageDimension.textContent = `尺寸: ${this.state.originalImageWidth} x ${this.state.originalImageHeight}`;
+        } else {
+            this.imageDimension.textContent = '尺寸: - x -';
+        }
+    }
+
+    // 更新标签数量显示
+    updateLabelsCountDisplay() {
+        const visibleLabels = this.state.initialLabels.filter(label => label.visible !== false).length;
+        this.labelsCount.textContent = `标签: ${visibleLabels}`;
     }
 }
 
@@ -1562,26 +1645,75 @@ class MessageHandler {
     }
 
     handleImageUpdate(message) {
-        this.state.currentImage = message.imageData;
-        this.state.initialLabels = message.labels || [];
-        // 保存当前图片路径
-        this.state.currentPath = message.currentPath || '';
-        
-        // Reset history
-        this.state.history = [];
-        this.state.historyIndex = -1;
-        this.state.pushHistory();
-        
         // Update UI
         document.getElementById('imageInfo').textContent = message.imageInfo || '';
         document.getElementById('imageSearch').value = message.currentPath || '';
-        this.canvasManager.loadImage(this.state.currentImage);
         
-        // 如果存在UI管理器实例，更新按钮状态
-        const uiManager = window.uiManager;
-        if (uiManager && typeof uiManager.updateButtonStates === 'function') {
-            uiManager.updateButtonStates();
+        // 保存当前图片路径
+        this.state.currentPath = message.currentPath || '';
+        this.state.initialLabels = message.labels || [];
+        
+        // Initialize history for this image if it doesn't exist
+        if (!this.state.imageHistories.has(this.state.currentPath)) {
+            // Push initial state to history
+            this.state.pushHistory();
+        } else {
+            // Ensure the labels are from the latest history for this image
+            const currentHistory = this.state.imageHistories.get(this.state.currentPath);
+            if (currentHistory.history.length > 0) {
+                // Use the latest history entry for this image
+                this.state.initialLabels = JSON.parse(
+                    JSON.stringify(currentHistory.history[currentHistory.historyIndex])
+                );
+            }
         }
+        
+        // 设置图像对象并加载
+        const img = new Image();
+        img.onload = () => {
+            // 设置图像尺寸
+            this.state.originalImageWidth = img.width;
+            this.state.originalImageHeight = img.height;
+            this.state.image = img;
+            
+            // 获取画布容器尺寸
+            const container = this.canvasManager.canvas.parentElement;
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            
+            // 重设缩放为1（原始大小）
+            this.state.scale = 1;
+            
+            // 计算居中位置
+            this.state.translateX = (containerWidth - img.width) / 2;
+            this.state.translateY = (containerHeight - img.height) / 2;
+            
+            // 加载后更新所有状态栏信息
+            this.canvasManager.updateImageDimensionDisplay();
+            this.canvasManager.updateLabelsCountDisplay();
+            this.canvasManager.updateZoomDisplay();
+            
+            // 更新标签列表
+            this.canvasManager.updateLabelList();
+            
+            // 重绘画布
+            this.state.requestRedraw();
+            
+            // 如果存在UI管理器实例，更新按钮状态
+            const uiManager = window.uiManager;
+            if (uiManager && typeof uiManager.updateButtonStates === 'function') {
+                uiManager.updateButtonStates();
+            }
+        };
+        
+        img.onerror = (error) => {
+            console.error('Error loading image:', error);
+            // 显示错误信息
+            this.canvasManager.showImageError();
+        };
+        
+        // 设置图像源
+        img.src = message.imageData;
     }
     
     handleError(message) {
@@ -1691,7 +1823,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.classList.add('active');
             }
         });
-        document.getElementById('zoom-info').textContent = 'Zoom: 100%';
+        document.getElementById('zoom-info').textContent = '缩放: 100%';
         
         // Initialize rectangles
         canvasManager.updateRects();
@@ -1701,7 +1833,35 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Initialize with current image if available
         if (state.currentImage) {
-            canvasManager.loadImage(state.currentImage);
+            // 转换为state.image使用的格式
+            const img = new Image();
+            img.onload = () => {
+                state.image = img;
+                state.originalImageWidth = img.width;
+                state.originalImageHeight = img.height;
+                
+                // 获取画布容器尺寸
+                const container = canvasManager.canvas.parentElement;
+                const containerWidth = container.clientWidth;
+                const containerHeight = container.clientHeight;
+                
+                // 设置为原始大小
+                state.scale = 1;
+                
+                // 计算居中位置
+                state.translateX = (containerWidth - img.width) / 2;
+                state.translateY = (containerHeight - img.height) / 2;
+                
+                canvasManager.resizeCanvas();
+                canvasManager.updateRects();
+                canvasManager.updateImageDimensionDisplay();
+                canvasManager.updateLabelsCountDisplay();
+                canvasManager.updateZoomDisplay();
+                canvasManager.updateLabelList();
+                state.requestRedraw();
+            };
+            img.src = state.currentImage;
+            
             // If we have a current path, set it in the search input
             if (state.currentPath) {
                 document.getElementById('imageSearch').value = state.currentPath;

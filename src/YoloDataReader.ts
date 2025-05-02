@@ -131,92 +131,40 @@ export class YoloDataReader {
             const imageFilesSet = new Set<string>();
             let directoriesChecked = 0;
 
-            // 处理训练集路径
-            const trainPaths = Array.isArray(this.config.train) 
-                ? this.config.train 
-                : [this.config.train];
-
-            // 遍历所有训练集路径
-            for (const trainPath of trainPaths) {
-                if (!trainPath) continue;
-
-                const fullPath = path.join(imagesPath, trainPath);
-                directoriesChecked++;
+            // 辅助函数，负责从指定路径加载图片
+            const loadImagesFromPath = (pathConfig: string | string[], label: string) => {
+                const paths = Array.isArray(pathConfig) ? pathConfig : [pathConfig];
                 
-                if (!fs.existsSync(fullPath)) {
-                    console.warn(`Warning: Directory does not exist: ${fullPath}`);
-                    continue;
+                for (const subPath of paths) {
+                    if (!subPath) continue;
+                    
+                    const fullPath = path.join(imagesPath, subPath);
+                    directoriesChecked++;
+                    
+                    if (!fs.existsSync(fullPath)) {
+                        console.warn(`Warning: Directory does not exist: ${fullPath}`);
+                        continue;
+                    }
+                    
+                    // 读取当前目录下的所有文件
+                    const files = fs.readdirSync(fullPath)
+                        .filter(file => {
+                            const ext = path.extname(file).toLowerCase();
+                            return this.SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
+                        })
+                        .map(file => path.join(fullPath, file));
+                    
+                    // 添加到 Set 中以去重
+                    files.forEach(file => imageFilesSet.add(file));
                 }
-
-                // 读取当前目录下的所有文件
-                const files = fs.readdirSync(fullPath)
-                    .filter(file => {
-                        const ext = path.extname(file).toLowerCase();
-                        return this.SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
-                    })
-                    .map(file => path.join(fullPath, file));
-
-                // 添加到 Set 中以去重
-                files.forEach(file => imageFilesSet.add(file));
-            }
-
-            // 处理验证集路径
-            const valPaths = Array.isArray(this.config.val)
-                ? this.config.val
-                : [this.config.val];
-
-            // 遍历所有验证集路径
-            for (const valPath of valPaths) {
-                if (!valPath) continue;
-
-                const fullPath = path.join(imagesPath, valPath);
-                directoriesChecked++;
                 
-                if (!fs.existsSync(fullPath)) {
-                    console.warn(`Warning: Directory does not exist: ${fullPath}`);
-                    continue;
-                }
-
-                // 读取当前目录下的所有文件
-                const files = fs.readdirSync(fullPath)
-                    .filter(file => {
-                        const ext = path.extname(file).toLowerCase();
-                        return this.SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
-                    })
-                    .map(file => path.join(fullPath, file));
-
-                // 添加到 Set 中以去重
-                files.forEach(file => imageFilesSet.add(file));
-            }
-
-            // 处理测试集路径
-            const testPaths = Array.isArray(this.config.test)
-                ? this.config.test
-                : [this.config.test];
-
-            // 遍历所有测试集路径
-            for (const testPath of testPaths) {
-                if (!testPath) continue;
-
-                const fullPath = path.join(imagesPath, testPath);
-                directoriesChecked++;
-                
-                if (!fs.existsSync(fullPath)) {
-                    console.warn(`Warning: Directory does not exist: ${fullPath}`);
-                    continue;
-                }
-
-                // 读取当前目录下的所有文件
-                const files = fs.readdirSync(fullPath)
-                    .filter(file => {
-                        const ext = path.extname(file).toLowerCase();
-                        return this.SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
-                    })
-                    .map(file => path.join(fullPath, file));
-
-                // 添加到 Set 中以去重
-                files.forEach(file => imageFilesSet.add(file));
-            }
+                return paths.length;
+            };
+            
+            // 处理训练集、验证集和测试集路径
+            const trainPathsCount = loadImagesFromPath(this.config.train, 'train');
+            const valPathsCount = loadImagesFromPath(this.config.val, 'val');
+            const testPathsCount = loadImagesFromPath(this.config.test, 'test');
 
             // 转换 Set 为数组并排序
             this.imageFiles = Array.from(imageFilesSet).sort();
@@ -225,7 +173,7 @@ export class YoloDataReader {
                 console.warn(`No supported image files found in any of the ${directoriesChecked} directories checked.`);
                 // 不立即抛出错误，允许初始化继续
             } else {
-                console.log(`Loaded ${this.imageFiles.length} unique images from ${trainPaths.length} train, ${valPaths.length} val, and ${testPaths.length} test directories`);
+                console.log(`Loaded ${this.imageFiles.length} unique images from ${trainPathsCount} train, ${valPathsCount} val, and ${testPathsCount} test directories`);
             }
         } catch (error: any) {
             console.error('Error loading image files:', error);

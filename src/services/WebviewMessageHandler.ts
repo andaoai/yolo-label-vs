@@ -252,7 +252,22 @@ export class WebviewMessageHandler {
     private getImageInfoText(): string {
         const currentIndex = this._yoloReader.getCurrentImageIndex();
         const totalImages = this._yoloReader.getTotalImages();
-        return `Image: ${currentIndex + 1} of ${totalImages}`;
+        
+        // 获取当前图片文件名（仅显示文件名，不包含路径）
+        const currentImage = this._yoloReader.getCurrentImage();
+        let filename = '';
+        
+        if (currentImage) {
+            const pathParts = currentImage.split(/[\\\/]/); // 处理不同操作系统的路径分隔符
+            filename = pathParts[pathParts.length - 1];
+            
+            if (filename.length > 20) {
+                // 如果文件名太长，则截断显示
+                filename = filename.substr(0, 17) + '...';
+            }
+        }
+        
+        return `图片 ${currentIndex + 1}/${totalImages} - ${filename}`;
     }
     
     /**
