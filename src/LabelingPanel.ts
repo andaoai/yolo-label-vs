@@ -8,9 +8,10 @@ export class LabelingPanel {
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
-    private _yoloReader!: YoloDataReader;
+    private _yoloReader?: YoloDataReader;
     private _imageCache: Map<string, string> = new Map();
     private readonly _maxCacheSize = 10;
+    private _hasError: boolean = false;
 
     public static createOrShow(extensionUri: vscode.Uri, yamlUri: vscode.Uri) {
         const column = vscode.window.activeTextEditor
@@ -18,8 +19,13 @@ export class LabelingPanel {
             : undefined;
 
         if (LabelingPanel.currentPanel) {
-            LabelingPanel.currentPanel._panel.reveal(column);
-            return;
+            if (LabelingPanel.currentPanel._hasError) {
+                LabelingPanel.currentPanel.dispose();
+                LabelingPanel.currentPanel = undefined;
+            } else {
+                LabelingPanel.currentPanel._panel.reveal(column);
+                return;
+            }
         }
 
         const panel = vscode.window.createWebviewPanel(
@@ -42,11 +48,13 @@ export class LabelingPanel {
         
         try {
             this._yoloReader = new YoloDataReader(yamlUri.fsPath);
-            if (this._yoloReader.getClassNames().length === 0 || !this._yoloReader.getCurrentImage()) {
+            if (!this._yoloReader.getClassNames().length || !this._yoloReader.getCurrentImage()) {
+                this._hasError = true;
                 this._panel.webview.html = this._getErrorHtml('No images or classes found in dataset');
                 return;
             }
         } catch (error: any) {
+            this._hasError = true;
             console.error('Error initializing YoloDataReader:', error);
             this._panel.webview.html = this._getErrorHtml(`Failed to load dataset configuration: ${error.message}`);
             return;
@@ -56,6 +64,25 @@ export class LabelingPanel {
         this._setupMessageListener();
 
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+        
+        if (this._hasError) {
+            this._addReloadButton();
+        }
+    }
+
+    private _addReloadButton() {
+        this._panel.webview.html = this._panel.webview.html.replace('</body>',
+            `<button id="reloadButton" style="margin-top: 20px; padding: 8px 16px; background-color: #0098ff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Reload Panel
+            </button>
+            <script>
+                document.getElementById('reloadButton').addEventListener('click', () => {
+                    const vscode = acquireVsCodeApi();
+                    vscode.postMessage({ command: 'reload' });
+                });
+            </script>
+            </body>`
+        );
     }
 
     private _getErrorHtml(message: string): string {
@@ -72,11 +99,38 @@ export class LabelingPanel {
                         background-color: #1e1e1e;
                     }
                     h1 { color: #f14c4c; }
+                    .error-details {
+                        background-color: #252526;
+                        padding: 12px;
+                        border-radius: 4px;
+                        margin-top: 10px;
+                    }
+                    button {
+                        margin-top: 20px;
+                        padding: 8px 16px;
+                        background-color: #0098ff;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    }
                 </style>
+                <script>
+                    const vscode = acquireVsCodeApi();
+                </script>
             </head>
             <body>
                 <h1>Error</h1>
                 <p>${message}</p>
+                <div class="error-details">
+                    <p>Try the following:</p>
+                    <ul>
+                        <li>Check if the YAML file exists and has correct permissions</li>
+                        <li>Verify that image paths in the YAML file are correct</li>
+                        <li>Make sure the image files exist in the specified locations</li>
+                    </ul>
+                </div>
+                <button onclick="vscode.postMessage({ command: 'reload' })">Reload Panel</button>
             </body>
             </html>`;
     }
@@ -87,10 +141,21 @@ export class LabelingPanel {
     }
 
     private async _getHtmlForWebview(webview: vscode.Webview) {
+        if (!this._yoloReader) {
+            return this._getErrorHtml('YoloDataReader is not initialized');
+        }
+        
         const classNames = this._yoloReader.getClassNames();
         const currentImage = this._yoloReader.getCurrentImage();
         const labels = currentImage ? this._yoloReader.readLabels(currentImage) : [];
-        const initialImageData = currentImage ? await this._loadImage(currentImage) : null;
+        let initialImageData = null;
+        
+        try {
+            initialImageData = currentImage ? await this._loadImage(currentImage) : null;
+        } catch (error: any) {
+            this._hasError = true;
+            return this._getErrorHtml(`Failed to load image: ${error.message}`);
+        }
 
         // Get path to CSS and JS files
         const cssPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'templates', 'labeling-panel.css');
@@ -132,65 +197,112 @@ export class LabelingPanel {
             async message => {
                 try {
                     switch (message.command) {
+                        case 'reload':
+                            this.dispose();
+                            vscode.commands.executeCommand('yolo-labeling-vs.openLabelingPanel');
+                            return;
+                            
                         case 'getImageList':
-                            // Send the list of all images to the webview
+                            if (!this._yoloReader) {
+                                throw new Error('YoloDataReader is not initialized');
+                            }
                             this._panel.webview.postMessage({
                                 command: 'imageList',
                                 paths: this._yoloReader.getAllImages()
                             });
                             return;
+                            
                         case 'loadImage':
-                            // Load specific image by path
+                            if (!this._yoloReader) {
+                                throw new Error('YoloDataReader is not initialized');
+                            }
                             if (message.path) {
-                                const imageData = await this._loadImage(message.path);
-                                const labels = this._yoloReader.readLabels(message.path);
-                                this._yoloReader.setCurrentImageByPath(message.path);
-                                this._panel.webview.postMessage({ 
-                                    command: 'updateImage', 
-                                    imageData: imageData,
-                                    labels: labels,
-                                    currentPath: message.path,
-                                    imageInfo: `Image: ${this._yoloReader.getCurrentImageIndex() + 1} of ${this._yoloReader.getTotalImages()}`
-                                });
+                                try {
+                                    const imageData = await this._loadImage(message.path);
+                                    const labels = this._yoloReader.readLabels(message.path);
+                                    this._yoloReader.setCurrentImageByPath(message.path);
+                                    this._panel.webview.postMessage({ 
+                                        command: 'updateImage', 
+                                        imageData: imageData,
+                                        labels: labels,
+                                        currentPath: message.path,
+                                        imageInfo: `Image: ${this._yoloReader.getCurrentImageIndex() + 1} of ${this._yoloReader.getTotalImages()}`
+                                    });
+                                } catch (error: any) {
+                                    this._panel.webview.postMessage({
+                                        command: 'error',
+                                        error: `Failed to load image: ${error.message}`
+                                    });
+                                }
                             }
                             return;
+                            
                         case 'save':
+                            if (!this._yoloReader) {
+                                throw new Error('YoloDataReader is not initialized');
+                            }
                             const currentImage = this._yoloReader.getCurrentImage();
                             if (currentImage) {
                                 this._yoloReader.saveLabels(currentImage, message.labels);
                                 vscode.window.showInformationMessage('Labels saved successfully!');
                             }
                             return;
+                            
                         case 'next':
+                            if (!this._yoloReader) {
+                                throw new Error('YoloDataReader is not initialized');
+                            }
                             const nextImage = this._yoloReader.getNextImage();
                             if (nextImage) {
-                                const imageData = await this._loadImage(nextImage);
-                                const labels = this._yoloReader.readLabels(nextImage);
-                                this._panel.webview.postMessage({ 
-                                    command: 'updateImage', 
-                                    imageData: imageData,
-                                    labels: labels,
-                                    currentPath: nextImage,
-                                    imageInfo: `Image: ${this._yoloReader.getCurrentImageIndex() + 1} of ${this._yoloReader.getTotalImages()}`
-                                });
+                                try {
+                                    const imageData = await this._loadImage(nextImage);
+                                    const labels = this._yoloReader.readLabels(nextImage);
+                                    this._panel.webview.postMessage({ 
+                                        command: 'updateImage', 
+                                        imageData: imageData,
+                                        labels: labels,
+                                        currentPath: nextImage,
+                                        imageInfo: `Image: ${this._yoloReader.getCurrentImageIndex() + 1} of ${this._yoloReader.getTotalImages()}`
+                                    });
+                                } catch (error: any) {
+                                    this._panel.webview.postMessage({
+                                        command: 'error',
+                                        error: `Failed to load next image: ${error.message}`
+                                    });
+                                }
                             }
                             return;
+                            
                         case 'previous':
+                            if (!this._yoloReader) {
+                                throw new Error('YoloDataReader is not initialized');
+                            }
                             const prevImage = this._yoloReader.getPreviousImage();
                             if (prevImage) {
-                                const imageData = await this._loadImage(prevImage);
-                                const labels = this._yoloReader.readLabels(prevImage);
-                                this._panel.webview.postMessage({ 
-                                    command: 'updateImage', 
-                                    imageData: imageData,
-                                    labels: labels,
-                                    currentPath: prevImage,
-                                    imageInfo: `Image: ${this._yoloReader.getCurrentImageIndex() + 1} of ${this._yoloReader.getTotalImages()}`
-                                });
+                                try {
+                                    const imageData = await this._loadImage(prevImage);
+                                    const labels = this._yoloReader.readLabels(prevImage);
+                                    this._panel.webview.postMessage({ 
+                                        command: 'updateImage', 
+                                        imageData: imageData,
+                                        labels: labels,
+                                        currentPath: prevImage,
+                                        imageInfo: `Image: ${this._yoloReader.getCurrentImageIndex() + 1} of ${this._yoloReader.getTotalImages()}`
+                                    });
+                                } catch (error: any) {
+                                    this._panel.webview.postMessage({
+                                        command: 'error',
+                                        error: `Failed to load previous image: ${error.message}`
+                                    });
+                                }
                             }
                             return;
                     }
                 } catch (error: any) {
+                    this._panel.webview.postMessage({
+                        command: 'error',
+                        error: `Error: ${error.message}`
+                    });
                     vscode.window.showErrorMessage(`Error: ${error.message}`);
                 }
             },
@@ -207,8 +319,25 @@ export class LabelingPanel {
         }
 
         try {
+            // Check if file exists before reading
+            await fs.promises.access(imagePath, fs.constants.R_OK);
             const imageBuffer = await fs.promises.readFile(imagePath);
-            const imageData = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
+            
+            // Try to determine image format from file extension
+            const ext = path.extname(imagePath).toLowerCase();
+            let mimeType = 'image/jpeg'; // Default
+            
+            if (ext === '.png') {
+                mimeType = 'image/png';
+            } else if (ext === '.gif') {
+                mimeType = 'image/gif';
+            } else if (ext === '.webp') {
+                mimeType = 'image/webp';
+            } else if (ext === '.bmp') {
+                mimeType = 'image/bmp';
+            }
+            
+            const imageData = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
             
             // Update cache
             this._imageCache.set(imagePath, imageData);
@@ -223,14 +352,22 @@ export class LabelingPanel {
             
             return imageData;
         } catch (error: any) {
-            throw new Error(`Failed to load image: ${error.message}`);
+            // More specific error message based on the error type
+            if (error.code === 'ENOENT') {
+                throw new Error(`Image file not found: ${imagePath}`);
+            } else if (error.code === 'EACCES') {
+                throw new Error(`Permission denied when reading image: ${imagePath}`);
+            }
+            throw new Error(`Failed to load image '${imagePath}': ${error.message}`);
         }
     }
 
     public dispose() {
         LabelingPanel.currentPanel = undefined;
-        this._panel.dispose();
+        this._hasError = false;
+        this._yoloReader = undefined;
         this._imageCache.clear();
+        this._panel.dispose();
         while (this._disposables.length) {
             const x = this._disposables.pop();
             if (x) {

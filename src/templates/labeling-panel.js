@@ -1395,7 +1395,7 @@ class MessageHandler {
     }
     
     handleImageList(message) {
-        this.state.allImagePaths = message.paths;
+        this.state.allImagePaths = message.paths || [];
     }
 
     handleImageUpdate(message) {
@@ -1408,47 +1408,166 @@ class MessageHandler {
         this.state.pushHistory();
         
         // Update UI
-        document.getElementById('imageInfo').textContent = message.imageInfo;
+        document.getElementById('imageInfo').textContent = message.imageInfo || '';
         document.getElementById('imageSearch').value = message.currentPath || '';
         this.canvasManager.loadImage(this.state.currentImage);
     }
     
     handleError(message) {
-        // Show error message
-        console.error(message.error);
-        // Could add UI notification here
+        console.error('Error from extension:', message.error);
+        this.showErrorMessage(message.error);
+    }
+    
+    // Display error message to user
+    showErrorMessage(errorMessage) {
+        // Create or update error container
+        let errorContainer = document.getElementById('error-container');
+        
+        if (!errorContainer) {
+            errorContainer = document.createElement('div');
+            errorContainer.id = 'error-container';
+            errorContainer.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: #f14c4c;
+                color: white;
+                padding: 16px 24px;
+                border-radius: 4px;
+                z-index: 1000;
+                max-width: 80%;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            `;
+            
+            // Add close button
+            const closeButton = document.createElement('button');
+            closeButton.textContent = '×';
+            closeButton.style.cssText = `
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: none;
+                border: none;
+                color: white;
+                font-size: 20px;
+                cursor: pointer;
+                padding: 0;
+                width: 24px;
+                height: 24px;
+                line-height: 24px;
+                text-align: center;
+            `;
+            closeButton.onclick = () => {
+                errorContainer.style.display = 'none';
+            };
+            
+            // Add reload button
+            const reloadButton = document.createElement('button');
+            reloadButton.textContent = 'Reload Panel';
+            reloadButton.style.cssText = `
+                background-color: #ffffff;
+                color: #f14c4c;
+                border: none;
+                padding: 8px 16px;
+                margin-top: 16px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: bold;
+            `;
+            reloadButton.onclick = () => {
+                this.state.vscode.postMessage({ command: 'reload' });
+            };
+            
+            const errorMessageElement = document.createElement('div');
+            errorMessageElement.id = 'error-message';
+            
+            errorContainer.appendChild(closeButton);
+            errorContainer.appendChild(errorMessageElement);
+            errorContainer.appendChild(reloadButton);
+            
+            document.body.appendChild(errorContainer);
+        } else {
+            // Show the container if it was hidden
+            errorContainer.style.display = 'block';
+        }
+        
+        // Update error message
+        const errorMessageElement = document.getElementById('error-message');
+        errorMessageElement.textContent = errorMessage || 'An error occurred';
     }
 }
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', () => {
-    const state = new LabelingState();
-    const canvasManager = new CanvasManager(state);
-    const uiManager = new UIManager(state, canvasManager);
-    const messageHandler = new MessageHandler(state, canvasManager);
-    
-    // Initialize UI states
-    document.getElementById('toggleLabels').classList.toggle('active', state.showLabels);
-    document.getElementById('labelMode').value = state.currentMode;
-    document.getElementById('zoom-info').textContent = 'Zoom: 100%';
-    
-    // Initialize rectangles
-    canvasManager.updateRects();
-    
-    // Request initial image list
-    state.vscode.postMessage({ command: 'getImageList' });
-    
-    // Initialize with current image if available
-    if (state.currentImage) {
-        canvasManager.loadImage(state.currentImage);
+    try {
+        const state = new LabelingState();
+        const canvasManager = new CanvasManager(state);
+        const uiManager = new UIManager(state, canvasManager);
+        const messageHandler = new MessageHandler(state, canvasManager);
+        
+        // Initialize UI states
+        document.getElementById('toggleLabels').classList.toggle('active', state.showLabels);
+        document.getElementById('labelMode').value = state.currentMode;
+        document.getElementById('zoom-info').textContent = 'Zoom: 100%';
+        
+        // Initialize rectangles
+        canvasManager.updateRects();
+        
+        // Request initial image list
+        state.vscode.postMessage({ command: 'getImageList' });
+        
+        // Initialize with current image if available
+        if (state.currentImage) {
+            canvasManager.loadImage(state.currentImage);
+        }
+        
+        // Add window resizing with throttle
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                canvasManager.handleResize();
+            }, 100);
+        });
+        
+        // Add global error handler
+        window.addEventListener('error', (event) => {
+            console.error('Uncaught error:', event.error);
+            if (messageHandler) {
+                messageHandler.showErrorMessage('An unexpected error occurred: ' + event.error.message);
+            }
+        });
+    } catch (error) {
+        console.error('Error initializing application:', error);
+        
+        // Show critical error that prevents initialization
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            padding: 20px;
+            z-index: 9999;
+        `;
+        
+        errorDiv.innerHTML = `
+            <h2 style="color: #f14c4c;">Critical Error</h2>
+            <p>${error.message || 'Failed to initialize YOLO labeling panel'}</p>
+            <button style="background-color: #0098ff; color: white; border: none; border-radius: 4px; padding: 8px 16px; margin-top: 16px; cursor: pointer;"
+                    onclick="window.vscode.postMessage({ command: 'reload' })">
+                Reload Panel
+            </button>
+        `;
+        
+        document.body.appendChild(errorDiv);
     }
-    
-    // Add window resizing with throttle
-    let resizeTimeout;
-    window.addEventListener('resize', () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            canvasManager.handleResize();
-        }, 100);
-    });
 }); 
