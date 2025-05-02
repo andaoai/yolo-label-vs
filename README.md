@@ -10,14 +10,18 @@ A VS Code extension for quickly browsing and editing YOLO dataset annotations. T
 
 Our extension seamlessly integrates with all VS Code themes for a consistent experience:
 
-<div style="display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, auto); gap: 10px;">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183912332.jpg" style="width: 100%; height: auto;" alt="Default Light Theme">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183969990.jpg" style="width: 100%; height: auto;" alt="Default Dark Theme">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183996831.jpg" style="width: 100%; height: auto;" alt="High Contrast Theme">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184077610.jpg" style="width: 100%; height: auto;" alt="Monokai Theme">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184138365.jpg" style="width: 100%; height: auto;" alt="GitHub Light Theme">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184166688.jpg" style="width: 100%; height: auto;" alt="Night Owl Theme">
-</div>
+<table>
+  <tr>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183912332.jpg" width="100%" alt="Default Light Theme"></td>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183969990.jpg" width="100%" alt="Default Dark Theme"></td>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183996831.jpg" width="100%" alt="High Contrast Theme"></td>
+  </tr>
+  <tr>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184077610.jpg" width="100%" alt="Monokai Theme"></td>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184138365.jpg" width="100%" alt="GitHub Light Theme"></td>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184166688.jpg" width="100%" alt="Night Owl Theme"></td>
+  </tr>
+</table>
 
 ## Documentation
 

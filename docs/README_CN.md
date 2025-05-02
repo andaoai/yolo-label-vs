@@ -11,14 +11,18 @@
 
 我们的扩展无缝集成了所有 VS Code 主题，提供一致的用户体验：
 
-<div style="display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, auto); gap: 10px;">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183912332.jpg" style="width: 100%; height: auto;" alt="默认浅色主题">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183969990.jpg" style="width: 100%; height: auto;" alt="默认深色主题">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183996831.jpg" style="width: 100%; height: auto;" alt="高对比度主题">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184077610.jpg" style="width: 100%; height: auto;" alt="Monokai主题">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184138365.jpg" style="width: 100%; height: auto;" alt="GitHub浅色主题">
-  <img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184166688.jpg" style="width: 100%; height: auto;" alt="Night Owl主题">
-</div>
+<table>
+  <tr>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183912332.jpg" width="100%" alt="默认浅色主题"></td>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183969990.jpg" width="100%" alt="默认深色主题"></td>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183996831.jpg" width="100%" alt="高对比度主题"></td>
+  </tr>
+  <tr>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184077610.jpg" width="100%" alt="Monokai主题"></td>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184138365.jpg" width="100%" alt="GitHub浅色主题"></td>
+    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184166688.jpg" width="100%" alt="Night Owl主题"></td>
+  </tr>
+</table>
 
 ## 相关文档
 
