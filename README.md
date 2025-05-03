@@ -41,11 +41,14 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
 - English
   - [Packaging Guide](./docs/PACKAGING.md)
   - [Publishing Guide](./docs/PUBLISHING.md)
+  - [Development Guide](./docs/DEVELOPMENT.md)
   - [CI/CD Workflow Guide](./docs/CI_CD_WORKFLOW.md)
+  - [README in English](./README.md)
 - 中文文档
   - [打包指南](./docs/PACKAGING_CN.md)
   - [发布指南](./docs/PUBLISHING_CN.md)
-  - [自动化工作流指南](./docs/CI_CD_WORKFLOW.md)
+  - [开发指南](./docs/DEVELOPMENT_CN.md)
+  - [CI/CD 工作流指南](./docs/CI_CD_WORKFLOW_CN.md)
   - [README 中文版](./docs/README_CN.md)
 
 ## Key Features
