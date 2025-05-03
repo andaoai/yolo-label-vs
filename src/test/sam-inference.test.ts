@@ -3,8 +3,9 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import * as ort from 'onnxruntime-node';
-import type Jimp from 'jimp';
-const JimpModule = require('jimp');
+
+const Jimp = require('jimp');
+
 
 // 定义常量和工具函数
 const TEST_ASSETS = {
@@ -27,20 +28,40 @@ async function preprocessImage(imagePath: string): Promise<{
     originalWidth: number,
     originalHeight: number
 }> {
-    const image = await JimpModule.read(imagePath);
+    const image = await Jimp.read(imagePath);
     const originalWidth = image.bitmap.width;
     const originalHeight = image.bitmap.height;
     
-    await image.resize(1024, 1024);
+    // SAM model specific mean and std values
+    const mean = [123.675, 116.28, 103.53];
+    const std = [58.395, 57.12, 57.375];
+    
+    // First pad the image to square
+    const size = Math.max(originalHeight, originalWidth);
+    const paddedImage = new Jimp(size, size);
+    paddedImage.composite(image, 0, 0);
+    
+    // Then resize to 1024x1024
+    const resized = paddedImage.resize(1024, 1024);
+    
+    // Create buffer for the standardized image data [1, 3, 1024, 1024]
     const imageData = new Float32Array(3 * 1024 * 1024);
     
+    // Process the image data with correct standardization
     for (let y = 0; y < 1024; y++) {
         for (let x = 0; x < 1024; x++) {
-            const idx = (y * 1024 + x) * 3;
-            const color = JimpModule.intToRGBA(image.getPixelColor(x, y));
-            imageData[idx] = color.r / 255.0;
-            imageData[idx + 1] = color.g / 255.0;
-            imageData[idx + 2] = color.b / 255.0;
+            const color = Jimp.intToRGBA(resized.getPixelColor(x, y));
+            
+            // Store in CHW format (transpose while storing)
+            // For each pixel, we store its RGB values in channel-first format
+            const r = (color.r - mean[0]) / std[0];
+            const g = (color.g - mean[1]) / std[1];
+            const b = (color.b - mean[2]) / std[2];
+            
+            // Store in CHW format
+            imageData[0 * 1024 * 1024 + y * 1024 + x] = r;
+            imageData[1 * 1024 * 1024 + y * 1024 + x] = g;
+            imageData[2 * 1024 * 1024 + y * 1024 + x] = b;
         }
     }
     
@@ -48,20 +69,26 @@ async function preprocessImage(imagePath: string): Promise<{
 }
 
 async function saveMask(maskData: Float32Array, dims: readonly number[], maskIndex: number, baseName: string) {
-    const [height, width] = dims;
+    const [_, __, height, width] = dims;
     const rgba = Buffer.alloc(width * height * 4);
     
-    for (let i = 0; i < width * height; i++) {
-        const val = Math.round(maskData[i] * 255);
-        rgba[i * 4] = val;
-        rgba[i * 4 + 1] = val;
-        rgba[i * 4 + 2] = val;
-        rgba[i * 4 + 3] = 255;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const maskOffset = maskIndex * width * height;
+            const pixelIndex = y * width + x;
+            const sourceIndex = maskOffset + pixelIndex;
+            const rgbaIndex = pixelIndex * 4;
+            
+            const alpha = maskData[sourceIndex] > 0 ? 255 : 0;
+            rgba[rgbaIndex + 0] = 255;  // R
+            rgba[rgbaIndex + 1] = 0;    // G
+            rgba[rgbaIndex + 2] = 0;    // B
+            rgba[rgbaIndex + 3] = alpha;// A
+        }
     }
     
     const maskOutPath = path.join(TEST_ASSETS.imageDir, `${baseName}_mask_${maskIndex}.png`);
-    const maskImage = new JimpModule(width, height);
-    maskImage.bitmap.data = rgba;
+    const maskImage = await Jimp.read({ data: rgba, width, height });
     await maskImage.writeAsync(maskOutPath);
 }
 

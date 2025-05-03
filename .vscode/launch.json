@@ -29,7 +29,7 @@
 				"--timeout",
 				"30000",
 				"--colors",
-				"src/test/onnx-inference.test.ts"
+				"src/test/sam-inference.test.ts"
 			],
 			"cwd": "${workspaceFolder}",
 			"internalConsoleOptions": "openOnSessionStart",
