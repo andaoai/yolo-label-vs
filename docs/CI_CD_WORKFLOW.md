@@ -17,6 +17,7 @@ Our CI/CD pipeline automates the testing, building, and publishing process for t
 **Key Benefits:**
 - Automatic validation of code changes
 - Consistent build and packaging
+- Automated version management
 - Automated publishing to the Visual Studio Code Marketplace
 - Reduced manual intervention in the release process
 
@@ -26,17 +27,16 @@ We use GitHub Actions to implement our CI/CD pipeline. The workflow is triggered
 
 ### Workflow Triggers
 
-The CI/CD workflow is triggered by the following events:
-- Push to the `main` branch
-- Creation of a new tag (for releases)
-- Pull requests to the `main` branch (for testing)
+The CI/CD workflows are triggered by the following events:
+- **main-publish.yml**: Manual dispatch or push to the `main` branch
+- **version-updater.yml**: Manual dispatch or push to the `dev` branch (ignoring changes to package.json)
 
 ### Workflow Files
 
 The workflow configurations are stored in the `.github/workflows/` directory:
 
-- `main-publish.yml`: Main workflow for building and publishing the extension
-- `pr-validation.yml`: Workflow for validating pull requests
+- `main-publish.yml`: Main workflow for building, creating releases, and publishing the extension
+- `version-updater.yml`: Workflow for automatically incrementing patch version in development branch
 
 ## Workflow Configuration
 
@@ -45,60 +45,155 @@ The workflow configurations are stored in the `.github/workflows/` directory:
 The `main-publish.yml` workflow performs the following steps:
 
 1. **Checkout**: Retrieves the latest code from the repository
-2. **Setup Node.js**: Configures the Node.js environment
-3. **Install Dependencies**: Installs the necessary npm packages
-4. **Lint**: Checks code quality
-5. **Build**: Compiles the TypeScript code
+2. **Setup Node.js**: Configures the Node.js environment (version 20.x)
+3. **Get Current Version**: Extracts version from package.json
+4. **Install Dependencies**: Removes package-lock.json and installs necessary npm packages
+5. **Compile**: Compiles the TypeScript code
 6. **Package**: Creates the VSIX package for the extension
-7. **Publish**: Publishes the extension to the VS Code Marketplace
+7. **Create GitHub Release**: Creates a new release with the current version number
+8. **Upload VSIX to Release**: Attaches the VSIX package to the GitHub release
+9. **Publish**: Publishes the extension to the VS Code Marketplace
 
 ```yaml
 name: Publish to VS Code Marketplace
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-  release:
-    types: [created]
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  publish-to-marketplace:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
         with:
-          node-version: '20.x'
-      - run: npm install
-      - run: npm run lint
-      - run: npm run build
-      - run: npm run package
+          token: ${{ secrets.PAT_TOKEN }}
       
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: '20.x'
-      - run: npm install
-      - run: npm run build
-      - run: npm run package
-      - name: Publish to VS Code Marketplace
-        run: npx vsce publish -p ${{ secrets.VSCE_PAT }}
+      
+      - name: Get current version
+        id: current_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        
+      - name: Delete package-lock.json and install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install --no-package-lock --ignore-scripts
+        
+      - name: Compile extension
+        run: npm run compile
+        
+      - name: Package extension
+        run: |
+          npm install -g @vscode/vsce
+          vsce package
+          
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        with:
+          tag_name: v${{ steps.current_version.outputs.version }}
+          release_name: Release v${{ steps.current_version.outputs.version }}
+          draft: false
+          prerelease: false
+          body: |
+            New version released to VS Code Marketplace.
+            Version: ${{ steps.current_version.outputs.version }}
+      
+      - name: Upload VSIX to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./yolo-labeling-vs-${{ steps.current_version.outputs.version }}.vsix
+          asset_name: yolo-labeling-vs-${{ steps.current_version.outputs.version }}.vsix
+          asset_content_type: application/octet-stream
+      
+      - name: Publish to Visual Studio Marketplace
+        uses: HaaLeo/publish-vscode-extension@v1
+        with:
+          pat: ${{ secrets.VSCE_TOKEN }}
+          registryUrl: https://marketplace.visualstudio.com
 ```
 
-### PR Validation Workflow
+### Version Updater Workflow
 
-The `pr-validation.yml` workflow runs when a pull request is created or updated:
+The `version-updater.yml` workflow automatically increments the patch version in the `dev` branch:
 
-1. **Checkout**: Retrieves the code from the pull request
-2. **Setup Node.js**: Configures the Node.js environment
-3. **Install Dependencies**: Installs the necessary npm packages
-4. **Lint**: Checks code quality
-5. **Build**: Ensures the code compiles correctly
-6. **Test Packaging**: Verifies that the extension can be packaged correctly
+1. **Checkout**: Retrieves the code from the repository
+2. **Setup Node.js**: Configures the Node.js environment (version 20.x)
+3. **Get Current Version**: Extracts current version from package.json
+4. **Bump Patch Version**: Increments the patch version (the third number)
+5. **Update Package.json**: Updates the version in package.json
+6. **Commit and Push**: Commits and pushes the change back to the repository
+7. **Install Dependencies**: Removes package-lock.json and installs necessary packages
+8. **Compile & Package**: Builds and packages the extension for testing
+
+```yaml
+name: Update Version for Dev Branch
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths-ignore:
+      - 'package.json'
+
+permissions:
+  contents: write
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev' && !contains(github.event.head_commit.message, '[skip ci]')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+      
+      - name: Get current version
+        id: current_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        
+      - name: Bump patch version (third number)
+        id: new_version
+        run: |
+          CURRENT=${{ steps.current_version.outputs.version }}
+          MAJOR=$(echo $CURRENT | cut -d. -f1)
+          MINOR=$(echo $CURRENT | cut -d. -f2)
+          PATCH=$(echo $CURRENT | cut -d. -f3)
+          NEWPATCH=$((PATCH + 1))
+          NEWVERSION="$MAJOR.$MINOR.$NEWPATCH"
+          echo "version=$NEWVERSION" >> $GITHUB_OUTPUT
+          
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.new_version.outputs.version }} --no-git-tag-version
+          
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add package.json
+          git commit -m "Bump patch version to ${{ steps.new_version.outputs.version }} for dev release [skip ci]"
+          git push
+```
 
 ## Release Process
 
@@ -108,29 +203,31 @@ The release process follows these steps:
 2. **Pull Request**: Changes are submitted via pull request to the `dev` branch
 3. **Code Review**: The PR is reviewed and approved
 4. **Merge to Dev**: Approved changes are merged to the `dev` branch
+   - The `version-updater.yml` workflow automatically increments the patch version
 5. **Testing**: The changes are tested in the `dev` branch
-6. **Version Update**: The version in `package.json` is updated according to semantic versioning
-7. **Merge to Main**: The `dev` branch is merged to `main`
-8. **Tag Creation**: A new tag is created with the version number
-9. **Automated Publishing**: The CI/CD workflow automatically publishes the extension to the VS Code Marketplace
+6. **Merge to Main**: When ready for release, the `dev` branch is merged to `main`
+7. **Automated Release & Publishing**: The `main-publish.yml` workflow automatically:
+   - Creates a GitHub release with the version tag
+   - Publishes the extension to the VS Code Marketplace
 
-### Version Tagging
+### Version Management
 
-Version tags follow semantic versioning (`vX.Y.Z`):
+The project uses semantic versioning (`vX.Y.Z`):
+- **Major version (X)**: Incompatible API changes
+- **Minor version (Y)**: Backward-compatible functionality addition
+- **Patch version (Z)**: Backward-compatible bug fixes
 
-```bash
-git tag -a v0.0.x -m "Version 0.0.x"
-git push origin v0.0.x
-```
+For development work, the patch version is automatically incremented by the version-updater workflow.
 
 ## Automated Tasks
 
 The CI/CD workflow automates the following tasks:
 
-1. **Code Validation**: Ensures code quality through linting
+1. **Version Management**: Automatically increments patch version on `dev` branch
 2. **Building**: Compiles TypeScript code to JavaScript
 3. **Packaging**: Creates the VSIX package for the extension
-4. **Publishing**: Uploads the extension to the VS Code Marketplace
+4. **Release Creation**: Creates GitHub releases with proper versioning
+5. **Publishing**: Uploads the extension to the VS Code Marketplace
 
 ### Configuration Files
 
@@ -147,16 +244,16 @@ Key configuration files:
 1. **Build Failures**
    - Check the GitHub Actions logs for specific errors
    - Ensure all dependencies are correctly specified in `package.json`
-   - Verify that the code passes linting and type checking
+   - Verify that the code passes compilation
 
 2. **Publishing Failures**
-   - Verify that the Personal Access Token (PAT) is valid and has the correct permissions
-   - Check that the version in `package.json` has been incremented
+   - Verify that the Personal Access Token (PAT_TOKEN) and VSCE Token (VSCE_TOKEN) are valid and have the correct permissions
+   - Check if the version in `package.json` conforms to semantic versioning
    - Ensure the `publisher` field in `package.json` is correct
 
 3. **Version Conflicts**
-   - Ensure each release has a unique version number
-   - Check that the version follows semantic versioning rules
+   - If manual version changes are made, ensure they don't conflict with the automatic versioning
+   - Avoid direct edits to `package.json` version on the `dev` branch
 
 ### Getting Help
 
