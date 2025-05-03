@@ -61,41 +61,81 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
 
 <table>
   <tr>
+    <th>Category</th>
     <th>Format</th>
     <th>Status</th>
     <th>Description</th>
   </tr>
   <tr>
-    <td><b>Bounding Box (box)</b></td>
+    <td rowspan="2"><b>Detection</b></td>
+    <td><b>COCO8</b></td>
     <td>✅ Supported</td>
-    <td>Standard YOLO bounding box format for object detection</td>
+    <td>A small dataset with 8 COCO images (4 train, 4 val) for object detection</td>
   </tr>
   <tr>
-    <td><b>Segmentation (seg)</b></td>
+    <td><b>COCO128</b></td>
+    <td>⏳ Planned</td>
+    <td>First 128 images of COCO train2017 dataset for object detection testing</td>
+  </tr>
+  <tr>
+    <td rowspan="2"><b>Segmentation</b></td>
+    <td><b>COCO8-seg</b></td>
     <td>✅ Supported</td>
-    <td>Polygon-based instance segmentation masks</td>
+    <td>8 COCO images with instance segmentation annotations</td>
   </tr>
   <tr>
-    <td><b>Pose (keypoints)</b></td>
-    <td>🔜 Coming Soon</td>
-    <td>Keypoint detection for human/object pose estimation</td>
-  </tr>
-  <tr>
-    <td><b>Classification (cls)</b></td>
-    <td>🔜 Coming Soon</td>
-    <td>Image-level class labels for classification tasks</td>
-  </tr>
-  <tr>
-    <td><b>OBB (Oriented Boxes)</b></td>
+    <td><b>COCO128-seg</b></td>
     <td>⏳ Planned</td>
-    <td>Rotated bounding boxes for aerial/oriented object detection</td>
+    <td>128 COCO images with segmentation masks for testing</td>
   </tr>
   <tr>
-    <td><b>3D Cuboids</b></td>
+    <td rowspan="2"><b>Pose</b></td>
+    <td><b>COCO8-pose</b></td>
+    <td>🔜 Coming Soon</td>
+    <td>8 COCO images with keypoints annotations for pose estimation</td>
+  </tr>
+  <tr>
+    <td><b>Tiger-pose</b></td>
     <td>⏳ Planned</td>
-    <td>3D bounding box annotations for 3D object detection</td>
+    <td>263 tiger images with 12 keypoints per tiger</td>
+  </tr>
+  <tr>
+    <td rowspan="2"><b>Classification</b></td>
+    <td><b>MNIST160</b></td>
+    <td>🔜 Coming Soon</td>
+    <td>First 8 images of each MNIST category (160 images total)</td>
+  </tr>
+  <tr>
+    <td><b>ImageNet-10</b></td>
+    <td>⏳ Planned</td>
+    <td>Smaller subset of ImageNet with 10 categories</td>
+  </tr>
+  <tr>
+    <td rowspan="1"><b>OBB</b></td>
+    <td><b>DOTA8</b></td>
+    <td>⏳ Planned</td>
+    <td>Small subset of 8 aerial images with oriented bounding boxes</td>
+  </tr>
+  <tr>
+    <td rowspan="1"><b>Multi-Object Tracking</b></td>
+    <td><b>VisDrone</b></td>
+    <td>⏳ Planned</td>
+    <td>Drone imagery for tracking multiple objects across frames</td>
   </tr>
 </table>
+
+<div align="center">
+
+# 🌟 Explore More Dataset Formats 🌟
+
+**Ultralytics supports a comprehensive range of datasets**  
+Detection · Segmentation · Pose · Classification · Tracking
+
+[![Explore Datasets](https://img.shields.io/badge/Ultralytics-Explore%20All%20Datasets-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTI0IDRDMTIuOTU0IDQgNCAxMi45NTQgNCAyNHM4Ljk1NCAyMCAyMCAyMCAyMC04Ljk1NCAyMC0yMFMzNS4wNDYgNCAyNCA0em0wIDM2Yy04LjgyMiAwLTE2LTcuMTc4LTE2LTE2UzE1LjE3OCA4IDI0IDhzMTYgNy4xNzggMTYgMTYtNy4xNzggMTYtMTYgMTZ6bTgtMTJhNCA0IDAgMTEtOCAwIDQgNCAwIDAxOCAweiIvPjwvc3ZnPg==)](https://docs.ultralytics.com/datasets/)
+
+**COCO · VOC · ImageNet · DOTA · and many more**
+
+</div>
 
 ## Why This Extension?
 

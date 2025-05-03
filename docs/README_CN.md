@@ -61,41 +61,81 @@
 
 <table>
   <tr>
+    <th>类别</th>
     <th>格式</th>
     <th>状态</th>
     <th>描述</th>
   </tr>
   <tr>
-    <td><b>边界框 (box)</b></td>
+    <td rowspan="2"><b>目标检测</b></td>
+    <td><b>COCO8</b></td>
     <td>✅ 已支持</td>
-    <td>标准YOLO边界框格式，用于目标检测</td>
+    <td>包含8张COCO图像（4训练，4验证）的小型目标检测数据集</td>
   </tr>
   <tr>
-    <td><b>分割 (seg)</b></td>
+    <td><b>COCO128</b></td>
+    <td>⏳ 计划中</td>
+    <td>COCO train2017数据集的前128张图像，用于目标检测测试</td>
+  </tr>
+  <tr>
+    <td rowspan="2"><b>分割</b></td>
+    <td><b>COCO8-seg</b></td>
     <td>✅ 已支持</td>
-    <td>基于多边形的实例分割蒙版</td>
+    <td>带有实例分割标注的8张COCO图像</td>
   </tr>
   <tr>
-    <td><b>姿态关键点 (keypoints)</b></td>
-    <td>🔜 即将推出</td>
-    <td>用于人体/物体姿态估计的关键点检测</td>
-  </tr>
-  <tr>
-    <td><b>分类 (cls)</b></td>
-    <td>🔜 即将推出</td>
-    <td>用于分类任务的图像级别类标签</td>
-  </tr>
-  <tr>
-    <td><b>旋转边界框 (OBB)</b></td>
+    <td><b>COCO128-seg</b></td>
     <td>⏳ 计划中</td>
-    <td>用于航拍/有方向性目标检测的旋转边界框</td>
+    <td>带有分割掩码的128张COCO图像，用于测试</td>
   </tr>
   <tr>
-    <td><b>3D立方体 (3D Cuboids)</b></td>
+    <td rowspan="2"><b>姿态关键点</b></td>
+    <td><b>COCO8-pose</b></td>
+    <td>🔜 即将推出</td>
+    <td>带有关键点标注的8张COCO图像，用于姿态估计</td>
+  </tr>
+  <tr>
+    <td><b>Tiger-pose</b></td>
     <td>⏳ 计划中</td>
-    <td>用于3D目标检测的三维边界框标注</td>
+    <td>263张老虎图像，每只老虎有12个关键点</td>
+  </tr>
+  <tr>
+    <td rowspan="2"><b>分类</b></td>
+    <td><b>MNIST160</b></td>
+    <td>🔜 即将推出</td>
+    <td>MNIST每个类别的前8张图像（共160张图像）</td>
+  </tr>
+  <tr>
+    <td><b>ImageNet-10</b></td>
+    <td>⏳ 计划中</td>
+    <td>包含10个类别的ImageNet子集</td>
+  </tr>
+  <tr>
+    <td rowspan="1"><b>旋转边界框</b></td>
+    <td><b>DOTA8</b></td>
+    <td>⏳ 计划中</td>
+    <td>带有旋转边界框的8张航拍图像小型子集</td>
+  </tr>
+  <tr>
+    <td rowspan="1"><b>多目标跟踪</b></td>
+    <td><b>VisDrone</b></td>
+    <td>⏳ 计划中</td>
+    <td>用于跨帧跟踪多个目标的无人机图像</td>
   </tr>
 </table>
+
+<div align="center">
+
+# 🌟 探索更多数据集格式 🌟
+
+**Ultralytics支持全面的数据集类型**  
+目标检测 · 实例分割 · 姿态估计 · 图像分类 · 目标跟踪
+
+[![探索数据集](https://img.shields.io/badge/Ultralytics-探索所有数据集-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTI0IDRDMTIuOTU0IDQgNCAxMi45NTQgNCAyNHM4Ljk1NCAyMCAyMCAyMCAyMC04Ljk1NCAyMC0yMFMzNS4wNDYgNCAyNCA0em0wIDM2Yy04LjgyMiAwLTE2LTcuMTc4LTE2LTE2UzE1LjE3OCA4IDI0IDhzMTYgNy4xNzggMTYgMTYtNy4xNzggMTYtMTYgMTZ6bTgtMTJhNCA0IDAgMTEtOCAwIDQgNCAwIDAxOCAweiIvPjwvc3ZnPg==)](https://docs.ultralytics.com/datasets/)
+
+**COCO · VOC · ImageNet · DOTA · 以及更多**
+
+</div>
 
 ## 为什么选择本扩展？
 
