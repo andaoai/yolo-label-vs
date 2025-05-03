@@ -239,22 +239,18 @@ export class YoloDataReader {
                         });
                     }
                 } 
-                // YOLO-Segmentation format: class x y width height [points...]
+                // YOLO-Segmentation format: class [points...]
                 else if (parts.length > 5) {
                     const classIndex = parseInt(parts[0], 10);
-                    const x = parseFloat(parts[1]);
-                    const y = parseFloat(parts[2]);
-                    const width = parseFloat(parts[3]);
-                    const height = parseFloat(parts[4]);
                     
-                    // Parse points as floats
-                    const points = parts.slice(5).map(p => parseFloat(p));
+                    // Parse points as floats - all the remaining points after class index
+                    const points = parts.slice(1).map(p => parseFloat(p));
                     
-                    if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height) && 
-                        points.every(p => !isNaN(p))) {
+                    if (!isNaN(classIndex) && points.every(p => !isNaN(p))) {
+                        // For segmentation, we don't need x,y,w,h as they'll be derived from points
                         labels.push({
                             class: classIndex,
-                            x, y, width, height,
+                            x: 0, y: 0, width: 0, height: 0, // Placeholder values
                             isSegmentation: true,
                             points: points,
                             visible: true
@@ -285,10 +281,10 @@ export class YoloDataReader {
             let content = '';
             for (const label of labels) {
                 if (label.isSegmentation && label.points && label.points.length > 0) {
-                    // Segmentation format
-                    content += `${label.class} ${label.x} ${label.y} ${label.width} ${label.height} ${label.points.join(' ')}\n`;
+                    // Segmentation format: class [points...]
+                    content += `${label.class} ${label.points.join(' ')}\n`;
                 } else {
-                    // Standard format
+                    // Standard format: class x y width height
                     content += `${label.class} ${label.x} ${label.y} ${label.width} ${label.height}\n`;
                 }
             }
