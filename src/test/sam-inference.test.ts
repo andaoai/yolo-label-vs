@@ -92,6 +92,39 @@ async function saveMask(maskData: Float32Array, dims: readonly number[], maskInd
     await maskImage.writeAsync(maskOutPath);
 }
 
+async function saveHighlightedImage(originalImage: typeof Jimp.prototype, maskData: Float32Array, dims: readonly number[], maskIndex: number, baseName: string) {
+    const [_, __, height, width] = dims;
+    
+    // 创建一个新的图像副本
+    const highlightedImage = originalImage.clone();
+    
+    // 遍历每个像素
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const maskOffset = maskIndex * width * height;
+            const pixelIndex = y * width + x;
+            const sourceIndex = maskOffset + pixelIndex;
+            
+            // 如果在mask区域外，将像素变暗
+            if (maskData[sourceIndex] <= 0) {
+                const color = Jimp.intToRGBA(highlightedImage.getPixelColor(x, y));
+                // 将背景区域的像素变暗（减少70%亮度）
+                color.r = Math.floor(color.r * 0.3);
+                color.g = Math.floor(color.g * 0.3);
+                color.b = Math.floor(color.b * 0.3);
+                highlightedImage.setPixelColor(
+                    Jimp.rgbaToInt(color.r, color.g, color.b, color.a),
+                    x,
+                    y
+                );
+            }
+        }
+    }
+    
+    const highlightOutPath = path.join(TEST_ASSETS.imageDir, `${baseName}_highlighted_${maskIndex}.png`);
+    await highlightedImage.writeAsync(highlightOutPath);
+}
+
 // 使用VSCode测试框架的suite和test语法
 suite('ONNX Model Inference Test', () => {
     test('Model files should exist', () => {
@@ -111,13 +144,16 @@ suite('ONNX Model Inference Test', () => {
 
     test('Should run inference with SAM model', async function() {
         this.timeout(30000);
-        const testImage = '1746128823995.png';
+        const testImage = '1746149830354.jpg';
         const imagePath = path.join(TEST_ASSETS.imageDir, testImage);
         assert.ok(fs.existsSync(imagePath), `Test image not found at path: ${imagePath}`);
         
         try {
             // 预处理图像
             const { imageData, originalHeight, originalWidth } = await preprocessImage(imagePath);
+            
+            // 保存原始图像实例以供后续使用
+            const originalImage = await Jimp.read(imagePath);
             
             // 运行编码器
             const encoderSession = await loadOnnxModel(TEST_ASSETS.encoderPath);
@@ -133,20 +169,19 @@ suite('ONNX Model Inference Test', () => {
                 'point_labels': new ort.Tensor('float32', new Float32Array([1]), [1, 1]),
                 'mask_input': new ort.Tensor('float32', new Float32Array(256 * 256).fill(0), [1, 1, 256, 256]),
                 'has_mask_input': new ort.Tensor('float32', new Float32Array([0]), [1]),
-                'orig_im_size': new ort.Tensor('float32', new Float32Array([originalHeight, originalWidth]), [2])
+                'orig_im_size': new ort.Tensor('float32', new Float32Array([originalHeight, originalWidth]), [2]),
+                'multimask_output': new ort.Tensor('bool', new Uint8Array([0]), [1])  // false = 只返回一个mask
             };
             
             const results = await decoderSession.run(decoderFeeds);
             assert.ok(results, '推理应返回结果');
             
-            // 保存 masks
+            // 保存 masks 和高亮图像
             const maskInfo = results['masks'];
-            const [_, maskCount] = maskInfo.dims;
             const maskData = maskInfo.data as Float32Array;
             
-            for (let maskIndex = 0; maskIndex < maskCount; maskIndex++) {
-                await saveMask(maskData, maskInfo.dims, maskIndex, testImage.replace('.png', ''));
-            }
+            await saveMask(maskData, maskInfo.dims, 0, testImage.replace('.png', ''));
+            await saveHighlightedImage(originalImage, maskData, maskInfo.dims, 0, testImage.replace('.png', ''));
         } catch (error) {
             console.error('SAM模型推理失败:', error);
             throw error;
