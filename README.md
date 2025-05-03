@@ -57,6 +57,46 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
 - **YAML Integration**: Direct support for YAML configuration files
 - **Batch Processing**: Browse and edit multiple images in sequence
 
+## Supported Data Formats
+
+<table>
+  <tr>
+    <th>Format</th>
+    <th>Status</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td><b>Bounding Box (box)</b></td>
+    <td>✅ Supported</td>
+    <td>Standard YOLO bounding box format for object detection</td>
+  </tr>
+  <tr>
+    <td><b>Segmentation (seg)</b></td>
+    <td>✅ Supported</td>
+    <td>Polygon-based instance segmentation masks</td>
+  </tr>
+  <tr>
+    <td><b>Pose (keypoints)</b></td>
+    <td>🔜 Coming Soon</td>
+    <td>Keypoint detection for human/object pose estimation</td>
+  </tr>
+  <tr>
+    <td><b>Classification (cls)</b></td>
+    <td>🔜 Coming Soon</td>
+    <td>Image-level class labels for classification tasks</td>
+  </tr>
+  <tr>
+    <td><b>OBB (Oriented Boxes)</b></td>
+    <td>⏳ Planned</td>
+    <td>Rotated bounding boxes for aerial/oriented object detection</td>
+  </tr>
+  <tr>
+    <td><b>3D Cuboids</b></td>
+    <td>⏳ Planned</td>
+    <td>3D bounding box annotations for 3D object detection</td>
+  </tr>
+</table>
+
 ## Why This Extension?
 
 - **Simplified Workflow**: No need to switch between different tools - view and edit YOLO datasets directly in VS Code
