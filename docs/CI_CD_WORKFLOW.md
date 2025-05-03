@@ -1,107 +1,171 @@
-# <img src="./images/icon.png" width="32" height="32" alt="YOLO标注工具图标"> 自动化工作流指南
+# CI/CD Workflow Guide
 
-本文档说明了项目中配置的 GitHub Actions 自动化工作流的功能和使用方法。
+This document describes the CI/CD (Continuous Integration/Continuous Deployment) workflow used in the YOLO Label VS extension project.
 
-## 工作流概述
+## Table of Contents
+1. [Overview](#overview)
+2. [GitHub Actions Workflow](#github-actions-workflow)
+3. [Workflow Configuration](#workflow-configuration)
+4. [Release Process](#release-process)
+5. [Automated Tasks](#automated-tasks)
+6. [Troubleshooting](#troubleshooting)
 
-项目配置了两个主要的自动化工作流：
+## Overview
 
-1. **Dev 分支工作流** (`.github/workflows/version-updater.yml`)
-   - 监听 dev 分支变更
-   - 自动更新第三位版本号（补丁版本）
-   - 自动创建 GitHub Release 预发布版本
+Our CI/CD pipeline automates the testing, building, and publishing process for the YOLO Label VS extension. This helps ensure code quality and simplifies the release process.
 
-2. **Main 分支工作流** (`.github/workflows/main-publish.yml`)
-   - 监听 main 分支变更
-   - 自动更新第二位版本号（次版本）
-   - 自动发布到 VS Code Marketplace
+**Key Benefits:**
+- Automatic validation of code changes
+- Consistent build and packaging
+- Automated publishing to the Visual Studio Code Marketplace
+- Reduced manual intervention in the release process
 
-## 版本号管理规则
+## GitHub Actions Workflow
 
-版本号遵循语义化版本规范 (SemVer)，格式为：`X.Y.Z`
+We use GitHub Actions to implement our CI/CD pipeline. The workflow is triggered by specific events in the repository.
 
-- **X** (第一位)：主版本号，需要手动更新
-- **Y** (第二位)：次版本号，main 分支自动更新
-- **Z** (第三位)：补丁版本号，dev 分支自动更新
+### Workflow Triggers
 
-## Dev 分支工作流详情
+The CI/CD workflow is triggered by the following events:
+- Push to the `main` branch
+- Creation of a new tag (for releases)
+- Pull requests to the `main` branch (for testing)
 
-**触发条件**：
-- 当 dev 分支的 `src` 目录或 `package.json` 文件有变更时
-- 手动触发（通过 GitHub Actions 的 workflow_dispatch）
+### Workflow Files
 
-**执行操作**：
-1. 获取当前版本号
-2. 将第三位版本号加 1（例如：`1.2.3` → `1.2.4`）
-3. 更新 package.json 中的版本号
-4. 提交并推送更改
-5. 创建 GitHub Release 作为预发布版本
+The workflow configurations are stored in the `.github/workflows/` directory:
 
-**用途**：
-- 用于开发过程中的频繁迭代
-- 创建预发布版本供内部测试
+- `main-publish.yml`: Main workflow for building and publishing the extension
+- `pr-validation.yml`: Workflow for validating pull requests
 
-## Main 分支工作流详情
+## Workflow Configuration
 
-**触发条件**：
-- 当 main 分支的 `src` 目录或 `package.json` 文件有变更时
-- 手动触发（通过 GitHub Actions 的 workflow_dispatch）
+### Main Publishing Workflow
 
-**执行操作**：
-1. 获取当前版本号
-2. 将第二位版本号加 1，第三位重置为 0（例如：`1.2.3` → `1.3.0`）
-3. 更新 package.json 中的版本号
-4. 提交并推送更改
-5. 安装依赖并编译扩展
-6. 发布到 VS Code Marketplace
+The `main-publish.yml` workflow performs the following steps:
 
-**用途**：
-- 用于正式发布稳定版本
-- 将扩展推送到 VS Code Marketplace 供用户下载
+1. **Checkout**: Retrieves the latest code from the repository
+2. **Setup Node.js**: Configures the Node.js environment
+3. **Install Dependencies**: Installs the necessary npm packages
+4. **Lint**: Checks code quality
+5. **Build**: Compiles the TypeScript code
+6. **Package**: Creates the VSIX package for the extension
+7. **Publish**: Publishes the extension to the VS Code Marketplace
 
-## 设置步骤
+```yaml
+name: Publish to VS Code Marketplace
 
-1. **创建 Personal Access Token**
-   - 访问 [Azure DevOps Personal Access Tokens](https://dev.azure.com/_usersSettings/tokens)
-   - 点击 "New Token"
-   - 设置名称、组织访问权限
-   - 在 Scopes 部分，确保选择 Marketplace 的 "Manage" 权限
-   - 创建并保存令牌
+on:
+  push:
+    branches: [main]
+  release:
+    types: [created]
 
-2. **添加 GitHub Secret**
-   - 在 GitHub 仓库中，进入 Settings > Secrets and variables > Actions
-   - 创建新的 repository secret
-   - 名称：`VSCE_TOKEN`
-   - 值：复制上一步创建的 PAT
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '20.x'
+      - run: npm install
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run package
+      
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '20.x'
+      - run: npm install
+      - run: npm run build
+      - run: npm run package
+      - name: Publish to VS Code Marketplace
+        run: npx vsce publish -p ${{ secrets.VSCE_PAT }}
+```
 
-## 推荐工作流程
+### PR Validation Workflow
 
-1. **日常开发**
-   - 在 dev 分支上进行所有开发工作
-   - 每次提交后会自动更新补丁版本号并创建 GitHub Release
+The `pr-validation.yml` workflow runs when a pull request is created or updated:
 
-2. **准备正式发布**
-   - 测试 dev 分支的功能确认稳定后
-   - 通过 Pull Request 将 dev 分支合并到 main 分支
-   - 合并后自动触发版本更新和 VS Code Marketplace 发布
+1. **Checkout**: Retrieves the code from the pull request
+2. **Setup Node.js**: Configures the Node.js environment
+3. **Install Dependencies**: Installs the necessary npm packages
+4. **Lint**: Checks code quality
+5. **Build**: Ensures the code compiles correctly
+6. **Test Packaging**: Verifies that the extension can be packaged correctly
 
-3. **主版本更新**
-   - 当有重大功能变更时
-   - 手动编辑 package.json 增加主版本号
-   - 提交到相应分支并走正常工作流
+## Release Process
 
-## 故障排除
+The release process follows these steps:
 
-如果工作流执行失败，请检查以下几点：
+1. **Development**: Features are developed in feature branches
+2. **Pull Request**: Changes are submitted via pull request to the `dev` branch
+3. **Code Review**: The PR is reviewed and approved
+4. **Merge to Dev**: Approved changes are merged to the `dev` branch
+5. **Testing**: The changes are tested in the `dev` branch
+6. **Version Update**: The version in `package.json` is updated according to semantic versioning
+7. **Merge to Main**: The `dev` branch is merged to `main`
+8. **Tag Creation**: A new tag is created with the version number
+9. **Automated Publishing**: The CI/CD workflow automatically publishes the extension to the VS Code Marketplace
 
-1. **权限问题**
-   - 确保 `VSCE_TOKEN` 有效且具有发布权限
-   - 检查 GitHub Actions 的权限设置
+### Version Tagging
 
-2. **版本号问题**
-   - 确保 package.json 中的版本号格式正确
-   - 检查是否有手动编辑导致的版本号异常
+Version tags follow semantic versioning (`vX.Y.Z`):
 
-3. **构建错误**
-   - 检查日志中的编译错误
-   - 确保所有依赖都正确安装 
+```bash
+git tag -a v0.0.x -m "Version 0.0.x"
+git push origin v0.0.x
+```
+
+## Automated Tasks
+
+The CI/CD workflow automates the following tasks:
+
+1. **Code Validation**: Ensures code quality through linting
+2. **Building**: Compiles TypeScript code to JavaScript
+3. **Packaging**: Creates the VSIX package for the extension
+4. **Publishing**: Uploads the extension to the VS Code Marketplace
+
+### Configuration Files
+
+Key configuration files:
+
+- `package.json`: Contains the extension metadata and scripts
+- `.github/workflows/*.yml`: GitHub Actions workflow configurations
+- `.vscodeignore`: Specifies files to exclude from the extension package
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Build Failures**
+   - Check the GitHub Actions logs for specific errors
+   - Ensure all dependencies are correctly specified in `package.json`
+   - Verify that the code passes linting and type checking
+
+2. **Publishing Failures**
+   - Verify that the Personal Access Token (PAT) is valid and has the correct permissions
+   - Check that the version in `package.json` has been incremented
+   - Ensure the `publisher` field in `package.json` is correct
+
+3. **Version Conflicts**
+   - Ensure each release has a unique version number
+   - Check that the version follows semantic versioning rules
+
+### Getting Help
+
+If you encounter issues with the CI/CD workflow:
+
+1. Check the GitHub Actions logs for detailed error messages
+2. Review the [VS Code Extension Publishing documentation](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
+3. Submit an issue through our [issue tracker](https://github.com/andaoai/yolo-label-vs/issues)
+
+---
+
+This documentation is maintained by the YOLO Label VS development team. For questions or suggestions, please create an issue in the repository. 
