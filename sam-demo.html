@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SAM ONNX Demo</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    #controls { margin-bottom: 10px; }
+    #imageCanvas, #maskCanvas { border: 1px solid #ccc; cursor: crosshair; }
+    #canvasContainer { position: relative; display: inline-block; }
+    #maskCanvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <h1>SAM ONNX Segmentation Demo</h1>
+  <div id="controls">
+    <input type="file" id="fileInput" accept="image/*">
+    <label><input type="radio" name="mode" value="point" checked> Point</label>
+    <label><input type="radio" name="mode" value="box"> Box</label>
+    <button id="resetBtn">Reset</button>
+  </div>
+  <div id="canvasContainer">
+    <canvas id="imageCanvas"></canvas>
+    <canvas id="maskCanvas"></canvas>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+  <script>
+    let session;
+    let img = new Image();
+    let canvas = document.getElementById('imageCanvas');
+    let maskCanvas = document.getElementById('maskCanvas');
+    let ctx = canvas.getContext('2d');
+    let maskCtx = maskCanvas.getContext('2d');
+    let mode = 'point';
+    let points = [];
+    let box = null;
+
+    document.getElementsByName('mode').forEach(r => {
+      r.addEventListener('change', e => { mode = e.target.value; clearOverlay(); });
+    });
+    document.getElementById('resetBtn').onclick = () => { points = []; box = null; clearOverlay(); };
+
+    document.getElementById('fileInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        maskCanvas.width = img.width;
+        maskCanvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        clearOverlay();
+      };
+      img.src = url;
+    });
+
+    canvas.addEventListener('mousedown', e => {
+      if (mode === 'point') {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        points = [[x / canvas.width, y / canvas.height]];
+        runSegmentation();
+      } else if (mode === 'box') {
+        const rect = canvas.getBoundingClientRect();
+        box = { x0: e.clientX - rect.left, y0: e.clientY - rect.top };
+        canvas.onmousemove = boxMouseMove;
+        window.onmouseup = boxMouseUp;
+      }
+    });
+
+    function boxMouseMove(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x1 = e.clientX - rect.left;
+      const y1 = e.clientY - rect.top;
+      clearOverlay();
+      maskCtx.strokeStyle = 'yellow';
+      maskCtx.lineWidth = 2;
+      maskCtx.strokeRect(box.x0, box.y0, x1 - box.x0, y1 - box.y0);
+    }
+    function boxMouseUp(e) {
+      canvas.onmousemove = null;
+      window.onmouseup = null;
+      const rect = canvas.getBoundingClientRect();
+      const x1 = e.clientX - rect.left;
+      const y1 = e.clientY - rect.top;
+      box = [ box.x0 / canvas.width, box.y0 / canvas.height, x1 / canvas.width, y1 / canvas.height ];
+      runSegmentation();
+    }
+
+    async function loadModel() {
+      session = await ort.InferenceSession.create('sam_vit_b.onnx', { executionProviders: ['wasm'] });
+      console.log('Model loaded');
+    }
+    loadModel();
+
+    function clearOverlay() {
+      maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+    }
+
+    async function runSegmentation() {
+      if (!session || !img.src) return;
+      // Prepare dummy image_embeddings (random)
+      const dimEmb = [1, 256, 64, 64];
+      const sizeEmb = dimEmb.reduce((a,b)=>a*b,1);
+      const embData = new Float32Array(sizeEmb).fill(0.1);
+      // Prepare mask_input and has_mask_input
+      const maskInDims = [1, 1, 256, 256];
+      const maskInSize = maskInDims.reduce((a,b)=>a*b,1);
+      const maskInData = new Float32Array(maskInSize).fill(0);
+      const hasMask = new Float32Array([0]);
+      // Point or box
+      let coordsArr, labelsArr;
+      if (mode === 'point') {
+        coordsArr = new Float32Array([points[0][0], points[0][1]]);
+        labelsArr = new Float32Array([1]);
+      } else {
+        // use box center point
+        const cx = (box[0] + box[2]) / 2;
+        const cy = (box[1] + box[3]) / 2;
+        coordsArr = new Float32Array([cx, cy]);
+        labelsArr = new Float32Array([1]);
+      }
+
+      const feeds = {
+        image_embeddings: new ort.Tensor('float32', embData, dimEmb),
+        point_coords: new ort.Tensor('float32', coordsArr, [1,1,2]),
+        point_labels: new ort.Tensor('float32', labelsArr, [1,1]),
+        mask_input: new ort.Tensor('float32', maskInData, maskInDims),
+        has_mask_input: new ort.Tensor('float32', hasMask, [1]),
+        orig_im_size: new ort.Tensor('float32', new Float32Array([canvas.height, canvas.width]), [2])
+      };
+      const results = await session.run(feeds);
+      const lowRes = results.low_res_masks.data;
+      // take first mask, upsample to full size
+      const [b,n,h,w] = results.low_res_masks.dims;
+      const mask = new Uint8ClampedArray(canvas.width*canvas.height);
+      // nearest neighbor upsample
+      for (let yy=0; yy<canvas.height; yy++) {
+        for (let xx=0; xx<canvas.width; xx++) {
+          const yy0 = Math.floor(yy*h/canvas.height);
+          const xx0 = Math.floor(xx*w/canvas.width);
+          const v = lowRes[yy0*w + xx0] > 0 ? 180 : 0;
+          mask[yy*canvas.width + xx] = v;
+        }
+      }
+      // draw overlay
+      clearOverlay();
+      const imgData = maskCtx.createImageData(canvas.width, canvas.height);
+      for (let i=0; i<mask.length; i++) {
+        imgData.data[4*i+0] = 255;
+        imgData.data[4*i+1] = 255;
+        imgData.data[4*i+2] = 0;
+        imgData.data[4*i+3] = mask[i] ? 128 : 0;
+      }
+      maskCtx.putImageData(imgData,0,0);
+    }
+  </script>
+</body>
+</html>

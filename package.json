@@ -110,7 +110,8 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "seg-demo": "ts-node src/scripts/onnx-seg-demo.ts"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
@@ -122,15 +123,27 @@
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "eslint": "^9.23.0",
+    "jimp": "^1.6.0",
+    "mocha": "^11.2.2",
+    "onnxruntime-node": "^1.21.1",
     "svg2png-cli": "^1.1.1",
     "svgexport": "^0.4.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   },
   "dependencies": {
+    "@mui/icons-material": "^7.0.2",
+    "@mui/material": "^7.0.2",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-converter": "^4.22.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "js-yaml": "^4.1.0",
+    "npyjs": "^0.7.0",
+    "onnxjs": "^0.1.8",
+    "onnxruntime-web": "^1.21.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-segment-anything": "^1.0.4"
   }
 }

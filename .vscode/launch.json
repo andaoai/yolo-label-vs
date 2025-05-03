@@ -16,6 +16,24 @@
 				"${workspaceFolder}/out/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+			"name": "Debug ONNX Inference Test",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+			"args": [
+				"--ui", "tdd",
+				"--require",
+				"ts-node/register",
+				"--timeout",
+				"30000",
+				"--colors",
+				"src/test/onnx-inference.test.ts"
+			],
+			"cwd": "${workspaceFolder}",
+			"internalConsoleOptions": "openOnSessionStart",
+			"skipFiles": ["<node_internals>/**"]
 		}
 	]
 }
