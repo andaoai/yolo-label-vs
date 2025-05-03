@@ -15,13 +15,41 @@
     "labeling",
     "dataset",
     "computer vision",
-    "machine learning"
+    "machine learning",
+    "annotation",
+    "object detection",
+    "image annotation",
+    "bounding box",
+    "deep learning",
+    "ai",
+    "yaml",
+    "keybindings",
+    "darknet",
+    "neural network",
+    "yolov5",
+    "yolov8",
+    "ultralytics",
+    "attention mechanism",
+    "transformer",
+    "computer vision",
+    "pytorch",
+    "tensorflow",
+    "cv",
+    "data labeling",
+    "detection",
+    "segmentation",
+    "coco",
+    "instance segmentation",
+    "real-time"
   ],
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Data Science",
+    "Machine Learning",
+    "Visualization"
   ],
   "activationEvents": [
     "onStartupFinished",
