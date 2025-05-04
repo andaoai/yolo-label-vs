@@ -165,7 +165,10 @@ suite('ONNX Model Inference Test', () => {
             const decoderSession = await loadOnnxModel(TEST_ASSETS.decoderPath);
             const decoderFeeds = {
                 'image_embeddings': encoderResults['image_embeddings'],
-                'point_coords': new ort.Tensor('float32', new Float32Array([originalWidth / 2, originalHeight / 2]), [1, 1, 2]),
+                'point_coords': new ort.Tensor('float32', new Float32Array([
+                    Math.floor(Math.random() * originalWidth),
+                    Math.floor(Math.random() * originalHeight)
+                ]), [1, 1, 2]),
                 'point_labels': new ort.Tensor('float32', new Float32Array([1]), [1, 1]),
                 'mask_input': new ort.Tensor('float32', new Float32Array(256 * 256).fill(0), [1, 1, 256, 256]),
                 'has_mask_input': new ort.Tensor('float32', new Float32Array([0]), [1]),

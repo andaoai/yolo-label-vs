@@ -18,7 +18,7 @@
 			"preLaunchTask": "${defaultBuildTask}"
 		},
 		{
-			"name": "Debug ONNX Inference Test",
+			"name": "Debug SAM$ Inference Test",
 			"type": "node",
 			"request": "launch",
 			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
