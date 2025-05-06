@@ -177,12 +177,21 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 - **Save Labels**: Save current annotations to disk
 - **Search Box**: Search for specific images in the dataset
 
-### Keyboard Shortcuts
+### 🆕 Label Interaction (since 0.0.48)
 
-#### Global Shortcuts
+- **Box/Seg Highlight & Move**:
+  - Hold `Ctrl` and hover the mouse to highlight a box or segmentation (seg) region.
+  - Highlighted box/seg will show a flowing dashed border for clear visual feedback.
+  - Hold `Ctrl` and drag with the left mouse button to move the highlighted box/seg.
+  - If `Ctrl` is not pressed, you cannot select, move, or highlight any label. This prevents accidental operations.
+
+## Keyboard Shortcuts
+
 - `Ctrl+Y`: Open YOLO Labeling Panel
 
-#### In Labeling Panel
+**In Labeling Panel:**
+- `Ctrl + Mouse Hover`: Highlight box/seg
+- `Ctrl + Mouse Drag`: Move highlighted box/seg
 - `D`: Go to next image
 - `A`: Go to previous image
 - `Ctrl+S`: Save labels
@@ -193,7 +202,7 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 - `Shift+Wheel`: Scroll horizontally when zoomed in
 - `Right-click`: Cancel polygon drawing (in segmentation mode)
 
-#### Search Functionality
+**Search Functionality:**
 - `Arrow Down`: Move down through search results
 - `Arrow Up`: Move up through search results
 - `Enter`: Select the highlighted search result
