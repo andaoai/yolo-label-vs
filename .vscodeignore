@@ -11,6 +11,7 @@ vsc-extension-quickstart.md
 **/*.ts
 **/.vscode-test.*
 test_label/**
+node_modules
 
 # 排除docs目录，只保留图标
 docs/**
