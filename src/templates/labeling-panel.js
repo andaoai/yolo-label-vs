@@ -1500,6 +1500,9 @@ class UIManager {
         
         // Initialize progress bar
         this.updateProgressBar();
+        
+        // 修复：绑定打开图片/标签按钮事件
+        this.setupTabButtons();
     }
     
     // Create undo/redo buttons and add to toolbar
