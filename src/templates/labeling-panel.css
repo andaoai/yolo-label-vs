@@ -229,6 +229,7 @@ body {
     border-radius: 2px;
     margin-bottom: 8px;
     gap: 8px;
+    transition: all 0.3s ease;
 }
 .label-item select {
     flex: 1;
@@ -285,6 +286,26 @@ body {
     background-color: var(--vscode-editor-background);
     color: var(--vscode-descriptionForeground);
     font-weight: 500;
+}
+
+.label-item.highlighted {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+    border-color: var(--vscode-focusBorder);
+    box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+    animation: highlight-pulse 1.5s infinite;
+}
+
+@keyframes highlight-pulse {
+    0% {
+        box-shadow: 0 0 0 0 var(--vscode-focusBorder);
+    }
+    70% {
+        box-shadow: 0 0 0 4px transparent;
+    }
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+    }
 }
 
 /* =================== 按钮和选择器 =================== */
