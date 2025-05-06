@@ -77,6 +77,14 @@ class LabelingState {
     // Store histories for each image path
     imageHistories = new Map();
     
+    hoveredLabel = null;
+    isDragging = false;
+    dragStartPos = { x: 0, y: 0 };
+    draggedLabel = null;
+    
+    dashOffset = 0; // 虚线动画偏移
+    dashAnimationId = null; // 虚线动画定时器
+    
     constructor() {
         // Ensure all labels have a visibility property
         if (this.initialLabels) {
@@ -187,7 +195,7 @@ class LabelingState {
                 if (this.needsRedraw) {
                     this.needsRedraw = false;
                     this.animationFrameId = null;
-                    // The actual redraw will be called by the manager
+                    this.dashOffset = (this.dashOffset + 2) % 40; // 控制虚线流动速度
                     if (this.onRedrawRequested) {
                         this.onRedrawRequested();
                     }
@@ -204,6 +212,135 @@ class LabelingState {
             return true;
         }
         return false;
+    }
+
+    // Add method to check if point is inside box
+    isPointInBox(x, y, label) {
+        if (label.isSegmentation) return false;
+        
+        const boxLeft = (label.x - label.width/2);
+        const boxRight = (label.x + label.width/2);
+        const boxTop = (label.y - label.height/2);
+        const boxBottom = (label.y + label.height/2);
+        
+        return x >= boxLeft && x <= boxRight && y >= boxTop && y <= boxBottom;
+    }
+
+    // Add method to check if point is near polygon line
+    isPointNearPolygon(x, y, label) {
+        if (!label.isSegmentation || !label.points) return false;
+        
+        const threshold = CONFIG.CLOSE_POINT_THRESHOLD;
+        
+        for (let i = 0; i < label.points.length - 2; i += 2) {
+            const x1 = label.points[i];
+            const y1 = label.points[i + 1];
+            const x2 = label.points[i + 2] || label.points[0];
+            const y2 = label.points[i + 3] || label.points[1];
+            
+            // Calculate distance from point to line segment
+            const A = x - x1;
+            const B = y - y1;
+            const C = x2 - x1;
+            const D = y2 - y1;
+            
+            const dot = A * C + B * D;
+            const len_sq = C * C + D * D;
+            
+            let param = -1;
+            if (len_sq != 0) param = dot / len_sq;
+            
+            let xx, yy;
+            
+            if (param < 0) {
+                xx = x1;
+                yy = y1;
+            } else if (param > 1) {
+                xx = x2;
+                yy = y2;
+            } else {
+                xx = x1 + param * C;
+                yy = y1 + param * D;
+            }
+            
+            const dx = x - xx;
+            const dy = y - yy;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < threshold) return true;
+        }
+        return false;
+    }
+
+    // Add method to find label under cursor
+    findLabelUnderCursor(x, y) {
+        if (!this.initialLabels) return null;
+        
+        for (let i = this.initialLabels.length - 1; i >= 0; i--) {
+            const label = this.initialLabels[i];
+            if (!label.visible) continue;
+            
+            if (label.isSegmentation) {
+                if (this.isPointInPolygon(x, y, label) || this.isPointNearPolygon(x, y, label)) return label;
+            } else {
+                if (this.isPointInBox(x, y, label)) return label;
+            }
+        }
+        return null;
+    }
+
+    // Update method to update label highlight in sidebar
+    updateLabelHighlight() {
+        const labelItems = document.querySelectorAll('.label-item');
+        let hasHighlight = false;
+        labelItems.forEach((item, index) => {
+            if (this.hoveredLabel === this.initialLabels[index]) {
+                item.classList.add('highlighted');
+                hasHighlight = true;
+            } else {
+                item.classList.remove('highlighted');
+            }
+        });
+        if (hasHighlight) {
+            this.startDashAnimation();
+        } else {
+            this.stopDashAnimation();
+        }
+    }
+
+    // 判断点是否在多边形内部（射线法）
+    isPointInPolygon(x, y, label) {
+        if (!label.isSegmentation || !label.points || label.points.length < 6) return false;
+        let inside = false;
+        const n = label.points.length / 2;
+        for (let i = 0, j = n - 1; i < n; j = i++) {
+            const xi = label.points[i * 2], yi = label.points[i * 2 + 1];
+            const xj = label.points[j * 2], yj = label.points[j * 2 + 1];
+            const intersect = ((yi > y) !== (yj > y)) &&
+                (x < (xj - xi) * (y - yi) / (yj - yi + 1e-10) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    // 新增方法：高亮时自动动画
+    startDashAnimation() {
+        if (this.dashAnimationId) return;
+        const animate = () => {
+            if (this.hoveredLabel) {
+                this.requestRedraw();
+                this.dashAnimationId = requestAnimationFrame(animate);
+            } else {
+                this.stopDashAnimation();
+            }
+        };
+        this.dashAnimationId = requestAnimationFrame(animate);
+    }
+    stopDashAnimation() {
+        if (this.dashAnimationId) {
+            cancelAnimationFrame(this.dashAnimationId);
+            this.dashAnimationId = null;
+        }
     }
 }
 
@@ -365,11 +502,19 @@ class CanvasManager {
             return;
         }
         
-        // Get normalized mouse position (0-1 range)
+        // Get normalized mouse position
         const pos = this.getMousePos(e);
         const x = pos.x / this.state.originalImageWidth;
         const y = pos.y / this.state.originalImageHeight;
-
+        
+        // 只有Ctrl+左键才允许拖动移动
+        if (e.ctrlKey && this.state.hoveredLabel && e.button === 0) {
+            this.state.isDragging = true;
+            this.state.draggedLabel = this.state.hoveredLabel;
+            this.state.dragStartPos = { x, y };
+            return;
+        }
+        
         if (this.state.currentMode === 'box') {
             this.startBoxDrawing(x, y);
         } else if (this.state.currentMode === 'seg') {
@@ -403,32 +548,55 @@ class CanvasManager {
     }
 
     handleMouseMove(e) {
-        // Throttle updates for better performance
         if (!this.state.shouldUpdate()) return;
-        
-        // Update rectangles
         this.updateRects();
-        
-        // Update cursor based on alt key
         this.updateCursorStyle(e);
-        
-        // Handle panning if active
         if (this.state.isPanning) {
             this.handlePanning(e);
             return;
         }
-        
-        // Get normalized mouse position and update state
         const pos = this.getMousePos(e);
         const normalizedX = pos.x / this.state.originalImageWidth;
         const normalizedY = pos.y / this.state.originalImageHeight;
-        
         this.state.currentMousePos = { x: normalizedX, y: normalizedY };
-        
-        // Update coordinate display
+
+        // 只有按住Ctrl时才允许hover和移动
+        if (e.ctrlKey && !this.state.isDrawing && !this.state.isDrawingPolygon) {
+            const label = this.state.findLabelUnderCursor(normalizedX, normalizedY);
+            if (this.state.hoveredLabel !== label) {
+                this.state.hoveredLabel = label;
+                this.state.updateLabelHighlight();
+                this.state.requestRedraw();
+            }
+            this.canvas.style.cursor = label ? 'move' : 'default';
+        } else if (!e.ctrlKey) {
+            // 没有按Ctrl时，hover和高亮全部取消
+            if (this.state.hoveredLabel) {
+                this.state.hoveredLabel = null;
+                this.state.updateLabelHighlight();
+                this.state.requestRedraw();
+            }
+            this.canvas.style.cursor = 'default';
+        }
+
+        // 只有Ctrl+拖动才允许移动
+        if (e.ctrlKey && this.state.isDragging && this.state.draggedLabel) {
+            const dx = normalizedX - this.state.dragStartPos.x;
+            const dy = normalizedY - this.state.dragStartPos.y;
+            if (this.state.draggedLabel.isSegmentation) {
+                for (let i = 0; i < this.state.draggedLabel.points.length; i += 2) {
+                    this.state.draggedLabel.points[i] += dx;
+                    this.state.draggedLabel.points[i + 1] += dy;
+                }
+            } else {
+                this.state.draggedLabel.x += dx;
+                this.state.draggedLabel.y += dy;
+            }
+            this.state.dragStartPos = { x: normalizedX, y: normalizedY };
+            this.state.requestRedraw();
+            this.state.hasUnsavedChanges = true;
+        }
         this.updateCoordinateDisplay(normalizedX, normalizedY);
-        
-        // Redraw canvas with current mouse position
         this.state.requestRedraw();
     }
     
@@ -477,7 +645,12 @@ class CanvasManager {
         if (this.state.isPanning) {
             this.state.isPanning = false;
             this.canvas.classList.remove('grabbing');
-            return;
+        }
+        
+        if (this.state.isDragging) {
+            this.state.isDragging = false;
+            this.state.draggedLabel = null;
+            this.state.pushHistory();
         }
         
         // Handle box completion
@@ -783,26 +956,34 @@ class CanvasManager {
         }
         
         this.state.initialLabels.forEach((label, index) => {
-            // Skip labels that are not visible
             if (label.visible === false) {
                 return;
             }
             
             const color = CONFIG.COLORS[label.class % CONFIG.COLORS.length];
+            const isHighlighted = label === this.state.hoveredLabel;
             
             if (label.isSegmentation && label.points) {
-                this.drawSegmentationLabel(label, color);
+                this.drawSegmentationLabel(label, color, isHighlighted);
             } else {
-                this.drawBoundingBoxLabel(label, color);
+                this.drawBoundingBoxLabel(label, color, isHighlighted);
             }
         });
     }
 
-    drawSegmentationLabel(label, color) {
+    drawSegmentationLabel(label, color, isHighlighted) {
         // Set styles
         this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = CONFIG.LINE_WIDTH / this.state.scale;
+        this.ctx.lineWidth = (isHighlighted ? 3 : CONFIG.LINE_WIDTH) / this.state.scale;
         this.ctx.fillStyle = `${color}33`; // Add transparency
+        
+        if (isHighlighted) {
+            this.ctx.setLineDash([8, 8]);
+            this.ctx.lineDashOffset = this.state.dashOffset;
+        } else {
+            this.ctx.setLineDash([]);
+            this.ctx.lineDashOffset = 0;
+        }
         
         // Draw polygon
         this.ctx.beginPath();
@@ -816,12 +997,13 @@ class CanvasManager {
             }
         }
         this.ctx.closePath();
-        this.ctx.fill();
+        
         this.ctx.stroke();
+        this.ctx.setLineDash([]);
+        this.ctx.lineDashOffset = 0;
         
         // Draw label text if enabled
         if (this.state.showLabels && label.points.length >= 2) {
-            // Use first point for label position
             const labelX = label.points[0] * this.state.originalImageWidth;
             const labelY = label.points[1] * this.state.originalImageHeight;
             
@@ -830,7 +1012,7 @@ class CanvasManager {
         }
     }
 
-    drawBoundingBoxLabel(label, color) {
+    drawBoundingBoxLabel(label, color, isHighlighted) {
         // Calculate pixel coordinates
         const x = label.x * this.state.originalImageWidth;
         const y = label.y * this.state.originalImageHeight;
@@ -839,8 +1021,17 @@ class CanvasManager {
         
         // Draw box
         this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = CONFIG.LINE_WIDTH / this.state.scale;
+        this.ctx.lineWidth = (isHighlighted ? 3 : CONFIG.LINE_WIDTH) / this.state.scale;
+        if (isHighlighted) {
+            this.ctx.setLineDash([8, 8]);
+            this.ctx.lineDashOffset = this.state.dashOffset;
+        } else {
+            this.ctx.setLineDash([]);
+            this.ctx.lineDashOffset = 0;
+        }
         this.ctx.strokeRect(x - width/2, y - height/2, width, height);
+        this.ctx.setLineDash([]);
+        this.ctx.lineDashOffset = 0;
         
         // Draw label text if enabled
         if (this.state.showLabels) {
