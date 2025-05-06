@@ -5,6 +5,23 @@ All notable changes to the "yolo-labeling-vs" extension will be documented in th
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+Here's the English translation of your changelog entry:  
+
+---
+
+## [0.0.48] - 2024-06-XX  
+
+### **Added**  
+- Flowing dashed border animation for highlighted Box and Seg objects, improving visual clarity.  
+- Ctrl-key requirement: Box/Seg highlighting and movement now require holding the `Ctrl` key to prevent accidental interactions.  
+- Updated documentation (Chinese & English) with detailed explanations of new interactions and shortcuts.  
+
+### Changed
+- Optimized performance of the highlight animation for smoother rendering.  
+- Revised documentation to reflect updated shortcuts and interaction behaviors.  
+
+
+
 ## [0.0.9] - 2024-09-05
 
 ### Added
