@@ -1488,13 +1488,18 @@ class UIManager {
             searchResults: document.getElementById('searchResults'),
             openImageTabButton: document.getElementById('openImageTab'),
             openTxtTabButton: document.getElementById('openTxtTab'),
-            undoButton: this.createUndoRedoButtons()
+            undoButton: this.createUndoRedoButtons(),
+            progressBar: document.getElementById('imageProgressBar'),
+            progressContainer: document.querySelector('.progress-container')
         };
         
         this.setupEventListeners();
         
         // Initialize save button state
         this.updateSaveButtonState();
+        
+        // Initialize progress bar
+        this.updateProgressBar();
     }
     
     // Create undo/redo buttons and add to toolbar
@@ -1524,8 +1529,7 @@ class UIManager {
         this.setupNavigationListeners();
         this.setupModeListeners();
         this.setupActionListeners();
-        this.setupSearch();
-        this.setupTabButtons();
+        this.setupProgressBarListeners();
     }
     
     setupNavigationListeners() {
@@ -1840,59 +1844,47 @@ class UIManager {
             saveButton.classList.add('disabled');
         }
     }
-}
 
-// Improved Message Handler
-class MessageHandler {
-    constructor(state, canvasManager) {
-        this.state = state;
-        this.canvasManager = canvasManager;
-        this.setupMessageListener();
+    setupProgressBarListeners() {
+        const { progressContainer } = this.elements;
+        
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const clickPosition = (e.clientX - rect.left) / rect.width;
+            const targetIndex = Math.floor(clickPosition * this.state.allImagePaths.length);
+            
+            if (targetIndex >= 0 && targetIndex < this.state.allImagePaths.length) {
+                this.state.vscode.postMessage({
+                    command: 'loadImage',
+                    path: this.state.allImagePaths[targetIndex]
+                });
+            }
+        });
     }
 
-    setupMessageListener() {
-        window.addEventListener('message', this.handleMessage.bind(this));
-    }
-    
-    handleMessage(event) {
-        const message = event.data;
+    updateProgressBar() {
+        const { progressBar } = this.elements;
+        const currentIndex = this.state.allImagePaths.indexOf(this.state.currentPath);
+        const totalImages = this.state.allImagePaths.length;
         
-        switch (message.command) {
-            case 'imageList':
-                this.handleImageList(message);
-                break;
-            case 'updateImage':
-                this.handleImageUpdate(message);
-                break;
-            case 'error':
-                this.handleError(message);
-                break;
-        }
-    }
-    
-    handleImageList(message) {
-        this.state.allImagePaths = message.paths || [];
-        
-        // Update the search input with the current image path if available
-        if (this.state.currentPath && document.getElementById('imageSearch')) {
-            document.getElementById('imageSearch').value = this.state.currentPath;
-        }
-        
-        // If we have a UIManager instance, update button states
-        const uiManager = window.uiManager;
-        if (uiManager && typeof uiManager.updateButtonStates === 'function') {
-            uiManager.updateButtonStates();
+        if (currentIndex >= 0 && totalImages > 0) {
+            const progress = ((currentIndex + 1) / totalImages) * 100;
+            progressBar.style.width = `${progress}%`;
+        } else {
+            progressBar.style.width = '0%';
         }
     }
 
     handleImageUpdate(message) {
         // Update UI
         document.getElementById('imageInfo').textContent = message.imageInfo || '';
-        document.getElementById('imageSearch').value = message.currentPath || '';
         
         // 保存当前图片路径
         this.state.currentPath = message.currentPath || '';
         this.state.initialLabels = message.labels || [];
+        
+        // Update progress bar
+        this.updateProgressBar();
         
         // Initialize history for this image if it doesn't exist
         if (!this.state.imageHistories.has(this.state.currentPath)) {
@@ -1909,8 +1901,6 @@ class MessageHandler {
                     JSON.stringify(currentHistory.history[currentHistory.historyIndex])
                 );
             }
-            // No unsaved changes for newly loaded image
-            this.state.markChangesSaved();
         }
         
         // 设置图像对象并加载
@@ -1960,7 +1950,52 @@ class MessageHandler {
         // 设置图像源
         img.src = message.imageData;
     }
+}
+
+// Improved Message Handler
+class MessageHandler {
+    constructor(state, canvasManager, uiManager) {
+        this.state = state;
+        this.canvasManager = canvasManager;
+        this.uiManager = uiManager;
+        this.setupMessageListener();
+    }
+
+    setupMessageListener() {
+        window.addEventListener('message', this.handleMessage.bind(this));
+    }
     
+    handleMessage(event) {
+        const message = event.data;
+        
+        switch (message.command) {
+            case 'imageList':
+                this.handleImageList(message);
+                break;
+            case 'updateImage':
+                this.uiManager.handleImageUpdate(message);
+                break;
+            case 'error':
+                this.handleError(message);
+                break;
+        }
+    }
+    
+    handleImageList(message) {
+        this.state.allImagePaths = message.paths || [];
+        
+        // Update the search input with the current image path if available
+        if (this.state.currentPath && document.getElementById('imageSearch')) {
+            document.getElementById('imageSearch').value = this.state.currentPath;
+        }
+        
+        // If we have a UIManager instance, update button states
+        const uiManager = window.uiManager;
+        if (uiManager && typeof uiManager.updateButtonStates === 'function') {
+            uiManager.updateButtonStates();
+        }
+    }
+
     handleError(message) {
         console.error('Error from extension:', message.error);
         this.showErrorMessage(message.error);
@@ -2055,7 +2090,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const state = new LabelingState();
         const canvasManager = new CanvasManager(state);
         const uiManager = new UIManager(state, canvasManager);
-        const messageHandler = new MessageHandler(state, canvasManager);
+        const messageHandler = new MessageHandler(state, canvasManager, uiManager);
         
         // 保存UIManager实例为全局变量，以便其他类能够访问
         window.uiManager = uiManager;
