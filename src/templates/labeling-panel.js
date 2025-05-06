@@ -1949,6 +1949,19 @@ class UIManager {
         
         // 设置图像源
         img.src = message.imageData;
+
+        // 新增：更新底部图片信息和进度条
+        this.updateImageInfo();
+    }
+
+    updateImageInfo() {
+        const currentIndex = this.state.allImagePaths.indexOf(this.state.currentPath);
+        const totalImages = this.state.allImagePaths.length || 1;
+        const displayIndex = currentIndex >= 0 ? currentIndex + 1 : 1;
+        // 更新底部状态栏
+        document.getElementById('imageInfo').textContent = `Image: ${displayIndex} of ${totalImages}`;
+        // 更新进度条
+        this.updateProgressBar();
     }
 }
 
@@ -1993,6 +2006,10 @@ class MessageHandler {
         const uiManager = window.uiManager;
         if (uiManager && typeof uiManager.updateButtonStates === 'function') {
             uiManager.updateButtonStates();
+        }
+        // 新增：图片列表更新后，刷新底部图片信息和进度条
+        if (uiManager && typeof uiManager.updateImageInfo === 'function') {
+            uiManager.updateImageInfo();
         }
     }
 
