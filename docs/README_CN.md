@@ -42,10 +42,14 @@
 - 中文文档
   - [打包指南](./PACKAGING_CN.md)
   - [发布指南](./PUBLISHING_CN.md)
-  - [自动化工作流指南](./CI_CD_WORKFLOW.md)
+  - [开发指南](./DEVELOPMENT_CN.md)
+  - [CI/CD 工作流指南](./CI_CD_WORKFLOW_CN.md)
+  - [README 中文版](./README_CN.md)
 - English Documentation
   - [Packaging Guide](./PACKAGING.md)
   - [Publishing Guide](./PUBLISHING.md)
+  - [Development Guide](./DEVELOPMENT.md)
+  - [CI/CD Workflow Guide](./CI_CD_WORKFLOW.md)
   - [README in English](../README.md)
 
 ## 核心功能

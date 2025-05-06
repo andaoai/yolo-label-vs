@@ -282,10 +282,11 @@ export class YoloDataReader {
             for (const label of labels) {
                 if (label.isSegmentation && label.points && label.points.length > 0) {
                     // Segmentation format: class [points...]
-                    content += `${label.class} ${label.points.join(' ')}\n`;
+                    const formattedPoints = label.points.map(p => p.toFixed(6));
+                    content += `${label.class} ${formattedPoints.join(' ')}\n`;
                 } else {
                     // Standard format: class x y width height
-                    content += `${label.class} ${label.x} ${label.y} ${label.width} ${label.height}\n`;
+                    content += `${label.class} ${label.x.toFixed(6)} ${label.y.toFixed(6)} ${label.width.toFixed(6)} ${label.height.toFixed(6)}\n`;
                 }
             }
             
