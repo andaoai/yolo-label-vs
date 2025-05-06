@@ -828,3 +828,27 @@ svg {
     max-width: 100%;
 }
 */ 
+
+/* =================== 进度条 =================== */
+.progress-container {
+    width: 100%;
+    height: 4px;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 2px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    position: relative;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--vscode-progressBar-background);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.2s ease;
+}
+
+.progress-container:hover .progress-bar {
+    background-color: var(--vscode-progressBar-foreground);
+} 
