@@ -190,6 +190,8 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 - `Ctrl+Y`: Open YOLO Labeling Panel
 
 **In Labeling Panel:**
+- `Tab`: Switch to next label class
+- `Shift+Tab`: Switch to previous label class
 - `Ctrl + Mouse Hover`: Highlight box/seg
 - `Ctrl + Mouse Drag`: Move highlighted box/seg
 - `D`: Go to next image
@@ -219,6 +221,15 @@ This extension contributes the following commands:
 Please report issues on our [GitHub repository](https://github.com/andaoai/yolo-label-vs/issues).
 
 ## Release Notes
+
+### 0.0.48
+
+- Added flowing dashed border animation for highlighted Box and Seg objects
+- Enhanced visual clarity with improved highlight effects
+- Added Ctrl-key requirement for Box/Seg interactions to prevent accidental operations
+- Added automatic tab switching when navigating between images
+- Updated documentation with detailed explanations of new interactions and shortcuts
+- Optimized performance of highlight animations for smoother rendering
 
 ### 0.0.9
 
