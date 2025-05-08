@@ -1625,10 +1625,7 @@ class UIManager {
                     JSON.stringify(currentHistory.history[currentHistory.historyIndex])
                 );
                 // Check if the current state matches the saved state
-                const savedLabels = message.labels || [];
-                const currentLabels = this.state.initialLabels;
-                const hasChanges = JSON.stringify(savedLabels) !== JSON.stringify(currentLabels);
-                this.state.hasUnsavedChanges = hasChanges;
+                this.state.checkUnsavedChanges();
                 this.updateSaveButtonState();
             }
         }

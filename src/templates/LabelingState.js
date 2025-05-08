@@ -76,7 +76,8 @@ export class LabelingState {
         if (this.currentPath) {
             this.imageHistories.set(this.currentPath, {
                 history: [],
-                historyIndex: -1
+                historyIndex: -1,
+                lastSavedIndex: -1  // Track the last saved history index
             });
             // Store initial labels in history
             this.pushHistory();
@@ -89,7 +90,8 @@ export class LabelingState {
         if (!this.imageHistories.has(this.currentPath)) {
             this.imageHistories.set(this.currentPath, {
                 history: [],
-                historyIndex: -1
+                historyIndex: -1,
+                lastSavedIndex: -1
             });
         }
         
@@ -109,6 +111,7 @@ export class LabelingState {
         // Limit history size
         if (currentHistory.history.length > this.maxHistorySize) {
             currentHistory.history.shift();
+            currentHistory.lastSavedIndex = Math.max(-1, currentHistory.lastSavedIndex - 1);
         }
         
         // Update index
@@ -117,8 +120,8 @@ export class LabelingState {
         // Update the state's imageHistories
         this.imageHistories.set(this.currentPath, currentHistory);
         
-        // Mark as having unsaved changes
-        this.hasUnsavedChanges = true;
+        // Check if we have unsaved changes
+        this.checkUnsavedChanges();
         
         // Update save button state if UI manager exists
         if (window.uiManager) {
@@ -127,7 +130,6 @@ export class LabelingState {
     }
     
     undo() {
-        // Get history for current image
         if (!this.imageHistories.has(this.currentPath)) {
             return false;
         }
@@ -141,8 +143,8 @@ export class LabelingState {
             // Update the state's imageHistories
             this.imageHistories.set(this.currentPath, currentHistory);
             
-            // Mark as having unsaved changes
-            this.hasUnsavedChanges = true;
+            // Check if we have unsaved changes
+            this.checkUnsavedChanges();
             
             // Update save button state if UI manager exists
             if (window.uiManager) {
@@ -156,12 +158,29 @@ export class LabelingState {
     
     // Mark changes as saved
     markChangesSaved() {
+        if (this.imageHistories.has(this.currentPath)) {
+            const currentHistory = this.imageHistories.get(this.currentPath);
+            currentHistory.lastSavedIndex = currentHistory.historyIndex;
+            this.imageHistories.set(this.currentPath, currentHistory);
+        }
+        
         this.hasUnsavedChanges = false;
         
         // Update save button state if UI manager exists
         if (window.uiManager) {
             window.uiManager.updateSaveButtonState();
         }
+    }
+    
+    // Check if there are unsaved changes
+    checkUnsavedChanges() {
+        if (!this.imageHistories.has(this.currentPath)) {
+            this.hasUnsavedChanges = false;
+            return;
+        }
+        
+        const currentHistory = this.imageHistories.get(this.currentPath);
+        this.hasUnsavedChanges = currentHistory.historyIndex !== currentHistory.lastSavedIndex;
     }
     
     // Request animation frame for efficient rendering
