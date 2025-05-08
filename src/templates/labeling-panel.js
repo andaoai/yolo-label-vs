@@ -1308,6 +1308,12 @@ class CanvasManager {
         const labelListContainer = document.getElementById('labelList');
         if (!labelListContainer) return;
         
+        // 刷新当前 class 状态栏
+        const classStatus = document.getElementById('currentClassStatus');
+        if (classStatus && this.state.classNamesList.length > 0) {
+            classStatus.textContent = `当前标签类型: ${this.state.classNamesList[this.state.currentLabel]} (${this.state.currentLabel + 1}/${this.state.classNamesList.length})`;
+        }
+        
         labelListContainer.innerHTML = '';
         
         if (!this.state.initialLabels || this.state.initialLabels.length === 0) {
@@ -1404,6 +1410,32 @@ class CanvasManager {
         if (e.altKey && !this.state.isPanning && !e.ctrlKey) {
             this.canvas.classList.add('grabable');
         }
+        
+        // Remove Ctrl+S handling from here since we'll handle it at document level
+        
+        // Undo with Ctrl+Z
+        if (e.ctrlKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            if (this.state.undo()) {
+                this.state.requestRedraw();
+                this.updateLabelList();
+            }
+            return;
+        }
+        
+        // Navigation with A and D keys (without modifiers)
+        if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
+            switch (e.key.toLowerCase()) {
+                case 'a':
+                    e.preventDefault();
+                    this.state.vscode.postMessage({ command: 'previous' });
+                    break;
+                case 'd':
+                    e.preventDefault();
+                    this.state.vscode.postMessage({ command: 'next' });
+                    break;
+            }
+        }
     }
 
     handleKeyUp(e) {
@@ -1416,6 +1448,22 @@ class CanvasManager {
     handleKeyboardShortcuts(e) {
         // Skip if target is input element
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            return;
+        }
+        // Tab/Shift+Tab 切换标签类型
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const classCount = this.state.classNamesList.length;
+            if (classCount > 0) {
+                if (e.shiftKey) {
+                    // Shift+Tab，前一个
+                    this.state.currentLabel = (this.state.currentLabel - 1 + classCount) % classCount;
+                } else {
+                    // Tab，后一个
+                    this.state.currentLabel = (this.state.currentLabel + 1) % classCount;
+                }
+                this.updateLabelList();
+            }
             return;
         }
         
@@ -1886,6 +1934,11 @@ class UIManager {
         this.state.currentPath = message.currentPath || '';
         this.state.initialLabels = message.labels || [];
         
+        // 更新搜索框显示当前图片路径
+        if (this.elements.searchInput) {
+            this.elements.searchInput.value = this.state.currentPath;
+        }
+        
         // Update progress bar
         this.updateProgressBar();
         
@@ -2119,18 +2172,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('toggleLabels').classList.toggle('active', state.showLabels);
         document.getElementById('modeControl').querySelectorAll('.segmented-button').forEach(btn => {
             btn.classList.remove('active');
-            if (btn.dataset.mode === state.currentMode) {
-                btn.classList.add('active');
+        });
+
+        // Add global keyboard event listener for Ctrl+S
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                if (state.hasUnsavedChanges) {
+                    state.vscode.postMessage({ command: 'save', labels: state.initialLabels });
+                    state.markChangesSaved();
+                }
             }
         });
-        document.getElementById('zoom-info').textContent = '缩放: 100%';
-        
-        // Ensure save button starts disabled
-        const saveButton = document.getElementById('saveLabels');
-        if (saveButton) {
-            saveButton.setAttribute('disabled', 'disabled');
-            saveButton.classList.add('disabled');
-        }
         
         // Initialize rectangles
         canvasManager.updateRects();
