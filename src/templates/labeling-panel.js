@@ -1886,6 +1886,11 @@ class UIManager {
         this.state.currentPath = message.currentPath || '';
         this.state.initialLabels = message.labels || [];
         
+        // 更新搜索框显示当前图片路径
+        if (this.elements.searchInput) {
+            this.elements.searchInput.value = this.state.currentPath;
+        }
+        
         // Update progress bar
         this.updateProgressBar();
         
