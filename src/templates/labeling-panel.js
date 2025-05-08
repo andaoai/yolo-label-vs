@@ -1868,6 +1868,9 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.remove('active');
         });
 
+        // 初始化模式
+        uiManager.updateModeBasedOnLabels();
+
         // Add global keyboard event listener for Ctrl+S
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key.toLowerCase() === 's') {
