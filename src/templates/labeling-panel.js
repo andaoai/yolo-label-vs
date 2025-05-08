@@ -1410,6 +1410,23 @@ class CanvasManager {
             return;
         }
 
+        // Tab/Shift+Tab 切换标签类型
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const classCount = this.state.classNamesList.length;
+            if (classCount > 0) {
+                if (e.shiftKey) {
+                    // Shift+Tab，前一个
+                    this.state.currentLabel = (this.state.currentLabel - 1 + classCount) % classCount;
+                } else {
+                    // Tab，后一个
+                    this.state.currentLabel = (this.state.currentLabel + 1) % classCount;
+                }
+                this.updateLabelList();
+            }
+            return;
+        }
+
         // Handle keyboard shortcuts
         if (e.ctrlKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
             e.preventDefault();
