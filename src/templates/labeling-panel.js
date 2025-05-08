@@ -376,7 +376,6 @@ class CanvasManager {
         window.addEventListener('resize', this.handleResize.bind(this));
         window.addEventListener('keydown', this.handleKeyDown.bind(this));
         window.addEventListener('keyup', this.handleKeyUp.bind(this));
-        window.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
         
         // Handle mouse leave with arrow function for conciseness
         this.canvas.addEventListener('mouseleave', () => {
@@ -405,7 +404,6 @@ class CanvasManager {
         window.removeEventListener('resize', this.handleResize);
         window.removeEventListener('keydown', this.handleKeyDown);
         window.removeEventListener('keyup', this.handleKeyUp);
-        window.removeEventListener('keydown', this.handleKeyboardShortcuts);
     }
 
     // Update canvas and image rectangles for coordinate calculations
@@ -1407,13 +1405,12 @@ class CanvasManager {
     }
 
     handleKeyDown(e) {
-        if (e.altKey && !this.state.isPanning && !e.ctrlKey) {
-            this.canvas.classList.add('grabable');
+        // Skip if target is input element
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            return;
         }
-        
-        // Remove Ctrl+S handling from here since we'll handle it at document level
-        
-        // Undo with Ctrl+Z
+
+        // Handle keyboard shortcuts
         if (e.ctrlKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
             e.preventDefault();
             if (this.state.undo()) {
@@ -1422,7 +1419,7 @@ class CanvasManager {
             }
             return;
         }
-        
+
         // Navigation with A and D keys (without modifiers)
         if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
             switch (e.key.toLowerCase()) {
@@ -1474,16 +1471,6 @@ class CanvasManager {
                 this.state.vscode.postMessage({ command: 'save', labels: this.state.initialLabels });
                 this.state.markChangesSaved();
             }
-        }
-        
-        // Undo with Ctrl+Z
-        if (e.ctrlKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-            e.preventDefault();
-            if (this.state.undo()) {
-                this.state.requestRedraw();
-                this.updateLabelList();
-            }
-            return;
         }
         
         // Navigation with A and D keys (without modifiers)
@@ -1581,6 +1568,9 @@ class UIManager {
         this.setupModeListeners();
         this.setupActionListeners();
         this.setupProgressBarListeners();
+        
+        // Remove duplicate keyboard event listener
+        // window.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
     }
     
     setupNavigationListeners() {
