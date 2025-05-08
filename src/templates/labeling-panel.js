@@ -1213,6 +1213,9 @@ class UIManager {
         
         // 修复：绑定打开图片/标签按钮事件
         this.setupTabButtons();
+
+        // 初始化模式
+        this.updateModeBasedOnLabels();
     }
     
     // Create undo/redo buttons and add to toolbar
@@ -1629,6 +1632,9 @@ class UIManager {
                 this.updateSaveButtonState();
             }
         }
+
+        // 更新模式
+        this.updateModeBasedOnLabels();
         
         // 设置图像对象并加载
         const img = new Image();
@@ -1686,6 +1692,26 @@ class UIManager {
         document.getElementById('imageInfo').textContent = `Image: ${displayIndex} of ${totalImages}`;
         // 更新进度条
         this.updateProgressBar();
+    }
+
+    // 根据当前标签类型更新模式
+    updateModeBasedOnLabels() {
+        if (!this.state.initialLabels || this.state.initialLabels.length === 0) {
+            // 如果没有标签，默认使用box模式
+            this.state.currentMode = 'box';
+            this.elements.boxModeButton.classList.add('active');
+            this.elements.segModeButton.classList.remove('active');
+            return;
+        }
+
+        // 检查最后一个标签的类型
+        const lastLabel = this.state.initialLabels[this.state.initialLabels.length - 1];
+        const mode = lastLabel.isSegmentation ? 'seg' : 'box';
+        
+        // 更新状态和UI
+        this.state.currentMode = mode;
+        this.elements.boxModeButton.classList.toggle('active', mode === 'box');
+        this.elements.segModeButton.classList.toggle('active', mode === 'seg');
     }
 }
 
