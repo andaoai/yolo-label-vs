@@ -1410,6 +1410,32 @@ class CanvasManager {
         if (e.altKey && !this.state.isPanning && !e.ctrlKey) {
             this.canvas.classList.add('grabable');
         }
+        
+        // Remove Ctrl+S handling from here since we'll handle it at document level
+        
+        // Undo with Ctrl+Z
+        if (e.ctrlKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            if (this.state.undo()) {
+                this.state.requestRedraw();
+                this.updateLabelList();
+            }
+            return;
+        }
+        
+        // Navigation with A and D keys (without modifiers)
+        if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
+            switch (e.key.toLowerCase()) {
+                case 'a':
+                    e.preventDefault();
+                    this.state.vscode.postMessage({ command: 'previous' });
+                    break;
+                case 'd':
+                    e.preventDefault();
+                    this.state.vscode.postMessage({ command: 'next' });
+                    break;
+            }
+        }
     }
 
     handleKeyUp(e) {
@@ -2146,18 +2172,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('toggleLabels').classList.toggle('active', state.showLabels);
         document.getElementById('modeControl').querySelectorAll('.segmented-button').forEach(btn => {
             btn.classList.remove('active');
-            if (btn.dataset.mode === state.currentMode) {
-                btn.classList.add('active');
+        });
+
+        // Add global keyboard event listener for Ctrl+S
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                if (state.hasUnsavedChanges) {
+                    state.vscode.postMessage({ command: 'save', labels: state.initialLabels });
+                    state.markChangesSaved();
+                }
             }
         });
-        document.getElementById('zoom-info').textContent = '缩放: 100%';
-        
-        // Ensure save button starts disabled
-        const saveButton = document.getElementById('saveLabels');
-        if (saveButton) {
-            saveButton.setAttribute('disabled', 'disabled');
-            saveButton.classList.add('disabled');
-        }
         
         // Initialize rectangles
         canvasManager.updateRects();
