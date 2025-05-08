@@ -9,6 +9,17 @@ Here's the English translation of your changelog entry:
 
 ---
 
+## [0.0.49] - 2024-06-XX
+
+### Added
+- Added Tab/Shift+Tab shortcuts for quick label class switching
+- Added current label class display in status bar
+- Added dropdown menu for label class selection
+
+### Changed
+- Simplified label class selection UI to match VSCode's aesthetic
+- Updated documentation with new keyboard shortcuts
+
 ## [0.0.48] - 2024-06-XX  
 
 ### **Added**  
