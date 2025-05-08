@@ -1308,6 +1308,12 @@ class CanvasManager {
         const labelListContainer = document.getElementById('labelList');
         if (!labelListContainer) return;
         
+        // 刷新当前 class 状态栏
+        const classStatus = document.getElementById('currentClassStatus');
+        if (classStatus && this.state.classNamesList.length > 0) {
+            classStatus.textContent = `当前标签类型: ${this.state.classNamesList[this.state.currentLabel]} (${this.state.currentLabel + 1}/${this.state.classNamesList.length})`;
+        }
+        
         labelListContainer.innerHTML = '';
         
         if (!this.state.initialLabels || this.state.initialLabels.length === 0) {
@@ -1416,6 +1422,22 @@ class CanvasManager {
     handleKeyboardShortcuts(e) {
         // Skip if target is input element
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            return;
+        }
+        // Tab/Shift+Tab 切换标签类型
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const classCount = this.state.classNamesList.length;
+            if (classCount > 0) {
+                if (e.shiftKey) {
+                    // Shift+Tab，前一个
+                    this.state.currentLabel = (this.state.currentLabel - 1 + classCount) % classCount;
+                } else {
+                    // Tab，后一个
+                    this.state.currentLabel = (this.state.currentLabel + 1) % classCount;
+                }
+                this.updateLabelList();
+            }
             return;
         }
         
