@@ -1621,6 +1621,12 @@ class UIManager {
                 this.state.initialLabels = JSON.parse(
                     JSON.stringify(currentHistory.history[currentHistory.historyIndex])
                 );
+                // Check if the current state matches the saved state
+                const savedLabels = message.labels || [];
+                const currentLabels = this.state.initialLabels;
+                const hasChanges = JSON.stringify(savedLabels) !== JSON.stringify(currentLabels);
+                this.state.hasUnsavedChanges = hasChanges;
+                this.updateSaveButtonState();
             }
         }
         
@@ -1644,15 +1650,12 @@ class UIManager {
             this.state.translateX = (containerWidth - img.width) / 2;
             this.state.translateY = (containerHeight - img.height) / 2;
             
-            // 加载后更新所有状态栏信息
+            this.canvasManager.resizeCanvas();
+            this.canvasManager.updateRects();
             this.canvasManager.updateImageDimensionDisplay();
             this.canvasManager.updateLabelsCountDisplay();
             this.canvasManager.updateZoomDisplay();
-            
-            // 更新标签列表
             this.canvasManager.updateLabelList();
-            
-            // 重绘画布
             this.state.requestRedraw();
             
             // 如果存在UI管理器实例，更新按钮状态
