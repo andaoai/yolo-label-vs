@@ -1,348 +1,6 @@
-// Constants and Configuration
-const CONFIG = {
-    CLOSE_POINT_THRESHOLD: 0.01,
-    COLORS: [
-        '#2196F3', '#4CAF50', '#F44336', '#FFC107', '#9C27B0',
-        '#00BCD4', '#FF9800', '#795548', '#607D8B', '#E91E63'
-    ],
-    DEBOUNCE_DELAY: 200,
-    MAX_SEARCH_RESULTS: 10,
-    MIN_ZOOM: 0.1,
-    MAX_ZOOM: 10,
-    ZOOM_SPEED: 0.1,
-    SCROLL_SPEED: 30,
-    POINT_RADIUS: 3,
-    HIGHLIGHT_RADIUS: 5,
-    CLOSE_HIGHLIGHT_RADIUS: 8,
-    MIN_BOX_SIZE: 0.01, // 1% of image size
-    LINE_WIDTH: 2,
-    CROSSHAIR_COLOR: 'rgba(0, 255, 0, 0.94)',
-    CROSSHAIR_CENTER_COLOR: 'rgba(255, 255, 255, 0.9)',
-    BACKGROUND_COLOR: getComputedStyle(document.documentElement).getPropertyValue('--vscode-editor-background') || '#1e1e1e',
-    LABEL_FONT_SIZE: 14,
-    LABEL_PADDING: 5,
-    LABEL_HEIGHT: 20
-};
-
-// State Management - Using ES6+ class fields
-class LabelingState {
-    // Use class fields for better organization and readability
-    vscode = acquireVsCodeApi();
-    currentImage = window.initialImageData;
-    initialLabels = window.initialLabels;
-    isDrawing = false;
-    startX = 0;
-    startY = 0;
-    currentLabel = 0;
-    classNamesList = window.classNames || [];
-    currentMode = 'box';
-    polygonPoints = [];
-    isDrawingPolygon = false;
-    showLabels = true;
-    allImagePaths = [];
-    currentPath = window.currentPath || '';
-    selectedSearchIndex = -1;
-    currentMousePos = null;
-    searchTimeout = null;
-    hasUnsavedChanges = false;
-    
-    // Zoom and pan related state
-    scale = 1;
-    translateX = 0;
-    translateY = 0;
-    isPanning = false;
-    lastPanPoint = { x: 0, y: 0 };
-    
-    // Image dimensions for coordinate calculations
-    originalImageWidth = 0;
-    originalImageHeight = 0;
-    
-    // Canvas and image relationship
-    canvasRect = null;
-    imageRect = null;
-    
-    // Animation related
-    animationFrameId = null;
-    needsRedraw = false;
-    
-    // For throttling mousemove events
-    lastRenderTime = 0;
-    throttleDelay = 16; // ~60fps
-    
-    // undo/redo history
-    history = [];
-    historyIndex = -1;
-    maxHistorySize = 50;
-    
-    // Store histories for each image path
-    imageHistories = new Map();
-    
-    hoveredLabel = null;
-    isDragging = false;
-    dragStartPos = { x: 0, y: 0 };
-    draggedLabel = null;
-    
-    dashOffset = 0; // 虚线动画偏移
-    dashAnimationId = null; // 虚线动画定时器
-    
-    constructor() {
-        // Ensure all labels have a visibility property
-        if (this.initialLabels) {
-            this.initialLabels.forEach(label => {
-                if (label.visible === undefined) {
-                    label.visible = true;
-                }
-            });
-        }
-        
-        // Initialize history for the initial path if it exists
-        if (this.currentPath) {
-            this.imageHistories.set(this.currentPath, {
-                history: [],
-                historyIndex: -1
-            });
-            // Store initial labels in history
-            this.pushHistory();
-        }
-    }
-    
-    // Add undo/redo functionality
-    pushHistory() {
-        // Get or initialize history for current image
-        if (!this.imageHistories.has(this.currentPath)) {
-            this.imageHistories.set(this.currentPath, {
-                history: [],
-                historyIndex: -1
-            });
-        }
-        
-        const currentHistory = this.imageHistories.get(this.currentPath);
-        
-        // Remove any future history if we're in the middle of the history stack
-        if (currentHistory.historyIndex < currentHistory.history.length - 1) {
-            currentHistory.history = currentHistory.history.slice(0, currentHistory.historyIndex + 1);
-        }
-        
-        // Clone current labels for history
-        const labelsCopy = JSON.parse(JSON.stringify(this.initialLabels));
-        
-        // Add to history
-        currentHistory.history.push(labelsCopy);
-        
-        // Limit history size
-        if (currentHistory.history.length > this.maxHistorySize) {
-            currentHistory.history.shift();
-        }
-        
-        // Update index
-        currentHistory.historyIndex = currentHistory.history.length - 1;
-        
-        // Update the state's imageHistories
-        this.imageHistories.set(this.currentPath, currentHistory);
-        
-        // Mark as having unsaved changes
-        this.hasUnsavedChanges = true;
-        
-        // Update save button state if UI manager exists
-        if (window.uiManager) {
-            window.uiManager.updateSaveButtonState();
-        }
-    }
-    
-    undo() {
-        // Get history for current image
-        if (!this.imageHistories.has(this.currentPath)) {
-            return false;
-        }
-        
-        const currentHistory = this.imageHistories.get(this.currentPath);
-        
-        if (currentHistory.historyIndex > 0) {
-            currentHistory.historyIndex--;
-            this.initialLabels = JSON.parse(JSON.stringify(currentHistory.history[currentHistory.historyIndex]));
-            
-            // Update the state's imageHistories
-            this.imageHistories.set(this.currentPath, currentHistory);
-            
-            // Mark as having unsaved changes
-            this.hasUnsavedChanges = true;
-            
-            // Update save button state if UI manager exists
-            if (window.uiManager) {
-                window.uiManager.updateSaveButtonState();
-            }
-            
-            return true;
-        }
-        return false;
-    }
-    
-    // Mark changes as saved
-    markChangesSaved() {
-        this.hasUnsavedChanges = false;
-        
-        // Update save button state if UI manager exists
-        if (window.uiManager) {
-            window.uiManager.updateSaveButtonState();
-        }
-    }
-    
-    // Request animation frame for efficient rendering
-    requestRedraw() {
-        this.needsRedraw = true;
-        if (!this.animationFrameId) {
-            this.animationFrameId = requestAnimationFrame(() => {
-                if (this.needsRedraw) {
-                    this.needsRedraw = false;
-                    this.animationFrameId = null;
-                    this.dashOffset = (this.dashOffset + 2) % 40; // 控制虚线流动速度
-                    if (this.onRedrawRequested) {
-                        this.onRedrawRequested();
-                    }
-                }
-            });
-        }
-    }
-    
-    // Throttle function for mousemove events
-    shouldUpdate() {
-        const now = performance.now();
-        if (now - this.lastRenderTime >= this.throttleDelay) {
-            this.lastRenderTime = now;
-            return true;
-        }
-        return false;
-    }
-
-    // Add method to check if point is inside box
-    isPointInBox(x, y, label) {
-        if (label.isSegmentation) return false;
-        
-        const boxLeft = (label.x - label.width/2);
-        const boxRight = (label.x + label.width/2);
-        const boxTop = (label.y - label.height/2);
-        const boxBottom = (label.y + label.height/2);
-        
-        return x >= boxLeft && x <= boxRight && y >= boxTop && y <= boxBottom;
-    }
-
-    // Add method to check if point is near polygon line
-    isPointNearPolygon(x, y, label) {
-        if (!label.isSegmentation || !label.points) return false;
-        
-        const threshold = CONFIG.CLOSE_POINT_THRESHOLD;
-        
-        for (let i = 0; i < label.points.length - 2; i += 2) {
-            const x1 = label.points[i];
-            const y1 = label.points[i + 1];
-            const x2 = label.points[i + 2] || label.points[0];
-            const y2 = label.points[i + 3] || label.points[1];
-            
-            // Calculate distance from point to line segment
-            const A = x - x1;
-            const B = y - y1;
-            const C = x2 - x1;
-            const D = y2 - y1;
-            
-            const dot = A * C + B * D;
-            const len_sq = C * C + D * D;
-            
-            let param = -1;
-            if (len_sq != 0) param = dot / len_sq;
-            
-            let xx, yy;
-            
-            if (param < 0) {
-                xx = x1;
-                yy = y1;
-            } else if (param > 1) {
-                xx = x2;
-                yy = y2;
-            } else {
-                xx = x1 + param * C;
-                yy = y1 + param * D;
-            }
-            
-            const dx = x - xx;
-            const dy = y - yy;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < threshold) return true;
-        }
-        return false;
-    }
-
-    // Add method to find label under cursor
-    findLabelUnderCursor(x, y) {
-        if (!this.initialLabels) return null;
-        
-        for (let i = this.initialLabels.length - 1; i >= 0; i--) {
-            const label = this.initialLabels[i];
-            if (!label.visible) continue;
-            
-            if (label.isSegmentation) {
-                if (this.isPointInPolygon(x, y, label) || this.isPointNearPolygon(x, y, label)) return label;
-            } else {
-                if (this.isPointInBox(x, y, label)) return label;
-            }
-        }
-        return null;
-    }
-
-    // Update method to update label highlight in sidebar
-    updateLabelHighlight() {
-        const labelItems = document.querySelectorAll('.label-item');
-        let hasHighlight = false;
-        labelItems.forEach((item, index) => {
-            if (this.hoveredLabel === this.initialLabels[index]) {
-                item.classList.add('highlighted');
-                hasHighlight = true;
-            } else {
-                item.classList.remove('highlighted');
-            }
-        });
-        if (hasHighlight) {
-            this.startDashAnimation();
-        } else {
-            this.stopDashAnimation();
-        }
-    }
-
-    // 判断点是否在多边形内部（射线法）
-    isPointInPolygon(x, y, label) {
-        if (!label.isSegmentation || !label.points || label.points.length < 6) return false;
-        let inside = false;
-        const n = label.points.length / 2;
-        for (let i = 0, j = n - 1; i < n; j = i++) {
-            const xi = label.points[i * 2], yi = label.points[i * 2 + 1];
-            const xj = label.points[j * 2], yj = label.points[j * 2 + 1];
-            const intersect = ((yi > y) !== (yj > y)) &&
-                (x < (xj - xi) * (y - yi) / (yj - yi + 1e-10) + xi);
-            if (intersect) inside = !inside;
-        }
-        return inside;
-    }
-
-    // 新增方法：高亮时自动动画
-    startDashAnimation() {
-        if (this.dashAnimationId) return;
-        const animate = () => {
-            if (this.hoveredLabel) {
-                this.requestRedraw();
-                this.dashAnimationId = requestAnimationFrame(animate);
-            } else {
-                this.stopDashAnimation();
-            }
-        };
-        this.dashAnimationId = requestAnimationFrame(animate);
-    }
-    stopDashAnimation() {
-        if (this.dashAnimationId) {
-            cancelAnimationFrame(this.dashAnimationId);
-            this.dashAnimationId = null;
-        }
-    }
-}
+// Import configuration and state management
+import { CONFIG } from './config.js';
+import { LabelingState } from './LabelingState.js';
 
 // Canvas Manager
 class CanvasManager {
@@ -1545,6 +1203,9 @@ class UIManager {
             progressContainer: document.querySelector('.progress-container')
         };
         
+        // Initialize progress elements first
+        this.createProgressElements();
+        
         this.setupEventListeners();
         
         // Initialize save button state
@@ -1555,6 +1216,9 @@ class UIManager {
         
         // 修复：绑定打开图片/标签按钮事件
         this.setupTabButtons();
+
+        // 初始化模式
+        this.updateModeBasedOnLabels();
     }
     
     // Create undo/redo buttons and add to toolbar
@@ -1904,27 +1568,14 @@ class UIManager {
     }
 
     setupProgressBarListeners() {
-        const { progressContainer } = this.elements;
-        
-        progressContainer.addEventListener('click', (e) => {
-            const rect = progressContainer.getBoundingClientRect();
-            const clickPosition = (e.clientX - rect.left) / rect.width;
-            const targetIndex = Math.floor(clickPosition * this.state.allImagePaths.length);
-            
-            if (targetIndex >= 0 && targetIndex < this.state.allImagePaths.length) {
-                this.state.vscode.postMessage({
-                    command: 'loadImage',
-                    path: this.state.allImagePaths[targetIndex]
-                });
-            }
-        });
+        // Progress bar is now just for display, no click handling needed
     }
 
     updateProgressBar() {
         const { progressBar } = this.elements;
-        const currentIndex = this.state.allImagePaths.indexOf(this.state.currentPath);
-        const totalImages = this.state.allImagePaths.length;
-        
+        if (!progressBar) return;
+        const currentIndex = this.state.allImagePaths?.indexOf(this.state.currentPath) ?? -1;
+        const totalImages = this.state.allImagePaths?.length ?? 0;
         if (currentIndex >= 0 && totalImages > 0) {
             const progress = ((currentIndex + 1) / totalImages) * 100;
             progressBar.style.width = `${progress}%`;
@@ -1963,8 +1614,14 @@ class UIManager {
                 this.state.initialLabels = JSON.parse(
                     JSON.stringify(currentHistory.history[currentHistory.historyIndex])
                 );
+                // Check if the current state matches the saved state
+                this.state.checkUnsavedChanges();
+                this.updateSaveButtonState();
             }
         }
+
+        // 更新模式
+        this.updateModeBasedOnLabels();
         
         // 设置图像对象并加载
         const img = new Image();
@@ -1986,15 +1643,12 @@ class UIManager {
             this.state.translateX = (containerWidth - img.width) / 2;
             this.state.translateY = (containerHeight - img.height) / 2;
             
-            // 加载后更新所有状态栏信息
+            this.canvasManager.resizeCanvas();
+            this.canvasManager.updateRects();
             this.canvasManager.updateImageDimensionDisplay();
             this.canvasManager.updateLabelsCountDisplay();
             this.canvasManager.updateZoomDisplay();
-            
-            // 更新标签列表
             this.canvasManager.updateLabelList();
-            
-            // 重绘画布
             this.state.requestRedraw();
             
             // 如果存在UI管理器实例，更新按钮状态
@@ -2026,6 +1680,98 @@ class UIManager {
         // 更新进度条
         this.updateProgressBar();
     }
+
+    // 根据当前标签类型更新模式
+    updateModeBasedOnLabels() {
+        if (!this.state.initialLabels || this.state.initialLabels.length === 0) {
+            // 如果没有标签，默认使用box模式
+            this.state.currentMode = 'box';
+            this.elements.boxModeButton.classList.add('active');
+            this.elements.segModeButton.classList.remove('active');
+            return;
+        }
+
+        // 检查最后一个标签的类型
+        const lastLabel = this.state.initialLabels[this.state.initialLabels.length - 1];
+        const mode = lastLabel.isSegmentation ? 'seg' : 'box';
+        
+        // 更新状态和UI
+        this.state.currentMode = mode;
+        this.elements.boxModeButton.classList.toggle('active', mode === 'box');
+        this.elements.segModeButton.classList.toggle('active', mode === 'seg');
+    }
+
+    createProgressElements() {
+        if (!this.elements.progressContainer) return;
+
+        // 只创建预览，不创建marker
+        const preview = document.createElement('div');
+        preview.className = 'progress-preview';
+        preview.innerHTML = `
+            <img src="" alt="Preview">
+            <div class="preview-info"></div>
+        `;
+        this.elements.progressContainer.appendChild(preview);
+        this.elements.progressPreview = preview;
+
+        // Add event listeners
+        this.setupProgressBarEvents();
+    }
+
+    setupProgressBarEvents() {
+        const container = this.elements.progressContainer;
+        const preview = this.elements.progressPreview;
+        const progressBar = this.elements.progressBar;
+        if (!container || !preview || !progressBar) return;
+
+        const PLACEHOLDER_IMG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+
+        container.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            const position = (e.clientX - rect.left) / rect.width;
+            const index = Math.floor(position * (this.state.allImagePaths?.length || 0));
+
+            if (index >= 0 && index < (this.state.allImagePaths?.length || 0)) {
+                progressBar.style.width = `${position * 100}%`;
+                preview.style.left = `${position * 100}%`;
+
+                const img = preview.querySelector('img');
+                const info = preview.querySelector('.preview-info');
+                if (img && info) {
+                    if (this.state.imagePreviews?.[index]) {
+                        img.src = `data:image/png;base64,${this.state.imagePreviews[index]}`;
+                        img.alt = 'Preview';
+                    } else {
+                        img.src = PLACEHOLDER_IMG;
+                        img.alt = 'No Preview';
+                    }
+                    info.textContent = `Image ${index + 1} of ${this.state.allImagePaths.length}`;
+                }
+            }
+        });
+
+        container.addEventListener('click', (e) => {
+            const rect = container.getBoundingClientRect();
+            const position = (e.clientX - rect.left) / rect.width;
+            const index = Math.floor(position * (this.state.allImagePaths?.length || 0));
+            if (index >= 0 && index < (this.state.allImagePaths?.length || 0)) {
+                const imagePath = this.state.allImagePaths[index];
+                this.state.vscode.postMessage({ 
+                    command: 'loadImage', 
+                    path: imagePath 
+                });
+            }
+        });
+
+        container.addEventListener('mouseleave', () => {
+            if (preview) preview.style.display = 'none';
+            this.updateProgressBar();
+        });
+
+        container.addEventListener('mouseenter', () => {
+            if (preview) preview.style.display = 'block';
+        });
+    }
 }
 
 // Improved Message Handler
@@ -2054,11 +1800,20 @@ class MessageHandler {
             case 'error':
                 this.handleError(message);
                 break;
+            case 'imagePreviews':
+                this.handleImagePreviews(message);
+                break;
         }
     }
     
     handleImageList(message) {
         this.state.allImagePaths = message.paths || [];
+        
+        // Request image previews for the list
+        this.state.vscode.postMessage({ 
+            command: 'getImagePreviews',
+            paths: this.state.allImagePaths
+        });
         
         // Update the search input with the current image path if available
         if (this.state.currentPath && document.getElementById('imageSearch')) {
@@ -2074,6 +1829,11 @@ class MessageHandler {
         if (uiManager && typeof uiManager.updateImageInfo === 'function') {
             uiManager.updateImageInfo();
         }
+    }
+
+    handleImagePreviews(message) {
+        // Store image previews in state
+        this.state.imagePreviews = message.previews || [];
     }
 
     handleError(message) {
@@ -2180,6 +1940,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modeControl').querySelectorAll('.segmented-button').forEach(btn => {
             btn.classList.remove('active');
         });
+
+        // 初始化模式
+        uiManager.updateModeBasedOnLabels();
 
         // Add global keyboard event listener for Ctrl+S
         document.addEventListener('keydown', (e) => {
