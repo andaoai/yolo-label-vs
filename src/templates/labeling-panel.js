@@ -1565,20 +1565,7 @@ class UIManager {
     }
 
     setupProgressBarListeners() {
-        const { progressContainer } = this.elements;
-        
-        progressContainer.addEventListener('click', (e) => {
-            const rect = progressContainer.getBoundingClientRect();
-            const clickPosition = (e.clientX - rect.left) / rect.width;
-            const targetIndex = Math.floor(clickPosition * this.state.allImagePaths.length);
-            
-            if (targetIndex >= 0 && targetIndex < this.state.allImagePaths.length) {
-                this.state.vscode.postMessage({
-                    command: 'loadImage',
-                    path: this.state.allImagePaths[targetIndex]
-                });
-            }
-        });
+        // Progress bar is now just for display, no click handling needed
     }
 
     updateProgressBar() {
