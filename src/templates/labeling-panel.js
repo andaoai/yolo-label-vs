@@ -1203,6 +1203,9 @@ class UIManager {
             progressContainer: document.querySelector('.progress-container')
         };
         
+        // Initialize progress elements first
+        this.createProgressElements();
+        
         this.setupEventListeners();
         
         // Initialize save button state
@@ -1570,9 +1573,9 @@ class UIManager {
 
     updateProgressBar() {
         const { progressBar } = this.elements;
-        const currentIndex = this.state.allImagePaths.indexOf(this.state.currentPath);
-        const totalImages = this.state.allImagePaths.length;
-        
+        if (!progressBar) return;
+        const currentIndex = this.state.allImagePaths?.indexOf(this.state.currentPath) ?? -1;
+        const totalImages = this.state.allImagePaths?.length ?? 0;
         if (currentIndex >= 0 && totalImages > 0) {
             const progress = ((currentIndex + 1) / totalImages) * 100;
             progressBar.style.width = `${progress}%`;
@@ -1697,6 +1700,78 @@ class UIManager {
         this.elements.boxModeButton.classList.toggle('active', mode === 'box');
         this.elements.segModeButton.classList.toggle('active', mode === 'seg');
     }
+
+    createProgressElements() {
+        if (!this.elements.progressContainer) return;
+
+        // 只创建预览，不创建marker
+        const preview = document.createElement('div');
+        preview.className = 'progress-preview';
+        preview.innerHTML = `
+            <img src="" alt="Preview">
+            <div class="preview-info"></div>
+        `;
+        this.elements.progressContainer.appendChild(preview);
+        this.elements.progressPreview = preview;
+
+        // Add event listeners
+        this.setupProgressBarEvents();
+    }
+
+    setupProgressBarEvents() {
+        const container = this.elements.progressContainer;
+        const preview = this.elements.progressPreview;
+        const progressBar = this.elements.progressBar;
+        if (!container || !preview || !progressBar) return;
+
+        const PLACEHOLDER_IMG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+
+        container.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            const position = (e.clientX - rect.left) / rect.width;
+            const index = Math.floor(position * (this.state.allImagePaths?.length || 0));
+
+            if (index >= 0 && index < (this.state.allImagePaths?.length || 0)) {
+                progressBar.style.width = `${position * 100}%`;
+                preview.style.left = `${position * 100}%`;
+
+                const img = preview.querySelector('img');
+                const info = preview.querySelector('.preview-info');
+                if (img && info) {
+                    if (this.state.imagePreviews?.[index]) {
+                        img.src = `data:image/png;base64,${this.state.imagePreviews[index]}`;
+                        img.alt = 'Preview';
+                    } else {
+                        img.src = PLACEHOLDER_IMG;
+                        img.alt = 'No Preview';
+                    }
+                    info.textContent = `Image ${index + 1} of ${this.state.allImagePaths.length}`;
+                }
+            }
+        });
+
+        container.addEventListener('click', (e) => {
+            const rect = container.getBoundingClientRect();
+            const position = (e.clientX - rect.left) / rect.width;
+            const index = Math.floor(position * (this.state.allImagePaths?.length || 0));
+            if (index >= 0 && index < (this.state.allImagePaths?.length || 0)) {
+                const imagePath = this.state.allImagePaths[index];
+                this.state.vscode.postMessage({ 
+                    command: 'loadImage', 
+                    path: imagePath 
+                });
+            }
+        });
+
+        container.addEventListener('mouseleave', () => {
+            if (preview) preview.style.display = 'none';
+            this.updateProgressBar();
+        });
+
+        container.addEventListener('mouseenter', () => {
+            if (preview) preview.style.display = 'block';
+        });
+    }
 }
 
 // Improved Message Handler
@@ -1725,11 +1800,20 @@ class MessageHandler {
             case 'error':
                 this.handleError(message);
                 break;
+            case 'imagePreviews':
+                this.handleImagePreviews(message);
+                break;
         }
     }
     
     handleImageList(message) {
         this.state.allImagePaths = message.paths || [];
+        
+        // Request image previews for the list
+        this.state.vscode.postMessage({ 
+            command: 'getImagePreviews',
+            paths: this.state.allImagePaths
+        });
         
         // Update the search input with the current image path if available
         if (this.state.currentPath && document.getElementById('imageSearch')) {
@@ -1745,6 +1829,11 @@ class MessageHandler {
         if (uiManager && typeof uiManager.updateImageInfo === 'function') {
             uiManager.updateImageInfo();
         }
+    }
+
+    handleImagePreviews(message) {
+        // Store image previews in state
+        this.state.imagePreviews = message.previews || [];
     }
 
     handleError(message) {
