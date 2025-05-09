@@ -37,7 +37,7 @@ export interface ErrorMessage extends ExtensionToWebviewMessage {
 
 // 从Webview到扩展的消息
 export interface WebviewToExtensionMessage extends WebviewMessage {
-  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab';
+  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab' | 'getImagePreviews';
 }
 
 // 保存标签消息

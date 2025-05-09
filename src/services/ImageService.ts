@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { CacheManager } from '../model/CacheManager';
 import { ErrorHandler, ErrorType } from '../ErrorHandler';
+import sharp from 'sharp';
 
 /**
  * 图像服务类
@@ -91,5 +92,19 @@ export class ImageService {
      */
     public clearCache(): void {
         this._imageCache.clear();
+    }
+
+    /**
+     * 生成图片缩略图，返回base64字符串（不带data:image/png;base64,前缀）
+     */
+    public async generateThumbnail(imagePath: string, width: number, height: number): Promise<string> {
+        // 检查文件是否存在
+        await fs.promises.access(imagePath, fs.constants.R_OK);
+        // 用 sharp 生成缩略图
+        const buffer = await sharp(imagePath)
+            .resize(width, height, { fit: 'cover' })
+            .toFormat('png')
+            .toBuffer();
+        return buffer.toString('base64');
     }
 } 
