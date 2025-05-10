@@ -175,30 +175,6 @@ class CanvasManager {
             this.startBoxDrawing(x, y);
         } else if (this.state.currentMode === 'seg') {
             this.handleSegmentationClick(x, y);
-        } else if (this.state.currentMode === 'pose') {
-            if (!this.state.currentImage) return;
-            
-            const rect = this.canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left - this.state.translateX) / this.state.scale;
-            const y = (e.clientY - rect.top - this.state.translateY) / this.state.scale;
-            
-            // 检查是否点击了关键点
-            if (this.state.hoveredLabel?.keypoints) {
-                const label = this.state.hoveredLabel;
-                const numKeypoints = label.keypoints.length / 3;
-                for (let i = 0; i < numKeypoints; i++) {
-                    const kx = label.keypoints[i * 3] * this.state.originalImageWidth;
-                    const ky = label.keypoints[i * 3 + 1] * this.state.originalImageHeight;
-                    const distance = Math.sqrt(Math.pow(x - kx, 2) + Math.pow(y - ky, 2));
-                    
-                    if (distance < 10 / this.state.scale) {
-                        this.state.isDragging = true;
-                        this.state.draggedKeypoint = i;
-                        this.state.dragStartPos = { x, y };
-                        return;
-                    }
-                }
-            }
         }
     }
     
@@ -240,9 +216,6 @@ class CanvasManager {
         const normalizedY = pos.y / this.state.originalImageHeight;
         this.state.currentMousePos = { x: normalizedX, y: normalizedY };
 
-        // 更新坐标显示
-        this.updateCoordinateDisplay(normalizedX, normalizedY);
-
         // 只有按住Ctrl时才允许hover和移动
         if (e.ctrlKey && !this.state.isDrawing && !this.state.isDrawingPolygon) {
             const label = this.state.findLabelUnderCursor(normalizedX, normalizedY);
@@ -279,21 +252,7 @@ class CanvasManager {
             this.state.requestRedraw();
             this.state.hasUnsavedChanges = true;
         }
-
-        // 处理关键点拖动
-        if (this.state.isDragging && this.state.draggedKeypoint !== undefined && this.state.hoveredLabel?.keypoints) {
-            const label = this.state.hoveredLabel;
-            const i = this.state.draggedKeypoint;
-            
-            // 更新关键点位置
-            label.keypoints[i * 3] = normalizedX;
-            label.keypoints[i * 3 + 1] = normalizedY;
-            
-            this.state.requestRedraw();
-            return;
-        }
-
-        // 请求重绘以更新十字辅助线
+        this.updateCoordinateDisplay(normalizedX, normalizedY);
         this.state.requestRedraw();
     }
     
@@ -354,16 +313,6 @@ class CanvasManager {
         if (this.state.currentMode === 'box' && this.state.isDrawing) {
             this.completeBoxDrawing(e);
         }
-
-        if (this.state.isDragging && this.state.draggedKeypoint !== undefined) {
-            this.state.pushHistory();
-        }
-        
-        this.state.isDragging = false;
-        this.state.draggedKeypoint = undefined;
-        this.state.isDrawing = false;
-        this.state.isDrawingPolygon = false;
-        this.state.polygonPoints = [];
     }
     
     // Complete box drawing and add to labels
@@ -670,9 +619,7 @@ class CanvasManager {
             const color = CONFIG.COLORS[label.class % CONFIG.COLORS.length];
             const isHighlighted = label === this.state.hoveredLabel;
             
-            if (label.keypoints) {
-                this.drawPoseLabel(label, color, isHighlighted);
-            } else if (label.isSegmentation && label.points) {
+            if (label.isSegmentation && label.points) {
                 this.drawSegmentationLabel(label, color, isHighlighted);
             } else {
                 this.drawBoundingBoxLabel(label, color, isHighlighted);
@@ -1229,172 +1176,6 @@ class CanvasManager {
     updateLabelsCountDisplay() {
         const visibleLabels = this.state.initialLabels.filter(label => label.visible !== false).length;
         this.labelsCount.textContent = `标签: ${visibleLabels}`;
-    }
-
-    // 新增：绘制姿态关键点标签
-    drawPoseLabel(label, color, isHighlighted) {
-        // 绘制边界框
-        const x = label.x * this.state.originalImageWidth;
-        const y = label.y * this.state.originalImageHeight;
-        const width = label.width * this.state.originalImageWidth;
-        const height = label.height * this.state.originalImageHeight;
-        
-        // 设置边界框样式
-        this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = (isHighlighted ? 3 : CONFIG.LINE_WIDTH) / this.state.scale;
-        if (isHighlighted) {
-            this.ctx.setLineDash([8, 8]);
-            this.ctx.lineDashOffset = this.state.dashOffset;
-        } else {
-            this.ctx.setLineDash([]);
-            this.ctx.lineDashOffset = 0;
-        }
-        
-        // 绘制边界框
-        this.ctx.strokeRect(x - width/2, y - height/2, width, height);
-        this.ctx.setLineDash([]);
-        this.ctx.lineDashOffset = 0;
-        
-        // 绘制关键点
-        if (label.keypoints) {
-            const numKeypoints = label.keypoints.length / 3; // 每个关键点有x,y,v三个值
-            for (let i = 0; i < numKeypoints; i++) {
-                const kx = label.keypoints[i * 3] * this.state.originalImageWidth;
-                const ky = label.keypoints[i * 3 + 1] * this.state.originalImageHeight;
-                const visibility = label.keypoints[i * 3 + 2];
-                
-                if (visibility > 0) { // 只绘制可见的关键点
-                    // 绘制关键点
-                    this.ctx.beginPath();
-                    this.ctx.arc(kx, ky, 4 / this.state.scale, 0, 2 * Math.PI);
-                    this.ctx.fillStyle = color;
-                    this.ctx.fill();
-                    
-                    // 绘制关键点序号
-                    if (this.state.showLabels) {
-                        this.ctx.fillStyle = '#ffffff';
-                        this.ctx.font = `${12 / this.state.scale}px sans-serif`;
-                        this.ctx.textAlign = 'center';
-                        this.ctx.textBaseline = 'middle';
-                        this.ctx.fillText(i.toString(), kx, ky);
-                    }
-                }
-            }
-        }
-        
-        // 绘制标签文本
-        if (this.state.showLabels) {
-            const text = `${this.state.classNamesList[label.class] || label.class.toString()} (POSE)`;
-            this.drawLabelText(text, x - width/2, y - height/2 - CONFIG.LABEL_HEIGHT / this.state.scale, color);
-        }
-    }
-
-    // 修改：更新鼠标事件处理
-    handleMouseDown(e) {
-        if (!this.state.currentImage) return;
-        
-        const rect = this.canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left - this.state.translateX) / this.state.scale;
-        const y = (e.clientY - rect.top - this.state.translateY) / this.state.scale;
-        
-        // 检查是否点击了关键点
-        if (this.state.currentMode === 'pose' && this.state.hoveredLabel?.keypoints) {
-            const label = this.state.hoveredLabel;
-            const numKeypoints = label.keypoints.length / 3;
-            for (let i = 0; i < numKeypoints; i++) {
-                const kx = label.keypoints[i * 3] * this.state.originalImageWidth;
-                const ky = label.keypoints[i * 3 + 1] * this.state.originalImageHeight;
-                const distance = Math.sqrt(Math.pow(x - kx, 2) + Math.pow(y - ky, 2));
-                
-                if (distance < 10 / this.state.scale) {
-                    this.state.isDragging = true;
-                    this.state.draggedKeypoint = i;
-                    this.state.dragStartPos = { x, y };
-                    return;
-                }
-            }
-        }
-        
-        // 原有的边界框和分割处理逻辑
-        if (this.state.currentMode === 'box' || this.state.currentMode === 'seg') {
-            // ... existing box/seg handling code ...
-        }
-    }
-
-    handleMouseMove(e) {
-        if (!this.state.currentImage) return;
-        
-        const rect = this.canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left - this.state.translateX) / this.state.scale;
-        const y = (e.clientY - rect.top - this.state.translateY) / this.state.scale;
-        
-        // 处理关键点拖动
-        if (this.state.isDragging && this.state.draggedKeypoint !== undefined && this.state.hoveredLabel?.keypoints) {
-            const label = this.state.hoveredLabel;
-            const i = this.state.draggedKeypoint;
-            
-            // 更新关键点位置
-            label.keypoints[i * 3] = x / this.state.originalImageWidth;
-            label.keypoints[i * 3 + 1] = y / this.state.originalImageHeight;
-            
-            this.state.needsRedraw = true;
-            return;
-        }
-        
-        // 原有的边界框和分割处理逻辑
-        if (this.state.currentMode === 'box' || this.state.currentMode === 'seg') {
-            // ... existing box/seg handling code ...
-        }
-    }
-
-    handleMouseUp(e) {
-        if (this.state.isDragging && this.state.draggedKeypoint !== undefined) {
-            this.state.pushHistory();
-        }
-        
-        this.state.isDragging = false;
-        this.state.draggedKeypoint = undefined;
-        this.state.isDrawing = false;
-        this.state.isDrawingPolygon = false;
-        this.state.polygonPoints = [];
-    }
-
-    // 修改：更新标签查找逻辑
-    findLabelUnderCursor(x, y) {
-        if (!this.state.initialLabels) return null;
-        
-        for (let i = this.state.initialLabels.length - 1; i >= 0; i--) {
-            const label = this.state.initialLabels[i];
-            if (!label.visible) continue;
-            
-            if (label.keypoints) {
-                // 检查是否点击了关键点
-                const numKeypoints = label.keypoints.length / 3;
-                for (let j = 0; j < numKeypoints; j++) {
-                    const kx = label.keypoints[j * 3] * this.state.originalImageWidth;
-                    const ky = label.keypoints[j * 3 + 1] * this.state.originalImageHeight;
-                    const distance = Math.sqrt(Math.pow(x - kx, 2) + Math.pow(y - ky, 2));
-                    
-                    if (distance < 10 / this.state.scale) {
-                        return label;
-                    }
-                }
-                
-                // 检查是否点击了边界框
-                if (this.isPointInBox(x, y, label)) {
-                    return label;
-                }
-            } else if (label.isSegmentation) {
-                if (this.isPointInPolygon(x, y, label) || this.isPointNearPolygon(x, y, label)) {
-                    return label;
-                }
-            } else {
-                if (this.isPointInBox(x, y, label)) {
-                    return label;
-                }
-            }
-        }
-        return null;
     }
 }
 

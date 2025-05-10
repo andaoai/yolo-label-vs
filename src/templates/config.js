@@ -16,8 +16,8 @@ export const CONFIG = {
     CLOSE_HIGHLIGHT_RADIUS: 8,
     MIN_BOX_SIZE: 0.01, // 1% of image size
     LINE_WIDTH: 2,
-    CROSSHAIR_COLOR: 'rgba(255, 255, 255, 0.5)',
-    CROSSHAIR_CENTER_COLOR: 'rgba(255, 255, 255, 0.8)',
+    CROSSHAIR_COLOR: 'rgba(0, 255, 0, 0.94)',
+    CROSSHAIR_CENTER_COLOR: 'rgba(255, 255, 255, 0.9)',
     BACKGROUND_COLOR: getComputedStyle(document.documentElement).getPropertyValue('--vscode-editor-background') || '#1e1e1e',
     LABEL_FONT_SIZE: 14,
     LABEL_PADDING: 5,

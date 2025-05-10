@@ -897,36 +897,4 @@ svg {
 
 .progress-marker:hover {
     transform: translate(-50%, -50%) scale(1.2);
-}
-
-/* 关键点样式 */
-.keypoint {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: var(--vscode-button-background);
-    border: 2px solid var(--vscode-button-foreground);
-    transform: translate(-50%, -50%);
-    cursor: move;
-    z-index: 1000;
-}
-
-.keypoint:hover {
-    transform: translate(-50%, -50%) scale(1.2);
-}
-
-.keypoint-number {
-    position: absolute;
-    color: var(--vscode-button-foreground);
-    font-size: 12px;
-    font-weight: bold;
-    text-shadow: 0 0 2px var(--vscode-editor-background);
-    pointer-events: none;
-}
-
-/* 姿态模式按钮样式 */
-#poseMode.active {
-    background-color: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
 } 

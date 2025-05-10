@@ -13,9 +13,6 @@ export interface YoloConfig {
     val: string | string[];       // 验证图片目录（相对于path）
     test: string | string[];      // 测试图片目录（相对于path）
     names: string[];   // 标签类别名称列表，始终保存为数组形式
-    dataset_type?: 'detection' | 'segmentation' | 'pose';
-    kpt_shape?: [number, number];
-    flip_idx?: number[];
 }
 
 export class YoloDataReader {
@@ -77,37 +74,6 @@ export class YoloDataReader {
             throw new Error('Test path must be a string or an array of strings');
         }
 
-        // Validate dataset_type if present
-        if (config.dataset_type && !['detection', 'segmentation', 'pose'].includes(config.dataset_type)) {
-            throw new Error('Invalid dataset_type: must be one of detection, segmentation, or pose');
-        }
-
-        // Validate kpt_shape if present
-        if (config.kpt_shape) {
-            if (!Array.isArray(config.kpt_shape) || config.kpt_shape.length !== 2) {
-                throw new Error('kpt_shape must be an array of two numbers [num_keypoints, num_dims]');
-            }
-            if (typeof config.kpt_shape[0] !== 'number' || typeof config.kpt_shape[1] !== 'number') {
-                throw new Error('kpt_shape values must be numbers');
-            }
-            if (config.kpt_shape[0] <= 0 || config.kpt_shape[1] <= 0) {
-                throw new Error('kpt_shape values must be positive numbers');
-            }
-        }
-
-        // Validate flip_idx if present
-        if (config.flip_idx) {
-            if (!Array.isArray(config.flip_idx)) {
-                throw new Error('flip_idx must be an array of numbers');
-            }
-            if (config.kpt_shape && config.flip_idx.length !== config.kpt_shape[0]) {
-                throw new Error('flip_idx length must match the number of keypoints');
-            }
-            if (!config.flip_idx.every((idx: any) => typeof idx === 'number' && idx >= 0)) {
-                throw new Error('flip_idx values must be non-negative numbers');
-            }
-        }
-
         return true;
     }
 
@@ -133,10 +99,7 @@ export class YoloDataReader {
                 train: rawConfig.train || '',
                 val: rawConfig.val || '',
                 test: rawConfig.test || '',
-                names: rawConfig.names,
-                dataset_type: rawConfig.dataset_type,
-                kpt_shape: rawConfig.kpt_shape,
-                flip_idx: rawConfig.flip_idx
+                names: rawConfig.names
             };
 
             this.loadImageFiles();
@@ -246,40 +209,6 @@ export class YoloDataReader {
         return labelPath.replace(/\.(jpg|jpeg|png)$/i, '.txt');
     }
 
-    private getDatasetType(): 'detection' | 'segmentation' | 'pose' {
-        // 1. 首先检查配置文件中的显式声明
-        if (this.config.dataset_type) {
-            return this.config.dataset_type;
-        }
-        
-        // 2. 如果没有显式声明，则通过配置文件特征推断
-        if (this.config.kpt_shape) {
-            return 'pose';
-        }
-        
-        // 3. 如果都没有，则通过数据特征推断
-        const currentImage = this.getCurrentImage();
-        if (currentImage) {
-            const labels = this.readLabels(currentImage);
-            if (labels.length > 0) {
-                const firstLabel = labels[0];
-                // 如果有关键点数据，就是pose格式
-                if ('keypoints' in firstLabel) {
-                    return 'pose';
-                }
-                // 如果有分割点数据，就是segmentation格式
-                if ('points' in firstLabel) {
-                    return 'segmentation';
-                }
-                // 否则就是detection格式
-                return 'detection';
-            }
-        }
-        
-        // 4. 默认返回detection类型
-        return 'detection';
-    }
-
     public readLabels(imagePath: string): BoundingBox[] {
         try {
             const labelPath = this.getLabelFile(imagePath);
@@ -290,71 +219,43 @@ export class YoloDataReader {
             const content = fs.readFileSync(labelPath, 'utf8');
             const lines = content.split('\n').filter(line => line.trim() !== '');
             
-            const datasetType = this.getDatasetType();
             const labels: BoundingBox[] = [];
-            
             for (const line of lines) {
                 const parts = line.trim().split(/\s+/);
                 
-                switch (datasetType) {
-                    case 'pose':
-                        // Pose格式：class x y width height [keypoints...]
-                        if (parts.length === 5 + (this.config.kpt_shape?.[0] || 0) * (this.config.kpt_shape?.[1] || 0)) {
-                            const classIndex = parseInt(parts[0], 10);
-                            const x = parseFloat(parts[1]);
-                            const y = parseFloat(parts[2]);
-                            const width = parseFloat(parts[3]);
-                            const height = parseFloat(parts[4]);
-                            const keypoints = parts.slice(5).map(p => parseFloat(p));
-                            
-                            if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
-                                labels.push({
-                                    class: classIndex,
-                                    x, y, width, height,
-                                    visible: true,
-                                    keypoints: keypoints
-                                });
-                            }
-                        }
-                        break;
-                        
-                    case 'segmentation':
-                        // Segmentation格式：class [points...]
-                        if (parts.length > 5) {
-                            const classIndex = parseInt(parts[0], 10);
-                            const points = parts.slice(1).map(p => parseFloat(p));
-                            
-                            if (!isNaN(classIndex) && points.every(p => !isNaN(p))) {
-                                labels.push({
-                                    class: classIndex,
-                                    x: 0, y: 0, width: 0, height: 0,
-                                    isSegmentation: true,
-                                    points: points,
-                                    visible: true
-                                });
-                            }
-                        }
-                        break;
-                        
-                    case 'detection':
-                    default:
-                        // 标准检测格式：class x y width height
-                        if (parts.length === 5) {
-                            const classIndex = parseInt(parts[0], 10);
-                            const x = parseFloat(parts[1]);
-                            const y = parseFloat(parts[2]);
-                            const width = parseFloat(parts[3]);
-                            const height = parseFloat(parts[4]);
-                            
-                            if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
-                                labels.push({
-                                    class: classIndex,
-                                    x, y, width, height,
-                                    visible: true
-                                });
-                            }
-                        }
-                        break;
+                // Standard YOLO format: class x y width height
+                if (parts.length === 5) {
+                    const classIndex = parseInt(parts[0], 10);
+                    const x = parseFloat(parts[1]);
+                    const y = parseFloat(parts[2]);
+                    const width = parseFloat(parts[3]);
+                    const height = parseFloat(parts[4]);
+                    
+                    if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
+                        labels.push({
+                            class: classIndex,
+                            x, y, width, height,
+                            visible: true
+                        });
+                    }
+                } 
+                // YOLO-Segmentation format: class [points...]
+                else if (parts.length > 5) {
+                    const classIndex = parseInt(parts[0], 10);
+                    
+                    // Parse points as floats - all the remaining points after class index
+                    const points = parts.slice(1).map(p => parseFloat(p));
+                    
+                    if (!isNaN(classIndex) && points.every(p => !isNaN(p))) {
+                        // For segmentation, we don't need x,y,w,h as they'll be derived from points
+                        labels.push({
+                            class: classIndex,
+                            x: 0, y: 0, width: 0, height: 0, // Placeholder values
+                            isSegmentation: true,
+                            points: points,
+                            visible: true
+                        });
+                    }
                 }
             }
             
@@ -379,16 +280,12 @@ export class YoloDataReader {
             // Format the labels according to YOLO format
             let content = '';
             for (const label of labels) {
-                if (label.keypoints) {
-                    // Pose格式：class x y width height [keypoints...]
-                    const formattedKeypoints = label.keypoints.map(k => k.toFixed(6));
-                    content += `${label.class} ${label.x.toFixed(6)} ${label.y.toFixed(6)} ${label.width.toFixed(6)} ${label.height.toFixed(6)} ${formattedKeypoints.join(' ')}\n`;
-                } else if (label.isSegmentation && label.points && label.points.length > 0) {
-                    // Segmentation格式：class [points...]
+                if (label.isSegmentation && label.points && label.points.length > 0) {
+                    // Segmentation format: class [points...]
                     const formattedPoints = label.points.map(p => p.toFixed(6));
                     content += `${label.class} ${formattedPoints.join(' ')}\n`;
                 } else {
-                    // Standard格式：class x y width height
+                    // Standard format: class x y width height
                     content += `${label.class} ${label.x.toFixed(6)} ${label.y.toFixed(6)} ${label.width.toFixed(6)} ${label.height.toFixed(6)}\n`;
                 }
             }

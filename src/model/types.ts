@@ -96,9 +96,6 @@ export interface YoloConfig {
   val: string | string[];
   test: string | string[];
   names: string[] | Record<string, string>;
-  dataset_type?: 'detection' | 'segmentation' | 'pose';
-  kpt_shape?: [number, number];
-  flip_idx?: number[];
 }
 
 // 标签框接口
@@ -108,10 +105,9 @@ export interface BoundingBox {
   y: number;
   width: number;
   height: number;
-  visible: boolean;
   isSegmentation?: boolean;
   points?: number[];
-  keypoints?: number[];
+  visible?: boolean;
 }
 
 // 图片信息接口
