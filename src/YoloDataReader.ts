@@ -251,7 +251,7 @@ export class YoloDataReader {
                         labels.push({
                             class: classIndex,
                             x: 0, y: 0, width: 0, height: 0, // Placeholder values
-                            isSegmentation: true,
+                            labelType: 'seg',
                             points: points,
                             visible: true
                         });
@@ -280,7 +280,7 @@ export class YoloDataReader {
             // Format the labels according to YOLO format
             let content = '';
             for (const label of labels) {
-                if (label.isSegmentation && label.points && label.points.length > 0) {
+                if (label.labelType === 'seg' && label.points && label.points.length > 0) {
                     // Segmentation format: class [points...]
                     const formattedPoints = label.points.map(p => p.toFixed(6));
                     content += `${label.class} ${formattedPoints.join(' ')}\n`;

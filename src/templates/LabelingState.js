@@ -212,7 +212,7 @@ export class LabelingState {
 
     // Add method to check if point is inside box
     isPointInBox(x, y, label) {
-        if (label.isSegmentation) return false;
+        if (label.labelType === 'seg') return false;
         
         const boxLeft = (label.x - label.width/2);
         const boxRight = (label.x + label.width/2);
@@ -222,47 +222,38 @@ export class LabelingState {
         return x >= boxLeft && x <= boxRight && y >= boxTop && y <= boxBottom;
     }
 
-    // Add method to check if point is near polygon line
-    isPointNearPolygon(x, y, label) {
-        if (!label.isSegmentation || !label.points) return false;
+    // Add method to check if point is inside polygon
+    isPointInPolygon(x, y, label) {
+        if (label.labelType !== 'seg' || !label.points) return false;
         
-        const threshold = CONFIG.CLOSE_POINT_THRESHOLD;
+        // Ray casting algorithm for point in polygon
+        let inside = false;
+        for (let i = 0, j = label.points.length - 2; i < label.points.length; i += 2) {
+            const xi = label.points[i];
+            const yi = label.points[i + 1];
+            const xj = label.points[j];
+            const yj = label.points[j + 1];
+            
+            const intersect = ((yi > y) !== (yj > y))
+                && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+            j = i;
+        }
+        return inside;
+    }
+
+    // Add method to check if point is near polygon edge
+    isPointNearPolygonEdge(x, y, label, threshold = 0.02) {
+        if (label.labelType !== 'seg' || !label.points || label.points.length < 6) return false;
         
-        for (let i = 0; i < label.points.length - 2; i += 2) {
+        // Check distance to each line segment
+        for (let i = 0; i < label.points.length; i += 2) {
             const x1 = label.points[i];
             const y1 = label.points[i + 1];
-            const x2 = label.points[i + 2] || label.points[0];
-            const y2 = label.points[i + 3] || label.points[1];
+            const x2 = label.points[(i + 2) % label.points.length];
+            const y2 = label.points[(i + 3) % label.points.length];
             
-            // Calculate distance from point to line segment
-            const A = x - x1;
-            const B = y - y1;
-            const C = x2 - x1;
-            const D = y2 - y1;
-            
-            const dot = A * C + B * D;
-            const len_sq = C * C + D * D;
-            
-            let param = -1;
-            if (len_sq != 0) param = dot / len_sq;
-            
-            let xx, yy;
-            
-            if (param < 0) {
-                xx = x1;
-                yy = y1;
-            } else if (param > 1) {
-                xx = x2;
-                yy = y2;
-            } else {
-                xx = x1 + param * C;
-                yy = y1 + param * D;
-            }
-            
-            const dx = x - xx;
-            const dy = y - yy;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
+            const distance = this.distanceToLineSegment(x, y, x1, y1, x2, y2);
             if (distance < threshold) return true;
         }
         return false;
@@ -276,8 +267,8 @@ export class LabelingState {
             const label = this.initialLabels[i];
             if (!label.visible) continue;
             
-            if (label.isSegmentation) {
-                if (this.isPointInPolygon(x, y, label) || this.isPointNearPolygon(x, y, label)) return label;
+            if (label.labelType === 'seg') {
+                if (this.isPointInPolygon(x, y, label) || this.isPointNearPolygonEdge(x, y, label)) return label;
             } else {
                 if (this.isPointInBox(x, y, label)) return label;
             }
@@ -302,21 +293,6 @@ export class LabelingState {
         } else {
             this.stopDashAnimation();
         }
-    }
-
-    // 判断点是否在多边形内部（射线法）
-    isPointInPolygon(x, y, label) {
-        if (!label.isSegmentation || !label.points || label.points.length < 6) return false;
-        let inside = false;
-        const n = label.points.length / 2;
-        for (let i = 0, j = n - 1; i < n; j = i++) {
-            const xi = label.points[i * 2], yi = label.points[i * 2 + 1];
-            const xj = label.points[j * 2], yj = label.points[j * 2 + 1];
-            const intersect = ((yi > y) !== (yj > y)) &&
-                (x < (xj - xi) * (y - yi) / (yj - yi + 1e-10) + xi);
-            if (intersect) inside = !inside;
-        }
-        return inside;
     }
 
     // 新增方法：高亮时自动动画

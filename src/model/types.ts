@@ -105,7 +105,7 @@ export interface BoundingBox {
   y: number;
   width: number;
   height: number;
-  isSegmentation?: boolean;
+  labelType?: 'box' | 'seg' | 'pose';
   points?: number[];
   visible?: boolean;
 }

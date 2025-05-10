@@ -239,7 +239,7 @@ class CanvasManager {
         if (e.ctrlKey && this.state.isDragging && this.state.draggedLabel) {
             const dx = normalizedX - this.state.dragStartPos.x;
             const dy = normalizedY - this.state.dragStartPos.y;
-            if (this.state.draggedLabel.isSegmentation) {
+            if (this.state.draggedLabel.labelType === 'seg') {
                 for (let i = 0; i < this.state.draggedLabel.points.length; i += 2) {
                     this.state.draggedLabel.points[i] += dx;
                     this.state.draggedLabel.points[i + 1] += dy;
@@ -619,7 +619,7 @@ class CanvasManager {
             const color = CONFIG.COLORS[label.class % CONFIG.COLORS.length];
             const isHighlighted = label === this.state.hoveredLabel;
             
-            if (label.isSegmentation && label.points) {
+            if (label.labelType === 'seg' && label.points) {
                 this.drawSegmentationLabel(label, color, isHighlighted);
             } else {
                 this.drawBoundingBoxLabel(label, color, isHighlighted);
@@ -909,7 +909,7 @@ class CanvasManager {
                 y: bbox.y,
                 width: bbox.width,
                 height: bbox.height,
-                isSegmentation: true,
+                labelType: 'seg',
                 points: [...this.state.polygonPoints]
             });
             
@@ -1008,7 +1008,7 @@ class CanvasManager {
             // Create type indicator
             const typeSpan = document.createElement('span');
             typeSpan.className = 'label-type';
-            typeSpan.textContent = label.isSegmentation ? 'SEG' : 'BOX';
+            typeSpan.textContent = label.labelType === 'seg' ? 'SEG' : 'BOX';
             
             // Create visibility toggle button (eye icon)
             const visibilityBtn = document.createElement('button');
@@ -1693,7 +1693,7 @@ class UIManager {
 
         // 检查最后一个标签的类型
         const lastLabel = this.state.initialLabels[this.state.initialLabels.length - 1];
-        const mode = lastLabel.isSegmentation ? 'seg' : 'box';
+        const mode = lastLabel.labelType === 'seg' ? 'seg' : 'box';
         
         // 更新状态和UI
         this.state.currentMode = mode;
