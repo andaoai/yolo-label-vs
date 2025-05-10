@@ -105,9 +105,12 @@ export interface BoundingBox {
   y: number;
   width: number;
   height: number;
-  labelType?: 'box' | 'seg' | 'pose';
+  labelType?: 'box' | 'seg' | 'pose' | 'obb';
   points?: number[];
   visible?: boolean;
+  keypoints?: number[];  // [x1,y1,v1, x2,y2,v2, ...] where v is visibility (0=invisible, 1=visible, 2=occluded)
+  skeleton?: number[];   // Indices of connected keypoints [0,1, 1,2, ...] representing skeleton connections
+  angle?: number;        // Rotation angle for OBB (in radians)
 }
 
 // 图片信息接口

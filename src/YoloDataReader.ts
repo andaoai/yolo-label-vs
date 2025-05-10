@@ -215,48 +215,116 @@ export class YoloDataReader {
             if (!fs.existsSync(labelPath)) {
                 return [];
             }
-            
+
             const content = fs.readFileSync(labelPath, 'utf8');
             const lines = content.split('\n').filter(line => line.trim() !== '');
             
             const labels: BoundingBox[] = [];
+            let detectedType: 'box' | 'seg' | 'pose' | 'obb' | null = null;
+            
             for (const line of lines) {
                 const parts = line.trim().split(/\s+/);
                 
-                // Standard YOLO format: class x y width height
+                // Skip empty lines
+                if (parts.length === 0) continue;
+                
+                // Validate class index
+                const classIndex = parseInt(parts[0], 10);
+                if (isNaN(classIndex)) {
+                    console.warn(`Invalid class index in line: ${line}`);
+                    continue;
+                }
+
+                // Detect data type based on the number of values and their format
                 if (parts.length === 5) {
-                    const classIndex = parseInt(parts[0], 10);
-                    const x = parseFloat(parts[1]);
-                    const y = parseFloat(parts[2]);
-                    const width = parseFloat(parts[3]);
-                    const height = parseFloat(parts[4]);
+                    // Standard YOLO format: class x y width height
+                    const [x, y, width, height] = parts.slice(1).map(p => parseFloat(p));
                     
-                    if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
+                    if (!isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
+                        if (detectedType && detectedType !== 'box') {
+                            console.warn(`Mixed data types detected in file ${labelPath}. Expected ${detectedType} but found box format.`);
+                        }
+                        detectedType = 'box';
                         labels.push({
                             class: classIndex,
                             x, y, width, height,
+                            labelType: 'box',
                             visible: true
                         });
                     }
                 } 
-                // YOLO-Segmentation format: class [points...]
-                else if (parts.length > 5) {
-                    const classIndex = parseInt(parts[0], 10);
+                else if (parts.length === 6) {
+                    // OBB format: class x y width height angle
+                    const [x, y, width, height, angle] = parts.slice(1).map(p => parseFloat(p));
                     
-                    // Parse points as floats - all the remaining points after class index
-                    const points = parts.slice(1).map(p => parseFloat(p));
-                    
-                    if (!isNaN(classIndex) && points.every(p => !isNaN(p))) {
-                        // For segmentation, we don't need x,y,w,h as they'll be derived from points
+                    if (!isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height) && !isNaN(angle)) {
+                        if (detectedType && detectedType !== 'obb') {
+                            console.warn(`Mixed data types detected in file ${labelPath}. Expected ${detectedType} but found OBB format.`);
+                        }
+                        detectedType = 'obb';
                         labels.push({
                             class: classIndex,
-                            x: 0, y: 0, width: 0, height: 0, // Placeholder values
+                            x, y, width, height,
+                            labelType: 'obb',
+                            angle: angle,
+                            visible: true
+                        });
+                    }
+                }
+                else if (parts.length > 5 && parts.length % 2 === 1) {
+                    // YOLO-Segmentation format: class [points...]
+                    const points = parts.slice(1).map(p => parseFloat(p));
+                    
+                    if (points.every(p => !isNaN(p))) {
+                        if (detectedType && detectedType !== 'seg') {
+                            console.warn(`Mixed data types detected in file ${labelPath}. Expected ${detectedType} but found segmentation format.`);
+                        }
+                        detectedType = 'seg';
+                        labels.push({
+                            class: classIndex,
+                            x: 0, y: 0, width: 0, height: 0,
                             labelType: 'seg',
                             points: points,
                             visible: true
                         });
                     }
                 }
+                else if (parts.length > 5 && parts.length % 3 === 2) {
+                    // YOLO-Pose format: class x y width height [keypoints...]
+                    const [x, y, width, height] = parts.slice(1, 5).map(p => parseFloat(p));
+                    const keypoints = parts.slice(5).map(p => parseFloat(p));
+                    
+                    // Validate keypoints format (should be multiple of 3)
+                    if (keypoints.length % 3 !== 0) {
+                        console.warn(`Invalid keypoints format in line: ${line}. Keypoints should be in groups of 3 (x, y, visibility).`);
+                        continue;
+                    }
+                    
+                    if (!isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height) && 
+                        keypoints.every(p => !isNaN(p))) {
+                        if (detectedType && detectedType !== 'pose') {
+                            console.warn(`Mixed data types detected in file ${labelPath}. Expected ${detectedType} but found pose format.`);
+                        }
+                        detectedType = 'pose';
+                        labels.push({
+                            class: classIndex,
+                            x, y, width, height,
+                            labelType: 'pose',
+                            keypoints: keypoints,
+                            visible: true
+                        });
+                    }
+                }
+                else {
+                    console.warn(`Invalid format in line: ${line}`);
+                }
+            }
+
+            // Log the detected data type
+            if (detectedType) {
+                console.log(`Detected YOLO data type: ${detectedType} in file ${labelPath}`);
+            } else {
+                console.warn(`Could not determine YOLO data type in file ${labelPath}`);
             }
             
             return labels;
@@ -284,6 +352,13 @@ export class YoloDataReader {
                     // Segmentation format: class [points...]
                     const formattedPoints = label.points.map(p => p.toFixed(6));
                     content += `${label.class} ${formattedPoints.join(' ')}\n`;
+                } else if (label.labelType === 'pose' && label.keypoints && label.keypoints.length > 0) {
+                    // Pose format: class x y width height [keypoints...]
+                    const formattedKeypoints = label.keypoints.map(k => k.toFixed(6));
+                    content += `${label.class} ${label.x.toFixed(6)} ${label.y.toFixed(6)} ${label.width.toFixed(6)} ${label.height.toFixed(6)} ${formattedKeypoints.join(' ')}\n`;
+                } else if (label.labelType === 'obb' && label.angle !== undefined) {
+                    // OBB format: class x y width height angle
+                    content += `${label.class} ${label.x.toFixed(6)} ${label.y.toFixed(6)} ${label.width.toFixed(6)} ${label.height.toFixed(6)} ${label.angle.toFixed(6)}\n`;
                 } else {
                     // Standard format: class x y width height
                     content += `${label.class} ${label.x.toFixed(6)} ${label.y.toFixed(6)} ${label.width.toFixed(6)} ${label.height.toFixed(6)}\n`;

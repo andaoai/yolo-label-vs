@@ -348,4 +348,73 @@ export class LabelingState {
             this.dashAnimationId = null;
         }
     }
+
+    handleMouseMove(e) {
+        if (!this.shouldUpdate()) return;
+        this.updateRects();
+        this.updateCursorStyle(e);
+        if (this.isPanning) {
+            this.handlePanning(e);
+            return;
+        }
+        const pos = this.getMousePos(e);
+        const normalizedX = pos.x / this.originalImageWidth;
+        const normalizedY = pos.y / this.originalImageHeight;
+        this.currentMousePos = { x: normalizedX, y: normalizedY };
+
+        // 只有按住Ctrl时才允许hover和移动
+        if (e.ctrlKey && !this.isDrawing && !this.isDrawingPolygon) {
+            const label = this.findLabelUnderCursor(normalizedX, normalizedY);
+            if (this.hoveredLabel !== label) {
+                this.hoveredLabel = label;
+                this.updateLabelHighlight();
+                this.requestRedraw();
+            }
+            this.canvas.style.cursor = label ? 'move' : 'default';
+        } else if (!e.ctrlKey) {
+            // 没有按Ctrl时，hover和高亮全部取消
+            if (this.hoveredLabel) {
+                this.hoveredLabel = null;
+                this.updateLabelHighlight();
+                this.requestRedraw();
+            }
+            this.canvas.style.cursor = 'default';
+        }
+
+        // 只有Ctrl+拖动才允许移动
+        if (e.ctrlKey && this.isDragging && this.draggedLabel) {
+            const dx = normalizedX - this.dragStartPos.x;
+            const dy = normalizedY - this.dragStartPos.y;
+            
+            if (this.draggedLabel.labelType === 'seg') {
+                // 移动分割标签的点
+                for (let i = 0; i < this.draggedLabel.points.length; i += 2) {
+                    this.draggedLabel.points[i] += dx;
+                    this.draggedLabel.points[i + 1] += dy;
+                }
+            } else if (this.draggedLabel.labelType === 'pose') {
+                // 移动pose标签的边界框和关键点
+                this.draggedLabel.x += dx;
+                this.draggedLabel.y += dy;
+                
+                // 同时移动所有关键点
+                if (this.draggedLabel.keypoints) {
+                    for (let i = 0; i < this.draggedLabel.keypoints.length; i += 3) {
+                        this.draggedLabel.keypoints[i] += dx;
+                        this.draggedLabel.keypoints[i + 1] += dy;
+                    }
+                }
+            } else {
+                // 移动普通边界框
+                this.draggedLabel.x += dx;
+                this.draggedLabel.y += dy;
+            }
+            
+            this.dragStartPos = { x: normalizedX, y: normalizedY };
+            this.requestRedraw();
+            this.hasUnsavedChanges = true;
+        }
+        this.updateCoordinateDisplay(normalizedX, normalizedY);
+        this.requestRedraw();
+    }
 } 

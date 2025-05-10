@@ -239,15 +239,31 @@ class CanvasManager {
         if (e.ctrlKey && this.state.isDragging && this.state.draggedLabel) {
             const dx = normalizedX - this.state.dragStartPos.x;
             const dy = normalizedY - this.state.dragStartPos.y;
+            
             if (this.state.draggedLabel.labelType === 'seg') {
+                // 移动分割标签的点
                 for (let i = 0; i < this.state.draggedLabel.points.length; i += 2) {
                     this.state.draggedLabel.points[i] += dx;
                     this.state.draggedLabel.points[i + 1] += dy;
                 }
+            } else if (this.state.draggedLabel.labelType === 'pose') {
+                // 移动pose标签的边界框和关键点
+                this.state.draggedLabel.x += dx;
+                this.state.draggedLabel.y += dy;
+                
+                // 同时移动所有关键点
+                if (this.state.draggedLabel.keypoints) {
+                    for (let i = 0; i < this.state.draggedLabel.keypoints.length; i += 3) {
+                        this.state.draggedLabel.keypoints[i] += dx;
+                        this.state.draggedLabel.keypoints[i + 1] += dy;
+                    }
+                }
             } else {
+                // 移动普通边界框
                 this.state.draggedLabel.x += dx;
                 this.state.draggedLabel.y += dy;
             }
+            
             this.state.dragStartPos = { x: normalizedX, y: normalizedY };
             this.state.requestRedraw();
             this.state.hasUnsavedChanges = true;
@@ -621,6 +637,8 @@ class CanvasManager {
             
             if (label.labelType === 'seg' && label.points) {
                 this.drawSegmentationLabel(label, color, isHighlighted);
+            } else if (label.labelType === 'pose' && label.keypoints) {
+                this.drawPoseLabel(label, color, isHighlighted);
             } else {
                 this.drawBoundingBoxLabel(label, color, isHighlighted);
             }
@@ -1177,6 +1195,86 @@ class CanvasManager {
         const visibleLabels = this.state.initialLabels.filter(label => label.visible !== false).length;
         this.labelsCount.textContent = `标签: ${visibleLabels}`;
     }
+
+    drawPoseLabel(label, color, isHighlighted) {
+        // Draw bounding box
+        const x = label.x * this.state.originalImageWidth;
+        const y = label.y * this.state.originalImageHeight;
+        const width = label.width * this.state.originalImageWidth;
+        const height = label.height * this.state.originalImageHeight;
+        
+        // Draw box
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = (isHighlighted ? 3 : CONFIG.LINE_WIDTH) / this.state.scale;
+        if (isHighlighted) {
+            this.ctx.setLineDash([8, 8]);
+            this.ctx.lineDashOffset = this.state.dashOffset;
+        } else {
+            this.ctx.setLineDash([]);
+            this.ctx.lineDashOffset = 0;
+        }
+        this.ctx.strokeRect(x - width/2, y - height/2, width, height);
+        
+        // Draw keypoints
+        const keypointRadius = 4 / this.state.scale;
+        for (let i = 0; i < label.keypoints.length; i += 3) {
+            const kx = label.keypoints[i] * this.state.originalImageWidth;
+            const ky = label.keypoints[i + 1] * this.state.originalImageHeight;
+            const visibility = label.keypoints[i + 2];
+            const keypointIndex = i / 3 + 1; // 关键点序号从1开始
+            
+            if (visibility > 0) {  // Only draw visible keypoints
+                // Draw keypoint circle
+                this.ctx.beginPath();
+                this.ctx.arc(kx, ky, keypointRadius, 0, Math.PI * 2);
+                this.ctx.fillStyle = visibility === 1 ? color : '#666666';  // Gray for occluded
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 1 / this.state.scale;
+                this.ctx.stroke();
+
+                // Draw keypoint number
+                this.ctx.save();
+                this.ctx.font = `${12 / this.state.scale}px Arial`;
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(keypointIndex.toString(), kx, ky);
+                this.ctx.restore();
+            }
+        }
+        
+        // Draw skeleton connections if defined
+        if (label.skeleton) {
+            this.ctx.strokeStyle = color;
+            this.ctx.lineWidth = 2 / this.state.scale;
+            for (let i = 0; i < label.skeleton.length; i += 2) {
+                const idx1 = label.skeleton[i] * 3;
+                const idx2 = label.skeleton[i + 1] * 3;
+                
+                if (idx1 < label.keypoints.length && idx2 < label.keypoints.length) {
+                    const x1 = label.keypoints[idx1] * this.state.originalImageWidth;
+                    const y1 = label.keypoints[idx1 + 1] * this.state.originalImageHeight;
+                    const x2 = label.keypoints[idx2] * this.state.originalImageWidth;
+                    const y2 = label.keypoints[idx2 + 1] * this.state.originalImageHeight;
+                    
+                    // Only draw connection if both keypoints are visible
+                    if (label.keypoints[idx1 + 2] > 0 && label.keypoints[idx2 + 2] > 0) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x1, y1);
+                        this.ctx.lineTo(x2, y2);
+                        this.ctx.stroke();
+                    }
+                }
+            }
+        }
+        
+        // Draw label text if enabled
+        if (this.state.showLabels) {
+            const text = `${this.state.classNamesList[label.class] || label.class.toString()} (POSE)`;
+            this.drawLabelText(text, x - width/2, y - height/2 - CONFIG.LABEL_HEIGHT / this.state.scale, color);
+        }
+    }
 }
 
 // UI Manager with improved event handling
@@ -1688,17 +1786,20 @@ class UIManager {
             this.state.currentMode = 'box';
             this.elements.boxModeButton.classList.add('active');
             this.elements.segModeButton.classList.remove('active');
+            if (this.elements.poseModeButton) this.elements.poseModeButton.classList.remove('active');
             return;
         }
 
         // 检查最后一个标签的类型
         const lastLabel = this.state.initialLabels[this.state.initialLabels.length - 1];
-        const mode = lastLabel.labelType === 'seg' ? 'seg' : 'box';
-        
-        // 更新状态和UI
+        let mode = 'box';
+        if (lastLabel.labelType === 'seg') mode = 'seg';
+        else if (lastLabel.labelType === 'pose') mode = 'pose';
+
         this.state.currentMode = mode;
         this.elements.boxModeButton.classList.toggle('active', mode === 'box');
         this.elements.segModeButton.classList.toggle('active', mode === 'seg');
+        if (this.elements.poseModeButton) this.elements.poseModeButton.classList.toggle('active', mode === 'pose');
     }
 
     createProgressElements() {
