@@ -903,15 +903,17 @@ class CanvasManager {
             const bbox = this.calculateBoundingBoxFromPolygon(this.state.polygonPoints);
             
             // Add new segmentation label
-            this.state.initialLabels.push({
+            const newLabel = {
                 class: this.state.currentLabel,
                 x: bbox.x,
                 y: bbox.y,
                 width: bbox.width,
                 height: bbox.height,
                 isSegmentation: true,
-                points: [...this.state.polygonPoints]
-            });
+                points: [...this.state.polygonPoints],
+                visible: true
+            };
+            this.state.initialLabels.push(newLabel);
             
             // Add to history
             this.state.pushHistory();
