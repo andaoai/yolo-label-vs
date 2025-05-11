@@ -228,11 +228,11 @@ export class LabelingState {
         
         const threshold = CONFIG.CLOSE_POINT_THRESHOLD;
         
-        for (let i = 0; i < label.points.length - 2; i += 2) {
+        for (let i = 0; i < label.points.length; i += 2) {
             const x1 = label.points[i];
             const y1 = label.points[i + 1];
-            const x2 = label.points[i + 2] || label.points[0];
-            const y2 = label.points[i + 3] || label.points[1];
+            const x2 = label.points[(i + 2) % label.points.length];
+            const y2 = label.points[(i + 3) % label.points.length];
             
             // Calculate distance from point to line segment
             const A = x - x1;
@@ -274,11 +274,11 @@ export class LabelingState {
         
         for (let i = this.initialLabels.length - 1; i >= 0; i--) {
             const label = this.initialLabels[i];
-            if (!label.visible) continue;
+            if (label.visible === false) continue;
             
-            if (label.isSegmentation) {
+            if (label.isSegmentation && label.points && label.points.length >= 6) {
                 if (this.isPointInPolygon(x, y, label) || this.isPointNearPolygon(x, y, label)) return label;
-            } else {
+            } else if (!label.isSegmentation) {
                 if (this.isPointInBox(x, y, label)) return label;
             }
         }
