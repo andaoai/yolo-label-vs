@@ -75,6 +75,7 @@ export class LabelingState {
         // 动画状态
         this.dashOffset = 0;
         this.animationFrameId = null;
+        this.dashAnimationActive = false;
         
         // 历史记录状态
         this.imageHistories = new Map();
