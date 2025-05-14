@@ -89,23 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // 处理A和D键导航（确保这些快捷键在初始化时就能工作）
-            if (!event.ctrlKey && !event.altKey && !event.shiftKey && 
-                event.target.tagName !== 'INPUT' && 
-                event.target.tagName !== 'TEXTAREA' && 
-                event.target.tagName !== 'SELECT') {
-                
-                switch (event.key.toLowerCase()) {
-                    case 'a':
-                        event.preventDefault();
-                        state.vscode.postMessage({ command: 'previous' });
-                        break;
-                    case 'd':
-                        event.preventDefault();
-                        state.vscode.postMessage({ command: 'next' });
-                        break;
-                }
-            }
+            // 注意：a和d键的导航由CanvasManager.handleKeyDown处理，这里不需要重复处理
         });
         
         // 监听VS Code主题变化

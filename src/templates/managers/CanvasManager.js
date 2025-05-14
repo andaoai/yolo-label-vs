@@ -577,10 +577,12 @@ export class CanvasManager {
             switch (e.key.toLowerCase()) {
                 case 'a':
                     e.preventDefault();
+                    console.log("CanvasManager: 按下A键导航到上一张图片");
                     this.state.vscode.postMessage({ command: 'previous' });
                     break;
                 case 'd':
                     e.preventDefault();
+                    console.log("CanvasManager: 按下D键导航到下一张图片");
                     this.state.vscode.postMessage({ command: 'next' });
                     break;
             }

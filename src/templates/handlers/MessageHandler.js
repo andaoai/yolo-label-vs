@@ -34,6 +34,13 @@ export class MessageHandler {
                 this.handleImageList(message);
                 break;
             case 'updateImage':
+                // 检查是否是新的图片路径
+                const isNewImage = message.currentPath !== this.state.currentPath;
+                if (isNewImage) {
+                    console.log('MessageHandler: 加载新图片:', message.currentPath);
+                }
+                
+                // 处理图像更新
                 this.uiManager.handleImageUpdate(message);
                 break;
             case 'error':
@@ -79,16 +86,16 @@ export class MessageHandler {
         // 如果有图像列表但没有当前图像，则自动加载第一张图像
         if (this.state.allImagePaths.length > 0 && !this.state.currentPath) {
             const firstImagePath = this.state.allImagePaths[0];
-            console.log('Loading first image:', firstImagePath);
+            console.log('MessageHandler: 加载第一张图片:', firstImagePath);
             // 显示加载状态
             if (this.canvasManager) {
                 this.canvasManager.showLoadingState(true);
             }
             this.state.vscode.postMessage({ command: 'loadImage', path: firstImagePath });
         } else if (!this.state.allImagePaths.length) {
-            console.log('No images in the list');
+            console.log('没有图片在列表中');
         } else {
-            console.log('Not loading first image, current path already set');
+            console.log('不加载第一张图片，当前路径已设置:', this.state.currentPath);
         }
 
         // After loading images, refresh any highlighted labels

@@ -333,4 +333,18 @@ export class LabelingState {
             window.uiManager.updateSaveButtonState();
         }
     }
+    
+    /**
+     * 重置保存状态到当前标签
+     * 在切换图片时使用，确保savedState与当前图片一致
+     */
+    resetSavedState() {
+        this.savedState = JSON.stringify(this.initialLabels || []);
+        this.hasUnsavedChanges = false;
+        
+        // 如果uiManager存在，则更新保存按钮状态
+        if (window.uiManager) {
+            window.uiManager.updateSaveButtonState();
+        }
+    }
 } 
