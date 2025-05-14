@@ -302,15 +302,38 @@ export class CanvasManager {
         if (e.ctrlKey && this.state.isDragging && this.state.draggedLabel) {
             const dx = normalizedX - this.state.dragStartPos.x;
             const dy = normalizedY - this.state.dragStartPos.y;
+            
             if (this.state.draggedLabel.isSegmentation) {
+                // 移动分割标签
                 for (let i = 0; i < this.state.draggedLabel.points.length; i += 2) {
                     this.state.draggedLabel.points[i] += dx;
                     this.state.draggedLabel.points[i + 1] += dy;
                 }
+            } else if (this.state.draggedLabel.isPose) {
+                // 移动姿态标签
+                // 首先移动边界框
+                this.state.draggedLabel.x += dx;
+                this.state.draggedLabel.y += dy;
+                
+                // 然后移动所有关键点
+                if (this.state.draggedLabel.keypoints && this.state.draggedLabel.keypointShape) {
+                    const valuePerPoint = this.state.draggedLabel.keypointShape[1];
+                    const numKeypoints = this.state.draggedLabel.keypointShape[0];
+                    
+                    // 遍历所有关键点并移动它们
+                    for (let i = 0; i < numKeypoints; i++) {
+                        const baseIndex = i * valuePerPoint;
+                        // 只更新x和y坐标，不更改可见性值
+                        this.state.draggedLabel.keypoints[baseIndex] += dx;
+                        this.state.draggedLabel.keypoints[baseIndex + 1] += dy;
+                    }
+                }
             } else {
+                // 移动普通边界框
                 this.state.draggedLabel.x += dx;
                 this.state.draggedLabel.y += dy;
             }
+            
             this.state.dragStartPos = { x: normalizedX, y: normalizedY };
             this.state.requestRedraw();
             this.state.hasUnsavedChanges = true;
@@ -1628,10 +1651,28 @@ export class CanvasManager {
      * @param {boolean} isHighlighted - 是否高亮
      */
     drawPoseLabel(label, color, isHighlighted) {
-        // 首先绘制边界框
-        this.drawBoundingBoxLabel(label, color, isHighlighted);
+        // 绘制边界框部分(保留绘制框，但不绘制标签文本)
+        // 计算像素坐标
+        const x = label.x * this.state.originalImageWidth;
+        const y = label.y * this.state.originalImageHeight;
+        const width = label.width * this.state.originalImageWidth;
+        const height = label.height * this.state.originalImageHeight;
         
-        // 如果没有关键点数据，则返回
+        // 绘制框
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = (isHighlighted ? 3 : CONFIG.LINE_WIDTH) / this.state.scale;
+        if (isHighlighted) {
+            this.ctx.setLineDash([8, 8]);
+            this.ctx.lineDashOffset = this.state.dashOffset;
+        } else {
+            this.ctx.setLineDash([]);
+            this.ctx.lineDashOffset = 0;
+        }
+        this.ctx.strokeRect(x - width/2, y - height/2, width, height);
+        this.ctx.setLineDash([]);
+        this.ctx.lineDashOffset = 0;
+        
+        // 如果没有关键点数据，则直接返回
         if (!label.keypoints || !label.keypointShape) return;
         
         const numKeypoints = label.keypointShape[0];
@@ -1681,8 +1722,8 @@ export class CanvasManager {
         // 如果可见，绘制标签文本
         if (this.state.showLabels) {
             // 获取边界框左上角位置
-            const x = (label.x - label.width / 2) * this.state.originalImageWidth;
-            const y = (label.y - label.height / 2) * this.state.originalImageHeight;
+            const labelX = x - width/2;
+            const labelY = y - height/2 - CONFIG.LABEL_HEIGHT / this.state.scale;
             
             // 获取类名
             const className = this.state.classNamesList && this.state.classNamesList[label.class] 
@@ -1691,7 +1732,7 @@ export class CanvasManager {
             
             // 绘制带有POSE标识的文本
             const text = `${className} (POSE)`;
-            this.drawLabelText(text, x, y, color);
+            this.drawLabelText(text, labelX, labelY, color);
         }
     }
 
