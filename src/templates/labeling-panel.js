@@ -110,6 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageHandler.showErrorMessage('An unexpected error occurred: ' + event.error.message);
             }
         });
+
+        // 初始化模式选择器
+        initializeModeSelector();
     } catch (error) {
         console.error('Error initializing application:', error);
         
@@ -142,4 +145,75 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.body.appendChild(errorDiv);
     }
-}); 
+});
+
+// 初始化模式选择器
+function initializeModeSelector() {
+    const modeControl = document.getElementById('modeControl');
+    const boxMode = document.getElementById('boxMode');
+    const segMode = document.getElementById('segMode');
+    const poseMode = document.getElementById('poseMode');
+    
+    // 检查是否配置了kptShape，显示或隐藏姿态标注模式
+    if (window.kptShape && Array.isArray(window.kptShape) && window.kptShape.length >= 2) {
+        poseMode.style.display = 'inline-block';
+    } else {
+        poseMode.style.display = 'none';
+    }
+    
+    // 初始设置基于当前模式（如果UIManager已初始化，让它来处理）
+    if (window.uiManager && window.state && window.state.currentMode) {
+        window.uiManager.resetModeButtons(window.state.currentMode);
+    } else if (window.state && window.state.currentMode) {
+        // 移除所有按钮的活动状态
+        const buttons = modeControl.querySelectorAll('.segmented-button');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        
+        // 根据当前模式设置活动按钮
+        const activeBtn = document.getElementById(`${window.state.currentMode}Mode`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        } else {
+            // 默认选择框模式
+            boxMode.classList.add('active');
+        }
+    } else {
+        // 默认选择框模式
+        boxMode.classList.add('active');
+    }
+    
+    if (modeControl) {
+        modeControl.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('segmented-button')) return;
+            
+            // 让UIManager处理模式变更（如果可用）
+            if (window.uiManager) {
+                // 委托给UIManager
+                window.uiManager.changeMode(e);
+            } else {
+                // 移除所有活动类
+                for (const button of modeControl.querySelectorAll('.segmented-button')) {
+                    button.classList.remove('active');
+                }
+                
+                // 添加活动类到被点击的按钮
+                e.target.classList.add('active');
+                
+                // 更新当前模式
+                const mode = e.target.dataset.mode;
+                state.currentMode = mode;
+                
+                // 如果需要，取消任何正在进行的绘制
+                if (state.isDrawing || state.isDrawingPolygon || state.isPoseDrawing) {
+                    state.isDrawing = false;
+                    state.isDrawingPolygon = false;
+                    state.isPoseDrawing = false;
+                    state.poseDrawingStep = 0;
+                    state.currentPoseLabel = null;
+                    state.polygonPoints = [];
+                    state.requestRedraw();
+                }
+            }
+        });
+    }
+} 
