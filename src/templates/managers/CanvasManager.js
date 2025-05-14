@@ -785,6 +785,36 @@ export class CanvasManager {
     }
 
     /**
+     * 绘制当前姿态边界框（虚线）
+     */
+    drawCurrentPoseBoundingBox() {
+        if (!this.state.currentPoseLabel) return;
+        
+        // 获取标签颜色
+        const colorIndex = this.state.currentPoseLabel.class % CONFIG.COLORS.length;
+        const color = CONFIG.COLORS[colorIndex];
+        
+        // 计算像素坐标
+        const x = this.state.currentPoseLabel.x * this.state.originalImageWidth;
+        const y = this.state.currentPoseLabel.y * this.state.originalImageHeight;
+        const width = this.state.currentPoseLabel.width * this.state.originalImageWidth;
+        const height = this.state.currentPoseLabel.height * this.state.originalImageHeight;
+        
+        // 设置虚线样式
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = CONFIG.LINE_WIDTH / this.state.scale;
+        this.ctx.setLineDash([8, 8]);
+        this.ctx.lineDashOffset = this.state.dashOffset;
+        
+        // 绘制框
+        this.ctx.strokeRect(x - width/2, y - height/2, width, height);
+        
+        // 恢复实线样式
+        this.ctx.setLineDash([]);
+        this.ctx.lineDashOffset = 0;
+    }
+
+    /**
      * 使用变换重绘画布
      */
     redrawWithTransform() {
@@ -797,8 +827,15 @@ export class CanvasManager {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.restore();
         
-        // 如果虚线动画处于活动状态但没有悬停标签，停止动画
-        if (this.state.dashAnimationActive && !this.state.hoveredLabel) {
+        // 如果在pose模式下标注关键点，需要启动虚线动画
+        if (this.state.currentMode === 'pose' && this.state.isPoseDrawing && this.state.poseDrawingStep > 0) {
+            if (!this.state.dashAnimationActive) {
+                this.state.dashAnimationActive = true;
+                this.startDashAnimation();
+            }
+        } 
+        // 如果虚线动画处于活动状态但没有悬停标签或不在pose标注中，停止动画
+        else if (this.state.dashAnimationActive && !this.state.hoveredLabel) {
             this.state.dashAnimationActive = false;
         }
         
@@ -849,6 +886,9 @@ export class CanvasManager {
                     
                     // 显示关键点预览
                     this.drawKeypointPreview(mouseX, mouseY);
+                    
+                    // 绘制当前姿态的边界框（虚线）
+                    this.drawCurrentPoseBoundingBox();
                     
                     // 如果已有部分关键点，绘制已标注的关键点
                     if (this.state.currentPoseLabel) {
@@ -1507,8 +1547,13 @@ export class CanvasManager {
     startDashAnimation() {
         if (!this.state.dashAnimationActive) return;
         
-        // 更新虚线偏移
-        this.state.dashOffset -= 1;
+        // 更新虚线偏移，使用更小的步长使动画更平滑
+        this.state.dashOffset -= 0.5;
+        
+        // 循环偏移值以避免数值过大
+        if (this.state.dashOffset < -100) {
+            this.state.dashOffset = 0;
+        }
         
         // 重绘画布以显示动画效果
         this.state.requestRedraw();

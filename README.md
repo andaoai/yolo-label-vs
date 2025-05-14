@@ -77,19 +77,14 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
   </tr>
   <tr>
     <td><b>COCO128</b></td>
-    <td>⏳ Planned</td>
+    <td>✅ Supported</td>
     <td>First 128 images of COCO train2017 dataset for object detection testing</td>
   </tr>
   <tr>
-    <td rowspan="2"><b>Segmentation</b></td>
+    <td rowspan="1"><b>Segmentation</b></td>
     <td><b>COCO8-seg</b></td>
     <td>✅ Supported</td>
     <td>8 COCO images with instance segmentation annotations</td>
-  </tr>
-  <tr>
-    <td><b>COCO128-seg</b></td>
-    <td>⏳ Planned</td>
-    <td>128 COCO images with segmentation masks for testing</td>
   </tr>
   <tr>
     <td rowspan="2"><b>Pose</b></td>
@@ -99,30 +94,30 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
   </tr>
   <tr>
     <td><b>Tiger-pose</b></td>
-    <td>⏳ Planned</td>
+    <td>✅ Supported</td>
     <td>263 tiger images with 12 keypoints per tiger</td>
-  </tr>
-  <tr>
-    <td rowspan="2"><b>Classification</b></td>
-    <td><b>MNIST160</b></td>
-    <td>🔜 Coming Soon</td>
-    <td>First 8 images of each MNIST category (160 images total)</td>
-  </tr>
-  <tr>
-    <td><b>ImageNet-10</b></td>
-    <td>⏳ Planned</td>
-    <td>Smaller subset of ImageNet with 10 categories</td>
   </tr>
   <tr>
     <td rowspan="1"><b>OBB</b></td>
     <td><b>DOTA8</b></td>
-    <td>⏳ Planned</td>
-    <td>Small subset of 8 aerial images with oriented bounding boxes</td>
+    <td>✅ Supported</td>
+    <td>Small subset of 8 aerial images with oriented bounding boxes (uses segmentation mode)</td>
+  </tr>
+  <tr>
+    <td rowspan="2"><b>Classification</b></td>
+    <td><b>MNIST160</b></td>
+    <td>❌ Not Planned</td>
+    <td>First 8 images of each MNIST category (160 images total)</td>
+  </tr>
+  <tr>
+    <td><b>ImageNet-10</b></td>
+    <td>❌ Not Planned</td>
+    <td>Smaller subset of ImageNet with 10 categories</td>
   </tr>
   <tr>
     <td rowspan="1"><b>Multi-Object Tracking</b></td>
     <td><b>VisDrone</b></td>
-    <td>⏳ Planned</td>
+    <td>❌ Not Planned</td>
     <td>Drone imagery for tracking multiple objects across frames</td>
   </tr>
 </table>
@@ -172,28 +167,21 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 ### Interface Controls
 
 - **Previous/Next Image**: Navigate through images in the dataset
-- **Mode Selector**: Switch between Box and Segmentation labeling modes
+- **Mode Selector**: Switch between Box, Segmentation, and Pose labeling modes
 - **Show Labels**: Toggle visibility of labels on the image
 - **Save Labels**: Save current annotations to disk
 - **Search Box**: Search for specific images in the dataset
 
-### 🆕 Label Interaction (since 0.0.48)
-
-- **Box/Seg Highlight & Move**:
-  - Hold `Ctrl` and hover the mouse to highlight a box or segmentation (seg) region.
-  - Highlighted box/seg will show a flowing dashed border for clear visual feedback.
-  - Hold `Ctrl` and drag with the left mouse button to move the highlighted box/seg.
-  - If `Ctrl` is not pressed, you cannot select, move, or highlight any label. This prevents accidental operations.
-
 ## Keyboard Shortcuts
 
+### Global Shortcuts
 - `Ctrl+Y`: Open YOLO Labeling Panel
 
-**In Labeling Panel:**
+### In Labeling Panel
 - `Tab`: Switch to next label class
 - `Shift+Tab`: Switch to previous label class
-- `Ctrl + Mouse Hover`: Highlight box/seg
-- `Ctrl + Mouse Drag`: Move highlighted box/seg
+- `Ctrl + Mouse Hover`: Highlight box, segmentation, or pose annotations
+- `Ctrl + Mouse Drag`: Move highlighted annotation
 - `D`: Go to next image
 - `A`: Go to previous image
 - `Ctrl+S`: Save labels
@@ -202,9 +190,19 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 - `Alt+Drag`: Pan the image when zoomed in
 - `Wheel`: Scroll vertically when zoomed in
 - `Shift+Wheel`: Scroll horizontally when zoomed in
-- `Right-click`: Cancel polygon drawing (in segmentation mode)
+- `Esc`: Cancel current drawing operation (in segmentation or pose mode)
 
-**Search Functionality:**
+### Mode-Specific Shortcuts
+- **Segmentation Mode**:
+  - `Left Mouse Click`: Add polygon point
+  - `Right Mouse Click`: Cancel polygon drawing
+  
+- **Pose Mode**:
+  - `Left Mouse Click`: Annotate fully visible keypoint (visibility=1)
+  - `Right Mouse Click`: Annotate occluded keypoint (visibility=2)
+  - `Esc`: Cancel current pose annotation
+
+### Search Functionality
 - `Arrow Down`: Move down through search results
 - `Arrow Up`: Move up through search results
 - `Enter`: Select the highlighted search result
@@ -222,68 +220,7 @@ Please report issues on our [GitHub repository](https://github.com/andaoai/yolo-
 
 ## Release Notes
 
-### 0.0.48
-
-- Added flowing dashed border animation for highlighted Box and Seg objects
-- Enhanced visual clarity with improved highlight effects
-- Added Ctrl-key requirement for Box/Seg interactions to prevent accidental operations
-- Added automatic tab switching when navigating between images
-- Updated documentation with detailed explanations of new interactions and shortcuts
-- Optimized performance of highlight animations for smoother rendering
-
-### 0.0.9
-
-- Added visual feedback for unsaved changes with pulsing save button animation
-- Added tooltip showing "Changes need saving" when hovering over save button
-- Improved UI button states with better visual feedback
-- Enhanced error handling with more detailed suggestions
-- Added image dimensions and label counts to UI for better information display
-
-### 0.0.8
-
-- Fixed theme showcase display in GitHub readme (changed from grid to table layout)
-- Improved documentation formatting for better platform compatibility
-
-### 0.0.7
-
-- Significantly reduced extension package size (from 51MB to 1.5MB)
-- Updated documentation to use GitHub hosted images
-- Improved extension loading performance
-
-### 0.0.6
-
-- Added seamless VSCode theme integration with proper button styling
-- Added theme showcase with support for multiple VSCode themes
-- Improved UI responsiveness across all theme variants
-- Fixed button styling issues to properly follow VSCode theme changes
-- Enhanced visual consistency across light and dark themes
-
-### 0.0.5
-
-- Removed redo functionality button to avoid conflicts with Ctrl+Y shortcut
-- Improved error handling when YAML image paths fail to load
-  - Added error tracking with recovery mechanisms
-  - Implemented proper resource cleanup
-  - Added reload button on error pages
-  - Enhanced error messages with troubleshooting guidance
-- Added tooltips for all toolbar buttons showing keyboard shortcuts
-- Added better error messaging and recovery options
-
-### 0.0.4
-
-- Simplified keyboard shortcuts for better usability
-- Changed main shortcut from `Ctrl+Shift+Y` to `Ctrl+Y` for easier access
-- Removed `Ctrl+Right` and `Ctrl+Left` shortcuts
-- Improved UI by hiding scrollbar in label list
-- Reduced package size by excluding test data files
-
-### 0.0.3
-
-Initial release of YOLO Labeling:
-- Basic image labeling functionality
-- YOLO format support
-- Keyboard shortcuts
-- Configuration file support
+For detailed release notes and version history, please see the [CHANGELOG.md](CHANGELOG.md) file.
 
 ## Contributing
 
