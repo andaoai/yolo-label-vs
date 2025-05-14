@@ -22,6 +22,10 @@ export class CanvasManager {
         // 设置回调函数
         this.state.onRedrawRequested = this.redrawWithTransform.bind(this);
         
+        // 初始化虚线动画相关属性
+        this.state.dashOffset = 0;
+        this.state.dashAnimationActive = false;
+        
         // 设置事件监听器
         this.setupEventListeners();
     }
@@ -263,6 +267,18 @@ export class CanvasManager {
             if (this.state.hoveredLabel !== label) {
                 this.state.hoveredLabel = label;
                 this.state.updateLabelHighlight();
+                
+                // 如果找到了标签，启动虚线动画
+                if (label) {
+                    if (!this.state.dashAnimationActive) {
+                        this.state.dashAnimationActive = true;
+                        this.startDashAnimation();
+                    }
+                } else {
+                    // 如果没有标签被悬停，停止动画
+                    this.state.dashAnimationActive = false;
+                }
+                
                 this.state.requestRedraw();
             }
             this.canvas.style.cursor = label ? 'move' : 'default';
@@ -271,6 +287,10 @@ export class CanvasManager {
             if (this.state.hoveredLabel) {
                 this.state.hoveredLabel = null;
                 this.state.updateLabelHighlight();
+                
+                // 停止虚线动画
+                this.state.dashAnimationActive = false;
+                
                 this.state.requestRedraw();
             }
             this.canvas.style.cursor = 'default';
@@ -740,6 +760,11 @@ export class CanvasManager {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.restore();
         
+        // 如果虚线动画处于活动状态但没有悬停标签，停止动画
+        if (this.state.dashAnimationActive && !this.state.hoveredLabel) {
+            this.state.dashAnimationActive = false;
+        }
+        
         // 如果图像已加载，则绘制图像和标注
         if (this.state.image && this.state.image.complete) {
             // 应用变换
@@ -831,6 +856,7 @@ export class CanvasManager {
         }
         this.ctx.closePath();
         
+        this.ctx.fill();
         this.ctx.stroke();
         this.ctx.setLineDash([]);
         this.ctx.lineDashOffset = 0;
@@ -1291,6 +1317,36 @@ export class CanvasManager {
             div.appendChild(visibilityBtn);
             div.appendChild(deleteBtn);
             labelListContainer.appendChild(div);
+            
+            // 添加鼠标悬停事件，使画布上相应的标签高亮
+            div.addEventListener('mouseenter', () => {
+                if (label.visible !== false) {
+                    this.state.hoveredLabel = label;
+                    this.state.updateLabelHighlight();
+                    
+                    // 启动虚线动画
+                    if (!this.state.dashAnimationActive) {
+                        this.state.dashAnimationActive = true;
+                        this.startDashAnimation();
+                    }
+                    
+                    this.state.requestRedraw();
+                }
+            });
+            
+            div.addEventListener('mouseleave', () => {
+                if (this.state.hoveredLabel === label) {
+                    this.state.hoveredLabel = null;
+                    this.state.updateLabelHighlight();
+                    
+                    // 如果没有悬停的标签，停止动画
+                    if (!this.state.hoveredLabel) {
+                        this.state.dashAnimationActive = false;
+                    }
+                    
+                    this.state.requestRedraw();
+                }
+            });
         });
         
         // 更新标签计数显示
@@ -1346,5 +1402,21 @@ export class CanvasManager {
                 item.classList.remove('highlighted');
             });
         }
+    }
+
+    /**
+     * 启动虚线动画
+     */
+    startDashAnimation() {
+        if (!this.state.dashAnimationActive) return;
+        
+        // 更新虚线偏移
+        this.state.dashOffset -= 1;
+        
+        // 重绘画布以显示动画效果
+        this.state.requestRedraw();
+        
+        // 使用requestAnimationFrame创建平滑动画
+        requestAnimationFrame(() => this.startDashAnimation());
     }
 } 
