@@ -1348,7 +1348,13 @@ export class CanvasManager {
             // 创建类型指示器
             const typeSpan = document.createElement('span');
             typeSpan.className = 'label-type';
-            typeSpan.textContent = label.isSegmentation ? 'SEG' : 'BOX';
+            if (label.isPose) {
+                typeSpan.textContent = 'POSE';
+            } else if (label.isSegmentation) {
+                typeSpan.textContent = 'SEG';
+            } else {
+                typeSpan.textContent = 'BOX';
+            }
             
             // 创建可见性切换按钮（眼睛图标）
             const visibilityBtn = document.createElement('button');
