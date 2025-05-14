@@ -1251,6 +1251,7 @@ class UIManager {
         this.setupModeListeners();
         this.setupActionListeners();
         this.setupProgressBarListeners();
+        this.setupSearch();
         
         // Remove duplicate keyboard event listener
         // window.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
