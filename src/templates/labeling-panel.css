@@ -293,18 +293,25 @@ body {
     color: var(--vscode-list-activeSelectionForeground);
     border-color: var(--vscode-focusBorder);
     box-shadow: 0 0 0 2px var(--vscode-focusBorder);
-    animation: highlight-pulse 1.5s infinite;
+    animation: highlight-pulse 1s infinite;
+    transform-origin: center;
 }
 
 @keyframes highlight-pulse {
     0% {
         box-shadow: 0 0 0 0 var(--vscode-focusBorder);
+        border-color: var(--vscode-focusBorder);
+        opacity: 1;
     }
-    70% {
-        box-shadow: 0 0 0 4px transparent;
+    50% {
+        box-shadow: 0 0 0 6px rgba(0, 120, 212, 0.3);
+        border-color: var(--vscode-focusBorder);
+        opacity: 0.7;
     }
     100% {
-        box-shadow: 0 0 0 0 transparent;
+        box-shadow: 0 0 0 0 var(--vscode-focusBorder);
+        border-color: var(--vscode-focusBorder);
+        opacity: 1;
     }
 }
 
