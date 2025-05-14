@@ -110,6 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageHandler.showErrorMessage('An unexpected error occurred: ' + event.error.message);
             }
         });
+
+        // 初始化模式选择器
+        initializeModeSelector();
     } catch (error) {
         console.error('Error initializing application:', error);
         
@@ -142,4 +145,48 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.body.appendChild(errorDiv);
     }
-}); 
+});
+
+// 初始化模式选择器
+function initializeModeSelector() {
+    const modeControl = document.getElementById('modeControl');
+    const boxMode = document.getElementById('boxMode');
+    const segMode = document.getElementById('segMode');
+    const poseMode = document.getElementById('poseMode');
+    
+    // 检查是否配置了kptShape，显示或隐藏姿态标注模式
+    if (window.kptShape && Array.isArray(window.kptShape) && window.kptShape.length >= 2) {
+        poseMode.style.display = 'inline-block';
+    } else {
+        poseMode.style.display = 'none';
+    }
+    
+    if (modeControl) {
+        modeControl.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('segmented-button')) return;
+            
+            // 移除所有活动类
+            for (const button of modeControl.querySelectorAll('.segmented-button')) {
+                button.classList.remove('active');
+            }
+            
+            // 添加活动类到被点击的按钮
+            e.target.classList.add('active');
+            
+            // 更新当前模式
+            const mode = e.target.dataset.mode;
+            state.currentMode = mode;
+            
+            // 如果需要，取消任何正在进行的绘制
+            if (state.isDrawing || state.isDrawingPolygon || state.isPoseDrawing) {
+                state.isDrawing = false;
+                state.isDrawingPolygon = false;
+                state.isPoseDrawing = false;
+                state.poseDrawingStep = 0;
+                state.currentPoseLabel = null;
+                state.polygonPoints = [];
+                state.requestRedraw();
+            }
+        });
+    }
+} 

@@ -94,7 +94,7 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
   <tr>
     <td rowspan="2"><b>Pose</b></td>
     <td><b>COCO8-pose</b></td>
-    <td>🔜 Coming Soon</td>
+    <td>✅ Supported</td>
     <td>8 COCO images with keypoints annotations for pose estimation</td>
   </tr>
   <tr>
