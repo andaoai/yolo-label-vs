@@ -964,8 +964,8 @@ export class CanvasManager {
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         
         // 设置十字线样式
-        this.ctx.strokeStyle = CONFIG.CROSSHAIR_COLOR;
-        this.ctx.lineWidth = 1;
+        this.ctx.strokeStyle = 'rgba(76, 217, 100, 0.8)'; // 绿色，0.8透明度
+        this.ctx.lineWidth = 1.5; // 增加线宽以提高可见度
         this.ctx.setLineDash([5, 5]);
         
         // 绘制水平线
@@ -978,12 +978,6 @@ export class CanvasManager {
         this.ctx.beginPath();
         this.ctx.moveTo(x, 0);
         this.ctx.lineTo(x, this.canvas.height);
-        this.ctx.stroke();
-        
-        // 绘制中心点
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, 3, 0, Math.PI * 2);
-        this.ctx.strokeStyle = CONFIG.CROSSHAIR_CENTER_COLOR;
         this.ctx.stroke();
         
         this.ctx.restore();
