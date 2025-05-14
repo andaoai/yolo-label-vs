@@ -208,6 +208,8 @@ export class CanvasManager {
             this.startBoxDrawing(x, y);
         } else if (this.state.currentMode === 'seg') {
             this.handleSegmentationClick(x, y);
+        } else if (this.state.currentMode === 'pose') {
+            this.handlePoseClick(e, x, y);
         }
     }
     
@@ -300,15 +302,38 @@ export class CanvasManager {
         if (e.ctrlKey && this.state.isDragging && this.state.draggedLabel) {
             const dx = normalizedX - this.state.dragStartPos.x;
             const dy = normalizedY - this.state.dragStartPos.y;
+            
             if (this.state.draggedLabel.isSegmentation) {
+                // 移动分割标签
                 for (let i = 0; i < this.state.draggedLabel.points.length; i += 2) {
                     this.state.draggedLabel.points[i] += dx;
                     this.state.draggedLabel.points[i + 1] += dy;
                 }
+            } else if (this.state.draggedLabel.isPose) {
+                // 移动姿态标签
+                // 首先移动边界框
+                this.state.draggedLabel.x += dx;
+                this.state.draggedLabel.y += dy;
+                
+                // 然后移动所有关键点
+                if (this.state.draggedLabel.keypoints && this.state.draggedLabel.keypointShape) {
+                    const valuePerPoint = this.state.draggedLabel.keypointShape[1];
+                    const numKeypoints = this.state.draggedLabel.keypointShape[0];
+                    
+                    // 遍历所有关键点并移动它们
+                    for (let i = 0; i < numKeypoints; i++) {
+                        const baseIndex = i * valuePerPoint;
+                        // 只更新x和y坐标，不更改可见性值
+                        this.state.draggedLabel.keypoints[baseIndex] += dx;
+                        this.state.draggedLabel.keypoints[baseIndex + 1] += dy;
+                    }
+                }
             } else {
+                // 移动普通边界框
                 this.state.draggedLabel.x += dx;
                 this.state.draggedLabel.y += dy;
             }
+            
             this.state.dragStartPos = { x: normalizedX, y: normalizedY };
             this.state.requestRedraw();
             this.state.hasUnsavedChanges = true;
@@ -550,6 +575,18 @@ export class CanvasManager {
             return;
         }
 
+        // ESC键取消分割或关键点绘制
+        if (e.key === 'Escape') {
+            if (this.state.currentMode === 'seg' && this.state.isDrawingPolygon) {
+                this.state.isDrawingPolygon = false;
+                this.state.polygonPoints = [];
+                this.state.requestRedraw();
+            } else if (this.state.currentMode === 'pose' && this.state.isPoseDrawing) {
+                this.cancelPoseDrawing();
+            }
+            return;
+        }
+
         // Tab/Shift+Tab 切换标签类型
         if (e.key === 'Tab') {
             e.preventDefault();
@@ -748,6 +785,36 @@ export class CanvasManager {
     }
 
     /**
+     * 绘制当前姿态边界框（虚线）
+     */
+    drawCurrentPoseBoundingBox() {
+        if (!this.state.currentPoseLabel) return;
+        
+        // 获取标签颜色
+        const colorIndex = this.state.currentPoseLabel.class % CONFIG.COLORS.length;
+        const color = CONFIG.COLORS[colorIndex];
+        
+        // 计算像素坐标
+        const x = this.state.currentPoseLabel.x * this.state.originalImageWidth;
+        const y = this.state.currentPoseLabel.y * this.state.originalImageHeight;
+        const width = this.state.currentPoseLabel.width * this.state.originalImageWidth;
+        const height = this.state.currentPoseLabel.height * this.state.originalImageHeight;
+        
+        // 设置虚线样式
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = CONFIG.LINE_WIDTH / this.state.scale;
+        this.ctx.setLineDash([8, 8]);
+        this.ctx.lineDashOffset = this.state.dashOffset;
+        
+        // 绘制框
+        this.ctx.strokeRect(x - width/2, y - height/2, width, height);
+        
+        // 恢复实线样式
+        this.ctx.setLineDash([]);
+        this.ctx.lineDashOffset = 0;
+    }
+
+    /**
      * 使用变换重绘画布
      */
     redrawWithTransform() {
@@ -760,8 +827,15 @@ export class CanvasManager {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.restore();
         
-        // 如果虚线动画处于活动状态但没有悬停标签，停止动画
-        if (this.state.dashAnimationActive && !this.state.hoveredLabel) {
+        // 如果在pose模式下标注关键点，需要启动虚线动画
+        if (this.state.currentMode === 'pose' && this.state.isPoseDrawing && this.state.poseDrawingStep > 0) {
+            if (!this.state.dashAnimationActive) {
+                this.state.dashAnimationActive = true;
+                this.startDashAnimation();
+            }
+        } 
+        // 如果虚线动画处于活动状态但没有悬停标签或不在pose标注中，停止动画
+        else if (this.state.dashAnimationActive && !this.state.hoveredLabel) {
             this.state.dashAnimationActive = false;
         }
         
@@ -788,6 +862,41 @@ export class CanvasManager {
                 this.drawPreviewBox(this.state.currentMousePos.x, this.state.currentMousePos.y);
             }
             
+            // 如果在关键点模式下绘制，根据步骤显示不同提示
+            if (this.state.currentMode === 'pose' && this.state.isPoseDrawing) {
+                // 如果正在绘制边界框
+                if (this.state.poseDrawingStep === 0 && this.state.isDrawing && this.state.currentMousePos) {
+                    this.drawPreviewBox(this.state.currentMousePos.x, this.state.currentMousePos.y);
+                    
+                    // 在鼠标位置显示"绘制边界框"提示
+                    const mouseX = this.state.currentMousePos.x * this.state.originalImageWidth;
+                    const mouseY = this.state.currentMousePos.y * this.state.originalImageHeight;
+                    this.drawPoseStepIndicator(mouseX, mouseY, "绘制边界框");
+                } 
+                // 如果正在标注关键点
+                else if (this.state.poseDrawingStep > 0 && this.state.currentMousePos) {
+                    const mouseX = this.state.currentMousePos.x * this.state.originalImageWidth;
+                    const mouseY = this.state.currentMousePos.y * this.state.originalImageHeight;
+                    
+                    // 当前点的编号 (1-based)
+                    const currentPoint = this.state.poseDrawingStep;
+                    
+                    // 显示关键点标注指示器
+                    this.drawPoseStepIndicator(mouseX, mouseY, `点 ${currentPoint}/${this.state.keypointCount}`);
+                    
+                    // 显示关键点预览
+                    this.drawKeypointPreview(mouseX, mouseY);
+                    
+                    // 绘制当前姿态的边界框（虚线）
+                    this.drawCurrentPoseBoundingBox();
+                    
+                    // 如果已有部分关键点，绘制已标注的关键点
+                    if (this.state.currentPoseLabel) {
+                        this.drawCurrentPoseKeypoints();
+                    }
+                }
+            }
+            
             this.ctx.restore();
             
             // 在鼠标位置绘制十字线 - 在恢复之后，以确保它们跨越整个画布
@@ -800,27 +909,37 @@ export class CanvasManager {
     }
 
     /**
-     * 绘制标签
+     * 绘制所有标签
      */
     drawLabels() {
-        if (!this.state.initialLabels || this.state.initialLabels.length === 0) {
-            return;
-        }
+        if (!this.state.initialLabels) return;
         
-        this.state.initialLabels.forEach((label, index) => {
-            if (label.visible === false) {
-                return;
-            }
+        // 获取类别颜色列表
+        const colorList = CONFIG.COLORS;
+        
+        // 遍历并绘制每个标签
+        for (let i = 0; i < this.state.initialLabels.length; i++) {
+            const label = this.state.initialLabels[i];
             
-            const color = CONFIG.COLORS[label.class % CONFIG.COLORS.length];
-            const isHighlighted = label === this.state.hoveredLabel;
+            // 跳过不可见的标签
+            if (label.visible === false) continue;
             
-            if (label.isSegmentation && label.points) {
+            // 获取标签颜色
+            const colorIndex = label.class % colorList.length;
+            const color = colorList[colorIndex];
+            
+            // 检查是否应高亮显示
+            const isHighlighted = this.state.hoveredLabel === label;
+
+            // 根据标签类型调用不同的绘制方法
+            if (label.isSegmentation) {
                 this.drawSegmentationLabel(label, color, isHighlighted);
+            } else if (label.isPose) {
+                this.drawPoseLabel(label, color, isHighlighted);
             } else {
                 this.drawBoundingBoxLabel(label, color, isHighlighted);
             }
-        });
+        }
     }
 
     /**
@@ -1269,7 +1388,13 @@ export class CanvasManager {
             // 创建类型指示器
             const typeSpan = document.createElement('span');
             typeSpan.className = 'label-type';
-            typeSpan.textContent = label.isSegmentation ? 'SEG' : 'BOX';
+            if (label.isPose) {
+                typeSpan.textContent = 'POSE';
+            } else if (label.isSegmentation) {
+                typeSpan.textContent = 'SEG';
+            } else {
+                typeSpan.textContent = 'BOX';
+            }
             
             // 创建可见性切换按钮（眼睛图标）
             const visibilityBtn = document.createElement('button');
@@ -1422,13 +1547,412 @@ export class CanvasManager {
     startDashAnimation() {
         if (!this.state.dashAnimationActive) return;
         
-        // 更新虚线偏移
-        this.state.dashOffset -= 1;
+        // 更新虚线偏移，使用更小的步长使动画更平滑
+        this.state.dashOffset -= 0.5;
+        
+        // 循环偏移值以避免数值过大
+        if (this.state.dashOffset < -100) {
+            this.state.dashOffset = 0;
+        }
         
         // 重绘画布以显示动画效果
         this.state.requestRedraw();
         
         // 使用requestAnimationFrame创建平滑动画
         requestAnimationFrame(() => this.startDashAnimation());
+    }
+
+    /**
+     * 绘制关键点标注步骤指示器
+     * @param {number} x - X坐标
+     * @param {number} y - Y坐标
+     * @param {string} text - 提示文本
+     */
+    drawPoseStepIndicator(x, y, text) {
+        // 偏移量，让提示显示在鼠标右侧
+        const offsetX = 20 / this.state.scale;
+        const offsetY = 0;
+        
+        // 设置字体大小
+        const fontSize = CONFIG.LABEL_FONT_SIZE / Math.max(1, this.state.scale);
+        this.ctx.font = `${fontSize}px sans-serif`;
+        
+        // 测量文本宽度
+        const textWidth = this.ctx.measureText(text).width;
+        const padding = CONFIG.LABEL_PADDING / this.state.scale;
+        
+        // 绘制文本背景
+        this.ctx.fillStyle = '#4285f4'; // 蓝色背景
+        this.ctx.fillRect(
+            x + offsetX,
+            y + offsetY,
+            textWidth + padding * 2,
+            fontSize + padding * 2
+        );
+        
+        // 绘制文本
+        this.ctx.fillStyle = '#ffffff'; // 白色文本
+        this.ctx.fillText(
+            text,
+            x + offsetX + padding,
+            y + offsetY + fontSize + padding / 2
+        );
+    }
+
+    /**
+     * 绘制关键点预览
+     * @param {number} x - X坐标
+     * @param {number} y - Y坐标
+     */
+    drawKeypointPreview(x, y) {
+        const radius = 5 / this.state.scale;
+        
+        // 绘制外圈
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
+        this.ctx.fillStyle = 'rgba(66, 133, 244, 0.3)'; // 半透明蓝色
+        this.ctx.fill();
+        
+        // 绘制内圈
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius / 2, 0, 2 * Math.PI);
+        this.ctx.fillStyle = 'rgba(66, 133, 244, 0.8)'; // 不太透明蓝色
+        this.ctx.fill();
+    }
+
+    /**
+     * 绘制当前已标注的关键点
+     */
+    drawCurrentPoseKeypoints() {
+        if (!this.state.currentPoseLabel || !this.state.currentPoseLabel.keypoints) return;
+        
+        const keypoints = this.state.currentPoseLabel.keypoints;
+        const valuePerPoint = this.state.keypointValueCount;
+        const numKeypoints = this.state.poseDrawingStep - 1; // 到目前为止已标注的点数量
+        
+        // 绘制已标注的点
+        for (let i = 0; i < numKeypoints; i++) {
+            const baseIndex = i * valuePerPoint;
+            
+            // 获取坐标
+            const x = keypoints[baseIndex] * this.state.originalImageWidth;
+            const y = keypoints[baseIndex + 1] * this.state.originalImageHeight;
+            
+            // 获取可见性（如果有）
+            let visibility = 1; // 默认可见
+            if (valuePerPoint >= 3) {
+                visibility = keypoints[baseIndex + 2];
+            }
+            
+            // 根据可见性绘制不同样式
+            const radius = 5 / this.state.scale;
+            
+            if (visibility === 1) {
+                // 可见点 - 实心圆
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                this.ctx.fillStyle = '#4CAF50'; // 绿色
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.lineWidth = 1 / this.state.scale;
+                this.ctx.stroke();
+            } else if (visibility === 2) {
+                // 被遮挡点 - 半透明圆
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                this.ctx.fillStyle = 'rgba(244, 67, 54, 0.7)'; // 半透明红色
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.lineWidth = 1 / this.state.scale;
+                this.ctx.stroke();
+            } else {
+                // 不可见点 - 带X的圆
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; // 半透明黑色
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.lineWidth = 1 / this.state.scale;
+                this.ctx.stroke();
+                
+                // 绘制X
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - radius/2, y - radius/2);
+                this.ctx.lineTo(x + radius/2, y + radius/2);
+                this.ctx.moveTo(x + radius/2, y - radius/2);
+                this.ctx.lineTo(x - radius/2, y + radius/2);
+                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.lineWidth = 1.5 / this.state.scale;
+                this.ctx.stroke();
+            }
+            
+            // 绘制点的编号
+            this.ctx.font = `${8 / this.state.scale}px sans-serif`;
+            this.ctx.fillStyle = '#FFFFFF';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(`${i + 1}`, x, y - (radius + 2 / this.state.scale));
+            this.ctx.textAlign = 'start'; // 重置为默认
+        }
+    }
+
+    /**
+     * 绘制关键点/姿态标签
+     * @param {Object} label - 标签对象
+     * @param {string} color - 标签颜色
+     * @param {boolean} isHighlighted - 是否高亮
+     */
+    drawPoseLabel(label, color, isHighlighted) {
+        // 绘制边界框部分(保留绘制框，但不绘制标签文本)
+        // 计算像素坐标
+        const x = label.x * this.state.originalImageWidth;
+        const y = label.y * this.state.originalImageHeight;
+        const width = label.width * this.state.originalImageWidth;
+        const height = label.height * this.state.originalImageHeight;
+        
+        // 绘制框
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = (isHighlighted ? 3 : CONFIG.LINE_WIDTH) / this.state.scale;
+        if (isHighlighted) {
+            this.ctx.setLineDash([8, 8]);
+            this.ctx.lineDashOffset = this.state.dashOffset;
+        } else {
+            this.ctx.setLineDash([]);
+            this.ctx.lineDashOffset = 0;
+        }
+        this.ctx.strokeRect(x - width/2, y - height/2, width, height);
+        this.ctx.setLineDash([]);
+        this.ctx.lineDashOffset = 0;
+        
+        // 如果没有关键点数据，则直接返回
+        if (!label.keypoints || !label.keypointShape) return;
+        
+        const numKeypoints = label.keypointShape[0];
+        const valuePerPoint = label.keypointShape[1]; // 通常是2或3
+        
+        // 设置关键点大小和线宽（基于缩放）
+        const keypointRadius = (isHighlighted ? 5 : 3) / this.state.scale;
+        this.ctx.lineWidth = (isHighlighted ? 2 : 1) / this.state.scale;
+        
+        // 遍历所有关键点
+        for (let i = 0; i < numKeypoints; i++) {
+            const baseIndex = i * valuePerPoint;
+            
+            // 获取关键点坐标和可见性
+            const kpX = label.keypoints[baseIndex] * this.state.originalImageWidth;
+            const kpY = label.keypoints[baseIndex + 1] * this.state.originalImageHeight;
+            
+            // 如果有可见性值（valuePerPoint=3），则检查可见性
+            let visibility = 1; // 默认可见
+            if (valuePerPoint >= 3) {
+                visibility = label.keypoints[baseIndex + 2];
+                // 如果可见性为0，跳过这个关键点
+                if (visibility === 0) continue;
+            }
+            
+            // 绘制关键点
+            this.ctx.beginPath();
+            this.ctx.arc(kpX, kpY, keypointRadius, 0, 2 * Math.PI);
+            
+            // 根据可见性设置颜色
+            if (valuePerPoint >= 3 && visibility === 1) {
+                // 完全可见
+                this.ctx.fillStyle = color;
+            } else if (valuePerPoint >= 3 && visibility === 2) {
+                // 被遮挡但可见
+                this.ctx.fillStyle = `${color}80`; // 半透明
+            } else {
+                // 默认颜色
+                this.ctx.fillStyle = color;
+            }
+            
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#ffffff';
+            this.ctx.stroke();
+        }
+        
+        // 如果可见，绘制标签文本
+        if (this.state.showLabels) {
+            // 获取边界框左上角位置
+            const labelX = x - width/2;
+            const labelY = y - height/2 - CONFIG.LABEL_HEIGHT / this.state.scale;
+            
+            // 获取类名
+            const className = this.state.classNamesList && this.state.classNamesList[label.class] 
+                ? this.state.classNamesList[label.class] 
+                : `Class ${label.class}`;
+            
+            // 绘制带有POSE标识的文本
+            const text = `${className} (POSE)`;
+            this.drawLabelText(text, labelX, labelY, color);
+        }
+    }
+
+    /**
+     * 处理姿态/关键点模式下的点击
+     * @param {MouseEvent} e - 鼠标事件
+     * @param {number} x - 归一化的X坐标
+     * @param {number} y - 归一化的Y坐标
+     */
+    handlePoseClick(e, x, y) {
+        // 如果按了右键
+        if (e.button === 2) {
+            if (this.state.isPoseDrawing && this.state.poseDrawingStep > 0) {
+                // 右键表示点不可见(可见性设为2 - 被遮挡)
+                this.addPoseKeypoint(x, y, 2);
+            }
+            return;
+        }
+        
+        // 处理左键点击
+        if (e.button === 0) {
+            if (!this.state.isPoseDrawing) {
+                // 开始新的姿态标注，首先绘制边界框
+                this.state.isPoseDrawing = true;
+                this.state.poseDrawingStep = 0;
+                this.startBoxDrawing(x, y);
+            } else if (this.state.poseDrawingStep === 0) {
+                // 如果正在绘制边界框，则完成边界框绘制
+                this.completePoseBoxDrawing(x, y);
+            } else {
+                // 否则添加关键点(左键是完全可见的点，可见性设为1)
+                this.addPoseKeypoint(x, y, 1);
+            }
+        }
+    }
+
+    /**
+     * 完成关键点标注的边界框绘制
+     * @param {number} x - 归一化的X坐标
+     * @param {number} y - 归一化的Y坐标
+     */
+    completePoseBoxDrawing(x, y) {
+        if (!this.state.isPoseDrawing) return;
+        
+        const { startX, startY } = this.state;
+        
+        // 计算宽度和高度（归一化）
+        const width = Math.abs(x - startX);
+        const height = Math.abs(y - startY);
+        
+        // 计算中心点坐标
+        const boxX = Math.min(startX, x) + width/2;
+        const boxY = Math.min(startY, y) + height/2;
+        
+        // 只有当框足够大时才继续
+        if (width > CONFIG.MIN_BOX_SIZE && height > CONFIG.MIN_BOX_SIZE) {
+            // 从YAML配置获取关键点数和值类型
+            let keypointCount = 17;  // 默认使用COCO的17个关键点
+            let valuePerKeypoint = 3; // 默认每个关键点有3个值(x,y,v)
+            
+            // 尝试从配置中读取
+            if (window.kptShape && Array.isArray(window.kptShape) && window.kptShape.length >= 2) {
+                keypointCount = window.kptShape[0];
+                valuePerKeypoint = window.kptShape[1];
+            }
+            
+            // 创建空的关键点数组
+            const keypoints = new Array(keypointCount * valuePerKeypoint).fill(0);
+            
+            // 创建新的关键点标签
+            this.state.currentPoseLabel = {
+                class: parseInt(this.state.currentLabel),
+                x: boxX,
+                y: boxY,
+                width: width,
+                height: height,
+                isPose: true,
+                keypoints: keypoints,
+                keypointShape: [keypointCount, valuePerKeypoint],
+                visible: true
+            };
+            
+            // 更新状态
+            this.state.keypointCount = keypointCount;
+            this.state.keypointValueCount = valuePerKeypoint;
+            this.state.poseDrawingStep = 1;  // 开始标注第1个关键点
+            
+            // 重置绘制框状态
+            this.state.isDrawing = false;
+            
+            // 重绘画布
+            this.state.requestRedraw();
+        } else {
+            // 框太小，取消绘制
+            this.cancelPoseDrawing();
+        }
+    }
+
+    /**
+     * 添加姿态关键点
+     * @param {number} x - 归一化的X坐标
+     * @param {number} y - 归一化的Y坐标
+     * @param {number} visibility - 可见性状态 (0=不可见, 1=可见, 2=被遮挡但可见)
+     */
+    addPoseKeypoint(x, y, visibility) {
+        if (!this.state.isPoseDrawing || !this.state.currentPoseLabel) return;
+        
+        const currentKeypoint = this.state.poseDrawingStep - 1;
+        const valuePerPoint = this.state.keypointValueCount;
+        
+        // 检查是否超出了关键点数量
+        if (currentKeypoint >= this.state.keypointCount) {
+            this.completePoseDrawing();
+            return;
+        }
+        
+        // 设置当前关键点的值
+        const baseIndex = currentKeypoint * valuePerPoint;
+        this.state.currentPoseLabel.keypoints[baseIndex] = x;
+        this.state.currentPoseLabel.keypoints[baseIndex + 1] = y;
+        
+        // 如果支持可见性值，则设置可见性
+        if (valuePerPoint >= 3) {
+            this.state.currentPoseLabel.keypoints[baseIndex + 2] = visibility;
+        }
+        
+        // 移动到下一个关键点
+        this.state.poseDrawingStep++;
+        
+        // 如果已经标注完所有关键点，则完成整个标注
+        if (this.state.poseDrawingStep - 1 >= this.state.keypointCount) {
+            this.completePoseDrawing();
+        } else {
+            // 否则继续绘制下一个点
+            this.state.requestRedraw();
+        }
+    }
+
+    /**
+     * 完成整个姿态标注过程
+     */
+    completePoseDrawing() {
+        if (!this.state.isPoseDrawing || !this.state.currentPoseLabel) return;
+        
+        // 添加标签到列表
+        this.state.initialLabels.push(this.state.currentPoseLabel);
+        
+        // 更新历史记录
+        this.state.pushHistory();
+        
+        // 更新标签列表和计数
+        this.updateLabelList();
+        this.updateLabelsCountDisplay();
+        
+        // 重置状态
+        this.cancelPoseDrawing();
+        
+        // 重绘画布
+        this.state.requestRedraw();
+    }
+
+    /**
+     * 取消当前姿态标注过程
+     */
+    cancelPoseDrawing() {
+        this.state.isPoseDrawing = false;
+        this.state.poseDrawingStep = 0;
+        this.state.currentPoseLabel = null;
+        this.state.isDrawing = false;
+        this.state.requestRedraw();
     }
 } 

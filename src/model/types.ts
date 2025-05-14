@@ -106,7 +106,10 @@ export interface BoundingBox {
   width: number;
   height: number;
   isSegmentation?: boolean;
+  isPose?: boolean;
   points?: number[];
+  keypoints?: number[];
+  keypointShape?: number[];
   visible?: boolean;
 }
 

@@ -175,13 +175,19 @@ export class LabelingPanel {
         const currentIndex = this._yoloReader.getCurrentImageIndex();
         const imageInfoText = `Image: ${currentIndex + 1} of ${totalImages}`;
 
+        // 获取关键点配置
+        const kptShape = this._yoloReader.getKptShape();
+        const flipIdx = this._yoloReader.getFlipIdx();
+
         return this._uiService.generateWebviewHtml({
             classNames,
             initialImageData,
             initialLabels: labels,
             imageInfoText,
             webview,
-            currentPath: currentImage || undefined
+            currentPath: currentImage || undefined,
+            kptShape,
+            flipIdx
         });
     }
 
