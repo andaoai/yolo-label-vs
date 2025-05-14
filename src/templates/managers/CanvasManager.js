@@ -263,8 +263,8 @@ export class CanvasManager {
         const normalizedY = pos.y / this.state.originalImageHeight;
         this.state.currentMousePos = { x: normalizedX, y: normalizedY };
 
-        // 只有按住Ctrl时才允许hover和移动
-        if (e.ctrlKey && !this.state.isDrawing && !this.state.isDrawingPolygon) {
+        // 处理标签悬停逻辑 - 无论是否按住 Ctrl 键都允许悬停和高亮
+        if (!this.state.isDrawing && !this.state.isDrawingPolygon) {
             const label = this.state.findLabelUnderCursor(normalizedX, normalizedY);
             if (this.state.hoveredLabel !== label) {
                 this.state.hoveredLabel = label;
@@ -283,19 +283,9 @@ export class CanvasManager {
                 
                 this.state.requestRedraw();
             }
-            this.canvas.style.cursor = label ? 'move' : 'default';
-        } else if (!e.ctrlKey) {
-            // 没有按Ctrl时，hover和高亮全部取消
-            if (this.state.hoveredLabel) {
-                this.state.hoveredLabel = null;
-                this.state.updateLabelHighlight();
-                
-                // 停止虚线动画
-                this.state.dashAnimationActive = false;
-                
-                this.state.requestRedraw();
-            }
-            this.canvas.style.cursor = 'default';
+            
+            // 只有按住 Ctrl 键时才显示移动光标和允许拖动
+            this.canvas.style.cursor = (e.ctrlKey && label) ? 'move' : 'default';
         }
 
         // 只有Ctrl+拖动才允许移动
@@ -955,7 +945,7 @@ export class CanvasManager {
         this.ctx.fillStyle = `${color}33`; // 添加透明度
         
         if (isHighlighted) {
-            this.ctx.setLineDash([8, 8]);
+            this.ctx.setLineDash([10, 6]);
             this.ctx.lineDashOffset = this.state.dashOffset;
         } else {
             this.ctx.setLineDash([]);
@@ -1012,7 +1002,7 @@ export class CanvasManager {
         this.ctx.strokeStyle = color;
         this.ctx.lineWidth = (isHighlighted ? 3 : CONFIG.LINE_WIDTH) / this.state.scale;
         if (isHighlighted) {
-            this.ctx.setLineDash([8, 8]);
+            this.ctx.setLineDash([10, 6]);
             this.ctx.lineDashOffset = this.state.dashOffset;
         } else {
             this.ctx.setLineDash([]);
@@ -1547,8 +1537,8 @@ export class CanvasManager {
     startDashAnimation() {
         if (!this.state.dashAnimationActive) return;
         
-        // 更新虚线偏移，使用更小的步长使动画更平滑
-        this.state.dashOffset -= 0.5;
+        // 更新虚线偏移，使用更大的步长使动画更明显
+        this.state.dashOffset -= 1.5;
         
         // 循环偏移值以避免数值过大
         if (this.state.dashOffset < -100) {
@@ -1713,7 +1703,7 @@ export class CanvasManager {
         this.ctx.strokeStyle = color;
         this.ctx.lineWidth = (isHighlighted ? 3 : CONFIG.LINE_WIDTH) / this.state.scale;
         if (isHighlighted) {
-            this.ctx.setLineDash([8, 8]);
+            this.ctx.setLineDash([10, 6]);
             this.ctx.lineDashOffset = this.state.dashOffset;
         } else {
             this.ctx.setLineDash([]);
