@@ -15,8 +15,8 @@ export const CONFIG = {
         '#5ac8fa', // 浅蓝
         '#af52de'  // 紫红
     ],
-    CROSSHAIR_COLOR: 'rgba(255, 255, 255, 0.5)',
-    CROSSHAIR_CENTER_COLOR: '#ff3b30',
+    CROSSHAIR_COLOR: 'rgba(76, 217, 100, 0.8)', // 绿色，0.8透明度
+    CROSSHAIR_CENTER_COLOR: '#4cd964', // 绿色
     BACKGROUND_COLOR: '#1e1e1e', // 默认背景色，会被VS Code主题覆盖
 
     // 绘图设置
