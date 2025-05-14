@@ -196,14 +196,41 @@ export class CanvasManager {
         const x = pos.x / this.state.originalImageWidth;
         const y = pos.y / this.state.originalImageHeight;
         
-        // 只有Ctrl+左键才允许拖动移动
-        if (e.ctrlKey && this.state.hoveredLabel && e.button === 0) {
+        // 按住Ctrl键时进行拖动操作
+        if (e.ctrlKey && e.button === 0) {
+            // 首先检查是否点击在某个点上
+            const pointUnderCursor = this.findPointUnderCursor(x, y);
+            
+            if (pointUnderCursor) {
+                // 选择点并开始点拖动
+                this.state.selectedPoint = pointUnderCursor;
+                this.state.isDraggingPoint = true;
+                this.state.dragStartPos = { x, y };
+                return;
+            }
+            
+            // 如果不是点，检查是否是标签
+            if (this.state.hoveredLabel) {
             this.state.isDragging = true;
             this.state.draggedLabel = this.state.hoveredLabel;
             this.state.dragStartPos = { x, y };
             return;
         }
+        }
         
+        // 如果正在绘制中，不处理其他操作
+        if (this.state.isDrawing || this.state.isDrawingPolygon || this.state.isPoseDrawing) {
+            if (this.state.currentMode === 'box') {
+                this.startBoxDrawing(x, y);
+            } else if (this.state.currentMode === 'seg') {
+                this.handleSegmentationClick(x, y);
+            } else if (this.state.currentMode === 'pose') {
+                this.handlePoseClick(e, x, y);
+            }
+            return;
+        }
+        
+        // 根据当前模式开始绘制
         if (this.state.currentMode === 'box') {
             this.startBoxDrawing(x, y);
         } else if (this.state.currentMode === 'seg') {
@@ -263,8 +290,27 @@ export class CanvasManager {
         const normalizedY = pos.y / this.state.originalImageHeight;
         this.state.currentMousePos = { x: normalizedX, y: normalizedY };
 
+        // 处理点拖动
+        if (e.ctrlKey && this.state.isDraggingPoint && this.state.selectedPoint) {
+            this.moveSelectedPoint(normalizedX, normalizedY);
+            this.state.hasUnsavedChanges = true;
+            this.state.requestRedraw();
+            this.updateCoordinateDisplay(normalizedX, normalizedY);
+            return;
+        }
+
         // 处理标签悬停逻辑 - 无论是否按住 Ctrl 键都允许悬停和高亮
         if (!this.state.isDrawing && !this.state.isDrawingPolygon) {
+            // 如果按住Ctrl键，检查是否有点在光标下
+            if (e.ctrlKey) {
+                const pointUnderCursor = this.findPointUnderCursor(normalizedX, normalizedY);
+                if (pointUnderCursor) {
+                    this.canvas.style.cursor = 'move';
+                    this.state.requestRedraw();
+                    return;
+                }
+            }
+            
             const label = this.state.findLabelUnderCursor(normalizedX, normalizedY);
             if (this.state.hoveredLabel !== label) {
                 this.state.hoveredLabel = label;
@@ -337,10 +383,34 @@ export class CanvasManager {
      * @param {MouseEvent} e - 鼠标事件
      */
     updateCursorStyle(e) {
+        const pos = this.getMousePos(e);
+        const normalizedX = pos.x / this.state.originalImageWidth;
+        const normalizedY = pos.y / this.state.originalImageHeight;
+        
+        // 如果按住Ctrl键，先检查是否悬停在点上
+        if (e.ctrlKey) {
+            const pointUnderCursor = this.findPointUnderCursor(normalizedX, normalizedY);
+            if (pointUnderCursor) {
+                this.canvas.style.cursor = 'move';
+                return;
+            }
+            
+            if (this.state.hoveredLabel) {
+                this.canvas.style.cursor = 'move';
+                return;
+            }
+        }
+        
+        // 平移模式的光标样式
         if (e.altKey && !this.state.isPanning) {
             this.canvas.classList.add('grabable');
         } else if (!e.altKey && !this.state.isPanning) {
             this.canvas.classList.remove('grabable');
+        }
+        
+        // 如果不是特殊模式，恢复默认光标
+        if (!e.altKey && !e.ctrlKey && !this.state.isPanning) {
+            this.canvas.style.cursor = 'default';
         }
     }
     
@@ -393,6 +463,14 @@ export class CanvasManager {
             this.canvas.classList.remove('grabbing');
         }
         
+        // 处理点拖动结束
+        if (this.state.isDraggingPoint) {
+            this.state.isDraggingPoint = false;
+            this.state.selectedPoint = null;
+            this.state.pushHistory();
+        }
+        
+        // 处理标签拖动结束
         if (this.state.isDragging) {
             this.state.isDragging = false;
             this.state.draggedLabel = null;
@@ -885,6 +963,11 @@ export class CanvasManager {
                         this.drawCurrentPoseKeypoints();
                     }
                 }
+            }
+            
+            // 如果有选中的点，绘制它
+            if (this.state.selectedPoint) {
+                this.drawSelectedPoint(this.state.selectedPoint);
             }
             
             this.ctx.restore();
@@ -1944,5 +2027,283 @@ export class CanvasManager {
         this.state.currentPoseLabel = null;
         this.state.isDrawing = false;
         this.state.requestRedraw();
+    }
+
+    /**
+     * 检测鼠标下是否有可选择的点
+     * @param {number} x - 归一化的X坐标
+     * @param {number} y - 归一化的Y坐标
+     * @returns {Object|null} 包含点信息的对象或null
+     */
+    findPointUnderCursor(x, y) {
+        if (!this.state.initialLabels || this.state.initialLabels.length === 0) return null;
+        
+        // 设置点的选择阈值（根据缩放调整）
+        const threshold = CONFIG.CLOSE_POINT_THRESHOLD / this.state.scale;
+        
+        // 从后向前遍历（后添加的标签优先）
+        for (let i = this.state.initialLabels.length - 1; i >= 0; i--) {
+            const label = this.state.initialLabels[i];
+            
+            // 跳过不可见的标签
+            if (label.visible === false) continue;
+            
+            if (label.isSegmentation) {
+                // 检查分割多边形的各个点
+                for (let j = 0; j < label.points.length; j += 2) {
+                    const pointX = label.points[j];
+                    const pointY = label.points[j + 1];
+                    const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+                    
+                    if (distance < threshold) {
+                        return {
+                            label,
+                            type: 'segmentation',
+                            pointIndex: j,
+                            x: pointX,
+                            y: pointY
+                        };
+                    }
+                }
+            } else if (label.isPose && label.keypoints) {
+                // 检查姿态关键点
+                const valuePerPoint = label.keypointShape ? label.keypointShape[1] : 3;
+                const numKeypoints = label.keypointShape ? label.keypointShape[0] : 0;
+                
+                for (let j = 0; j < numKeypoints; j++) {
+                    const baseIndex = j * valuePerPoint;
+                    const pointX = label.keypoints[baseIndex];
+                    const pointY = label.keypoints[baseIndex + 1];
+                    
+                    // 如果点有可见性值且不可见，则跳过
+                    if (valuePerPoint >= 3 && label.keypoints[baseIndex + 2] === 0) continue;
+                    
+                    const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+                    
+                    if (distance < threshold) {
+                        return {
+                            label,
+                            type: 'pose',
+                            pointIndex: baseIndex,
+                            x: pointX,
+                            y: pointY
+                        };
+                    }
+                }
+            } else {
+                // 检查边界框的四个角点
+                const halfWidth = label.width / 2;
+                const halfHeight = label.height / 2;
+                
+                // 左上角
+                let pointX = label.x - halfWidth;
+                let pointY = label.y - halfHeight;
+                let distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+                
+                if (distance < threshold) {
+                    return {
+                        label,
+                        type: 'box',
+                        corner: 'top-left',
+                        x: pointX,
+                        y: pointY
+                    };
+                }
+                
+                // 右上角
+                pointX = label.x + halfWidth;
+                pointY = label.y - halfHeight;
+                distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+                
+                if (distance < threshold) {
+                    return {
+                        label,
+                        type: 'box',
+                        corner: 'top-right',
+                        x: pointX,
+                        y: pointY
+                    };
+                }
+                
+                // 左下角
+                pointX = label.x - halfWidth;
+                pointY = label.y + halfHeight;
+                distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+                
+                if (distance < threshold) {
+                    return {
+                        label,
+                        type: 'box',
+                        corner: 'bottom-left',
+                        x: pointX,
+                        y: pointY
+                    };
+                }
+                
+                // 右下角
+                pointX = label.x + halfWidth;
+                pointY = label.y + halfHeight;
+                distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
+                
+                if (distance < threshold) {
+                    return {
+                        label,
+                        type: 'box',
+                        corner: 'bottom-right',
+                        x: pointX,
+                        y: pointY
+                    };
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * 绘制选中的点
+     * @param {Object} selectedPoint - 选中的点信息
+     */
+    drawSelectedPoint(selectedPoint) {
+        if (!selectedPoint) return;
+        
+        // 获取点的像素坐标
+        const x = selectedPoint.x * this.state.originalImageWidth;
+        const y = selectedPoint.y * this.state.originalImageHeight;
+        
+        // 绘制高亮效果
+        const radius = 6 / this.state.scale;
+        
+        // 外部高亮圆
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius * 1.5, 0, Math.PI * 2);
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        this.ctx.fill();
+        
+        // 内部点
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 1.5 / this.state.scale;
+        this.ctx.stroke();
+    }
+
+    /**
+     * 移动选中的点
+     * @param {number} x - 归一化的X坐标
+     * @param {number} y - 归一化的Y坐标
+     */
+    moveSelectedPoint(x, y) {
+        if (!this.state.selectedPoint) return;
+        
+        const selectedPoint = this.state.selectedPoint;
+        const dx = x - this.state.dragStartPos.x;
+        const dy = y - this.state.dragStartPos.y;
+        
+        // 更新拖动开始位置
+        this.state.dragStartPos = { x, y };
+        
+        // 根据点的类型进行不同的处理
+        if (selectedPoint.type === 'segmentation') {
+            // 更新分割多边形的点
+            const pointIndex = selectedPoint.pointIndex;
+            selectedPoint.label.points[pointIndex] = x;
+            selectedPoint.label.points[pointIndex + 1] = y;
+            
+            // 更新选中点的位置信息
+            selectedPoint.x = x;
+            selectedPoint.y = y;
+        } else if (selectedPoint.type === 'pose') {
+            // 更新姿态关键点
+            const pointIndex = selectedPoint.pointIndex;
+            selectedPoint.label.keypoints[pointIndex] = x;
+            selectedPoint.label.keypoints[pointIndex + 1] = y;
+            
+            // 更新选中点的位置信息
+            selectedPoint.x = x;
+            selectedPoint.y = y;
+        } else if (selectedPoint.type === 'box') {
+            // 更新边界框角点
+            const label = selectedPoint.label;
+            const halfWidth = label.width / 2;
+            const halfHeight = label.height / 2;
+            
+            // 根据拖动的角点更新框的位置和大小
+            if (selectedPoint.corner === 'top-left') {
+                // 移动左上角 - 影响 x, y, width, height
+                const newX = label.x + dx * 0.5;
+                const newY = label.y + dy * 0.5;
+                const newWidth = label.width - dx;
+                const newHeight = label.height - dy;
+                
+                // 确保宽度和高度不为负
+                if (newWidth > 0 && newHeight > 0) {
+                    label.x = newX;
+                    label.y = newY;
+                    label.width = newWidth;
+                    label.height = newHeight;
+                    
+                    // 更新选中点位置
+                    selectedPoint.x = label.x - label.width / 2;
+                    selectedPoint.y = label.y - label.height / 2;
+                }
+            } else if (selectedPoint.corner === 'top-right') {
+                // 移动右上角 - 影响 x, y, width, height
+                const newX = label.x + dx * 0.5;
+                const newY = label.y + dy * 0.5;
+                const newWidth = label.width + dx;
+                const newHeight = label.height - dy;
+                
+                // 确保宽度和高度不为负
+                if (newWidth > 0 && newHeight > 0) {
+                    label.x = newX;
+                    label.y = newY;
+                    label.width = newWidth;
+                    label.height = newHeight;
+                    
+                    // 更新选中点位置
+                    selectedPoint.x = label.x + label.width / 2;
+                    selectedPoint.y = label.y - label.height / 2;
+                }
+            } else if (selectedPoint.corner === 'bottom-left') {
+                // 移动左下角 - 影响 x, y, width, height
+                const newX = label.x + dx * 0.5;
+                const newY = label.y + dy * 0.5;
+                const newWidth = label.width - dx;
+                const newHeight = label.height + dy;
+                
+                // 确保宽度和高度不为负
+                if (newWidth > 0 && newHeight > 0) {
+                    label.x = newX;
+                    label.y = newY;
+                    label.width = newWidth;
+                    label.height = newHeight;
+                    
+                    // 更新选中点位置
+                    selectedPoint.x = label.x - label.width / 2;
+                    selectedPoint.y = label.y + label.height / 2;
+                }
+            } else if (selectedPoint.corner === 'bottom-right') {
+                // 移动右下角 - 影响 x, y, width, height
+                const newX = label.x + dx * 0.5;
+                const newY = label.y + dy * 0.5;
+                const newWidth = label.width + dx;
+                const newHeight = label.height + dy;
+                
+                // 确保宽度和高度不为负
+                if (newWidth > 0 && newHeight > 0) {
+                    label.x = newX;
+                    label.y = newY;
+                    label.width = newWidth;
+                    label.height = newHeight;
+                    
+                    // 更新选中点位置
+                    selectedPoint.x = label.x + label.width / 2;
+                    selectedPoint.y = label.y + label.height / 2;
+                }
+            }
+        }
     }
 } 
