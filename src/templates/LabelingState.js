@@ -1,342 +1,336 @@
-// Import configuration
-import { CONFIG } from './config.js';
-
-// State Management - Using ES6+ class fields
+/**
+ * LabelingState - 管理整个标注应用的状态
+ * 负责维护当前状态、历史记录、标签和画布的转换
+ */
 export class LabelingState {
-    // Use class fields for better organization and readability
-    vscode = acquireVsCodeApi();
-    currentImage = window.initialImageData;
-    initialLabels = window.initialLabels;
-    isDrawing = false;
-    startX = 0;
-    startY = 0;
-    currentLabel = 0;
-    classNamesList = window.classNames || [];
-    currentMode = 'box';
-    polygonPoints = [];
-    isDrawingPolygon = false;
-    showLabels = true;
-    allImagePaths = [];
-    currentPath = window.currentPath || '';
-    selectedSearchIndex = -1;
-    currentMousePos = null;
-    searchTimeout = null;
-    hasUnsavedChanges = false;
-    
-    // Zoom and pan related state
-    scale = 1;
-    translateX = 0;
-    translateY = 0;
-    isPanning = false;
-    lastPanPoint = { x: 0, y: 0 };
-    
-    // Image dimensions for coordinate calculations
-    originalImageWidth = 0;
-    originalImageHeight = 0;
-    
-    // Canvas and image relationship
-    canvasRect = null;
-    imageRect = null;
-    
-    // Animation related
-    animationFrameId = null;
-    needsRedraw = false;
-    
-    // For throttling mousemove events
-    lastRenderTime = 0;
-    throttleDelay = 16; // ~60fps
-    
-    // undo/redo history
-    history = [];
-    historyIndex = -1;
-    maxHistorySize = 50;
-    
-    // Store histories for each image path
-    imageHistories = new Map();
-    
-    hoveredLabel = null;
-    isDragging = false;
-    dragStartPos = { x: 0, y: 0 };
-    draggedLabel = null;
-    
-    dashOffset = 0; // 虚线动画偏移
-    dashAnimationId = null; // 虚线动画定时器
-    
     constructor() {
-        // Ensure all labels have a visibility property
-        if (this.initialLabels) {
-            this.initialLabels.forEach(label => {
-                if (label.visible === undefined) {
-                    label.visible = true;
-                }
-            });
+        // 获取VS Code API
+        this.vscode = acquireVsCodeApi();
+        
+        // 图像状态
+        this.image = null;
+        this.originalImageWidth = 0;
+        this.originalImageHeight = 0;
+        this.currentPath = '';
+        this.currentImage = '';
+        this.allImagePaths = [];
+        this.imagePreviews = [];
+        
+        // 标签状态
+        this.initialLabels = [];
+        this.currentLabel = 0;
+        this.classNamesList = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat'];
+        this.showLabels = true;
+        
+        // 初始化来自window变量的值
+        if (typeof window !== 'undefined') {
+            // 初始化类名列表
+            if (window.classNames && Array.isArray(window.classNames)) {
+                this.classNamesList = window.classNames;
+            }
+            
+            // 初始化标签
+            if (window.initialLabels && Array.isArray(window.initialLabels)) {
+                this.initialLabels = window.initialLabels;
+            }
+            
+            // 初始化当前路径
+            if (window.currentPath && typeof window.currentPath === 'string') {
+                this.currentPath = window.currentPath;
+                console.log('Initialized with currentPath:', this.currentPath);
+            }
         }
         
-        // Initialize history for the initial path if it exists
-        if (this.currentPath) {
-            this.imageHistories.set(this.currentPath, {
-                history: [],
-                historyIndex: -1,
-                lastSavedIndex: -1  // Track the last saved history index
-            });
-            // Store initial labels in history
-            this.pushHistory();
+        // 画布变换状态
+        this.scale = 1.0;
+        this.translateX = 0;
+        this.translateY = 0;
+        this.canvasRect = null;
+        this.imageRect = null;
+    
+        // 绘图状态
+        this.currentMode = 'box';  // 'box' or 'seg'
+        this.isDrawing = false;
+        this.startX = 0;
+        this.startY = 0;
+        this.currentMousePos = null;
+        this.hoveredLabel = null;
+        this.lastPanPoint = null;
+        this.isPanning = false;
+        this.isDragging = false;
+        this.draggedLabel = null;
+        this.dragStartPos = null;
+    
+        // 多边形绘制状态
+        this.isDrawingPolygon = false;
+        this.polygonPoints = [];
+        
+        // 动画状态
+        this.dashOffset = 0;
+        this.animationFrameId = null;
+        
+        // 历史记录状态
+        this.imageHistories = new Map();
+        this.hasUnsavedChanges = false;
+        this.savedState = null;
+        
+        // 搜索状态
+        this.searchTimeout = null;
+        this.selectedSearchIndex = -1;
+        
+        // 回调函数
+        this.onRedrawRequested = null;
+    
+        // 开始动画循环
+        this.startAnimationLoop();
+    }
+    
+    /**
+     * 请求重绘画布
+     */
+    requestRedraw() {
+        if (this.onRedrawRequested) {
+            this.onRedrawRequested();
         }
     }
     
-    // Add undo/redo functionality
+    /**
+     * 检查是否应该更新绘图状态
+     * @returns {boolean} 是否应该更新
+     */
+    shouldUpdate() {
+        // 如果无图像，则不更新
+        if (!this.image) return false;
+        
+        // 每16ms更新一次绘图状态
+        return true;
+    }
+    
+    /**
+     * 开始动画循环以更新虚线偏移
+     */
+    startAnimationLoop() {
+        const animate = () => {
+            this.dashOffset = (this.dashOffset + 0.5) % 16;
+            
+            if (this.hoveredLabel) {
+                this.requestRedraw();
+            }
+            
+            this.animationFrameId = requestAnimationFrame(animate);
+        };
+        
+        this.animationFrameId = requestAnimationFrame(animate);
+    }
+    
+    /**
+     * 停止动画循环
+     */
+    stopAnimationLoop() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+    }
+    
+    /**
+     * 查找光标下的标签
+     * @param {number} x - 归一化的X坐标
+     * @param {number} y - 归一化的Y坐标
+     * @returns {Object|null} 找到的标签或null
+     */
+    findLabelUnderCursor(x, y) {
+        if (!this.initialLabels || this.initialLabels.length === 0) return null;
+        
+        // 从后向前遍历（后添加的标签优先）
+        for (let i = this.initialLabels.length - 1; i >= 0; i--) {
+            const label = this.initialLabels[i];
+            
+            // 跳过不可见的标签
+            if (label.visible === false) continue;
+            
+            if (label.isSegmentation) {
+                // 检查点是否在多边形内
+                if (this.isPointInPolygon(x, y, label.points)) {
+                    return label;
+                }
+            } else {
+                // 检查点是否在边界框内
+                const halfWidth = label.width / 2;
+                const halfHeight = label.height / 2;
+                
+                if (x >= (label.x - halfWidth) && 
+                    x <= (label.x + halfWidth) && 
+                    y >= (label.y - halfHeight) && 
+                    y <= (label.y + halfHeight)) {
+                    return label;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 判断点是否在多边形内
+     * @param {number} x - 点的X坐标
+     * @param {number} y - 点的Y坐标
+     * @param {Array<number>} points - 多边形点的数组[x1,y1,x2,y2,...]
+     * @returns {boolean} 点是否在多边形内
+     */
+    isPointInPolygon(x, y, points) {
+        let inside = false;
+        
+        for (let i = 0, j = points.length - 2; i < points.length; i += 2) {
+            const xi = points[i];
+            const yi = points[i + 1];
+            const xj = points[j];
+            const yj = points[j + 1];
+            
+            const intersect = ((yi > y) !== (yj > y)) && 
+                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                
+            if (intersect) inside = !inside;
+            
+            j = i;
+        }
+        
+        return inside;
+    }
+    
+    /**
+     * 更新标签高亮状态
+     */
+    updateLabelHighlight() {
+        // Delegate to CanvasManager's updateLabelHighlight if it exists
+        if (window.canvasManager && typeof window.canvasManager.updateLabelHighlight === 'function') {
+            window.canvasManager.updateLabelHighlight();
+        }
+    }
+    
+    /**
+     * 将当前标签状态推入历史记录
+     */
     pushHistory() {
-        // Get or initialize history for current image
+        if (!this.currentPath) return;
+        
+        // 确保该图像的历史记录存在
         if (!this.imageHistories.has(this.currentPath)) {
             this.imageHistories.set(this.currentPath, {
                 history: [],
-                historyIndex: -1,
-                lastSavedIndex: -1
+                historyIndex: -1
             });
         }
         
-        const currentHistory = this.imageHistories.get(this.currentPath);
+        const imageHistory = this.imageHistories.get(this.currentPath);
         
-        // Remove any future history if we're in the middle of the history stack
-        if (currentHistory.historyIndex < currentHistory.history.length - 1) {
-            currentHistory.history = currentHistory.history.slice(0, currentHistory.historyIndex + 1);
+        // 创建当前标签状态的深拷贝
+        const currentState = JSON.parse(JSON.stringify(this.initialLabels || []));
+        
+        // 如果当前索引不是历史记录的最后一项，则移除之后的历史记录
+        if (imageHistory.historyIndex < imageHistory.history.length - 1) {
+            imageHistory.history = imageHistory.history.slice(0, imageHistory.historyIndex + 1);
         }
         
-        // Clone current labels for history
-        const labelsCopy = JSON.parse(JSON.stringify(this.initialLabels));
+        // 添加当前状态到历史记录
+        imageHistory.history.push(currentState);
+        imageHistory.historyIndex = imageHistory.history.length - 1;
         
-        // Add to history
-        currentHistory.history.push(labelsCopy);
+        // 标记为有未保存的更改
+        this.hasUnsavedChanges = true;
         
-        // Limit history size
-        if (currentHistory.history.length > this.maxHistorySize) {
-            currentHistory.history.shift();
-            currentHistory.lastSavedIndex = Math.max(-1, currentHistory.lastSavedIndex - 1);
-        }
-        
-        // Update index
-        currentHistory.historyIndex = currentHistory.history.length - 1;
-        
-        // Update the state's imageHistories
-        this.imageHistories.set(this.currentPath, currentHistory);
-        
-        // Check if we have unsaved changes
-        this.checkUnsavedChanges();
-        
-        // Update save button state if UI manager exists
+        // 如果uiManager存在，则更新保存按钮状态
         if (window.uiManager) {
             window.uiManager.updateSaveButtonState();
         }
     }
     
+    /**
+     * 撤销上一步操作
+     * @returns {boolean} 是否成功撤销
+     */
     undo() {
-        if (!this.imageHistories.has(this.currentPath)) {
-            return false;
-        }
+        if (!this.currentPath) return false;
         
-        const currentHistory = this.imageHistories.get(this.currentPath);
+        // 确保有历史记录
+        if (!this.imageHistories.has(this.currentPath)) return false;
         
-        if (currentHistory.historyIndex > 0) {
-            currentHistory.historyIndex--;
-            this.initialLabels = JSON.parse(JSON.stringify(currentHistory.history[currentHistory.historyIndex]));
+        const imageHistory = this.imageHistories.get(this.currentPath);
+        
+        // 检查是否可以撤销
+        if (imageHistory.historyIndex <= 0) return false;
+        
+        // 移动到上一个历史记录
+        imageHistory.historyIndex--;
+        
+        // 恢复状态
+        this.initialLabels = JSON.parse(
+            JSON.stringify(imageHistory.history[imageHistory.historyIndex])
+        );
             
-            // Update the state's imageHistories
-            this.imageHistories.set(this.currentPath, currentHistory);
-            
-            // Check if we have unsaved changes
-            this.checkUnsavedChanges();
-            
-            // Update save button state if UI manager exists
-            if (window.uiManager) {
-                window.uiManager.updateSaveButtonState();
-            }
+        // 标记为有未保存的更改
+        this.hasUnsavedChanges = true;
             
             return true;
         }
-        return false;
+    
+    /**
+     * 重做上一步撤销的操作
+     * @returns {boolean} 是否成功重做
+     */
+    redo() {
+        if (!this.currentPath) return false;
+    
+        // 确保有历史记录
+        if (!this.imageHistories.has(this.currentPath)) return false;
+        
+        const imageHistory = this.imageHistories.get(this.currentPath);
+        
+        // 检查是否可以重做
+        if (imageHistory.historyIndex >= imageHistory.history.length - 1) return false;
+        
+        // 移动到下一个历史记录
+        imageHistory.historyIndex++;
+        
+        // 恢复状态
+        this.initialLabels = JSON.parse(
+            JSON.stringify(imageHistory.history[imageHistory.historyIndex])
+        );
+        
+        // 标记为有未保存的更改
+        this.hasUnsavedChanges = true;
+        
+        return true;
     }
     
-    // Mark changes as saved
+    /**
+     * 标记当前状态为已保存
+     */
     markChangesSaved() {
-        if (this.imageHistories.has(this.currentPath)) {
-            const currentHistory = this.imageHistories.get(this.currentPath);
-            currentHistory.lastSavedIndex = currentHistory.historyIndex;
-            this.imageHistories.set(this.currentPath, currentHistory);
-        }
-        
         this.hasUnsavedChanges = false;
+        this.savedState = JSON.stringify(this.initialLabels || []);
         
-        // Update save button state if UI manager exists
+        // 如果uiManager存在，则更新保存按钮状态
         if (window.uiManager) {
             window.uiManager.updateSaveButtonState();
         }
     }
     
-    // Check if there are unsaved changes
+    /**
+     * 检查是否有未保存的更改
+     */
     checkUnsavedChanges() {
-        if (!this.imageHistories.has(this.currentPath)) {
-            this.hasUnsavedChanges = false;
+        if (!this.savedState) {
+            this.hasUnsavedChanges = this.initialLabels.length > 0;
             return;
         }
         
-        const currentHistory = this.imageHistories.get(this.currentPath);
-        this.hasUnsavedChanges = currentHistory.historyIndex !== currentHistory.lastSavedIndex;
-    }
-    
-    // Request animation frame for efficient rendering
-    requestRedraw() {
-        this.needsRedraw = true;
-        if (!this.animationFrameId) {
-            this.animationFrameId = requestAnimationFrame(() => {
-                if (this.needsRedraw) {
-                    this.needsRedraw = false;
-                    this.animationFrameId = null;
-                    this.dashOffset = (this.dashOffset + 2) % 40; // 控制虚线流动速度
-                    if (this.onRedrawRequested) {
-                        this.onRedrawRequested();
-                    }
-                }
-            });
-        }
-    }
-    
-    // Throttle function for mousemove events
-    shouldUpdate() {
-        const now = performance.now();
-        if (now - this.lastRenderTime >= this.throttleDelay) {
-            this.lastRenderTime = now;
-            return true;
-        }
-        return false;
-    }
-
-    // Add method to check if point is inside box
-    isPointInBox(x, y, label) {
-        if (label.isSegmentation) return false;
+        const currentState = JSON.stringify(this.initialLabels || []);
+        this.hasUnsavedChanges = this.savedState !== currentState;
         
-        const boxLeft = (label.x - label.width/2);
-        const boxRight = (label.x + label.width/2);
-        const boxTop = (label.y - label.height/2);
-        const boxBottom = (label.y + label.height/2);
-        
-        return x >= boxLeft && x <= boxRight && y >= boxTop && y <= boxBottom;
-    }
-
-    // Add method to check if point is near polygon line
-    isPointNearPolygon(x, y, label) {
-        if (!label.isSegmentation || !label.points) return false;
-        
-        const threshold = CONFIG.CLOSE_POINT_THRESHOLD;
-        
-        for (let i = 0; i < label.points.length; i += 2) {
-            const x1 = label.points[i];
-            const y1 = label.points[i + 1];
-            const x2 = label.points[(i + 2) % label.points.length];
-            const y2 = label.points[(i + 3) % label.points.length];
-            
-            // Calculate distance from point to line segment
-            const A = x - x1;
-            const B = y - y1;
-            const C = x2 - x1;
-            const D = y2 - y1;
-            
-            const dot = A * C + B * D;
-            const len_sq = C * C + D * D;
-            
-            let param = -1;
-            if (len_sq != 0) param = dot / len_sq;
-            
-            let xx, yy;
-            
-            if (param < 0) {
-                xx = x1;
-                yy = y1;
-            } else if (param > 1) {
-                xx = x2;
-                yy = y2;
-            } else {
-                xx = x1 + param * C;
-                yy = y1 + param * D;
-            }
-            
-            const dx = x - xx;
-            const dy = y - yy;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < threshold) return true;
-        }
-        return false;
-    }
-
-    // Add method to find label under cursor
-    findLabelUnderCursor(x, y) {
-        if (!this.initialLabels) return null;
-        
-        for (let i = this.initialLabels.length - 1; i >= 0; i--) {
-            const label = this.initialLabels[i];
-            if (label.visible === false) continue;
-            
-            if (label.isSegmentation && label.points && label.points.length >= 6) {
-                if (this.isPointInPolygon(x, y, label) || this.isPointNearPolygon(x, y, label)) return label;
-            } else if (!label.isSegmentation) {
-                if (this.isPointInBox(x, y, label)) return label;
-            }
-        }
-        return null;
-    }
-
-    // Update method to update label highlight in sidebar
-    updateLabelHighlight() {
-        const labelItems = document.querySelectorAll('.label-item');
-        let hasHighlight = false;
-        labelItems.forEach((item, index) => {
-            if (this.hoveredLabel === this.initialLabels[index]) {
-                item.classList.add('highlighted');
-                hasHighlight = true;
-            } else {
-                item.classList.remove('highlighted');
-            }
-        });
-        if (hasHighlight) {
-            this.startDashAnimation();
-        } else {
-            this.stopDashAnimation();
-        }
-    }
-
-    // 判断点是否在多边形内部（射线法）
-    isPointInPolygon(x, y, label) {
-        if (!label.isSegmentation || !label.points || label.points.length < 6) return false;
-        let inside = false;
-        const n = label.points.length / 2;
-        for (let i = 0, j = n - 1; i < n; j = i++) {
-            const xi = label.points[i * 2], yi = label.points[i * 2 + 1];
-            const xj = label.points[j * 2], yj = label.points[j * 2 + 1];
-            const intersect = ((yi > y) !== (yj > y)) &&
-                (x < (xj - xi) * (y - yi) / (yj - yi + 1e-10) + xi);
-            if (intersect) inside = !inside;
-        }
-        return inside;
-    }
-
-    // 新增方法：高亮时自动动画
-    startDashAnimation() {
-        if (this.dashAnimationId) return;
-        const animate = () => {
-            if (this.hoveredLabel) {
-                this.requestRedraw();
-                this.dashAnimationId = requestAnimationFrame(animate);
-            } else {
-                this.stopDashAnimation();
-            }
-        };
-        this.dashAnimationId = requestAnimationFrame(animate);
-    }
-
-    stopDashAnimation() {
-        if (this.dashAnimationId) {
-            cancelAnimationFrame(this.dashAnimationId);
-            this.dashAnimationId = null;
+        // 如果uiManager存在，则更新保存按钮状态
+        if (window.uiManager) {
+            window.uiManager.updateSaveButtonState();
         }
     }
 } 
