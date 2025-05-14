@@ -294,9 +294,21 @@ export class UIManager {
      * @param {string} path - 图像路径
      */
     loadImage(path) {
+        // 检查是否是不同的图像路径
+        const isNewImage = path !== this.state.currentPath;
+        
+        // 通知扩展加载图像
         this.state.vscode.postMessage({ command: 'loadImage', path: path });
+        
+        // 隐藏搜索结果
         this.elements.searchResults.style.display = 'none';
         this.state.selectedSearchIndex = -1;
+        
+        // 如果是新图像，则需要确保在handleImageUpdate中重置保存状态
+        if (isNewImage) {
+            console.log('Loading new image, path will change from:', 
+                this.state.currentPath, 'to:', path);
+        }
     }
 
     /**
@@ -499,9 +511,15 @@ export class UIManager {
         // 更新UI
         document.getElementById('imageInfo').textContent = message.imageInfo || '';
         
+        // 保存旧路径，用于检测图片变更
+        const oldPath = this.state.currentPath;
+        
         // 保存当前图片路径
         this.state.currentPath = message.currentPath || '';
         this.state.initialLabels = message.labels || [];
+        
+        // 检测是否切换了图片
+        const isNewImage = oldPath !== this.state.currentPath;
         
         // 更新搜索框显示当前图片路径
         if (this.elements.searchInput) {
@@ -525,8 +543,15 @@ export class UIManager {
                 this.state.initialLabels = JSON.parse(
                     JSON.stringify(currentHistory.history[currentHistory.historyIndex])
                 );
-                // 检查当前状态是否与保存的状态匹配
-                this.state.checkUnsavedChanges();
+                
+                // 如果是切换到新图片，需要重置savedState
+                if (isNewImage) {
+                    // 将当前状态标记为已保存状态
+                    this.state.resetSavedState();
+                } else {
+                    // 检查当前状态是否与保存的状态匹配
+                    this.state.checkUnsavedChanges();
+                }
                 this.updateSaveButtonState();
             }
         }
