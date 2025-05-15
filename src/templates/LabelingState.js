@@ -49,7 +49,7 @@ export class LabelingState {
         this.imageRect = null;
     
         // 绘图状态
-        this.currentMode = 'box';  // 'box' or 'seg'
+        this.currentMode = 'box';  // 'box', 'seg', 或 'pose'
         this.isDrawing = false;
         this.startX = 0;
         this.startY = 0;
@@ -65,9 +65,17 @@ export class LabelingState {
         this.isDrawingPolygon = false;
         this.polygonPoints = [];
         
+        // 关键点绘制状态
+        this.isPoseDrawing = false;     // 是否正在绘制关键点
+        this.poseDrawingStep = 0;       // 0 = 绘制box, 1+ = 绘制关键点
+        this.currentPoseLabel = null;   // 当前正在绘制的关键点标签
+        this.keypointCount = 0;         // 需要标注的关键点数量
+        this.keypointValueCount = 3;    // 每个关键点有几个值(x,y,v)
+        
         // 动画状态
         this.dashOffset = 0;
         this.animationFrameId = null;
+        this.dashAnimationActive = false;
         
         // 历史记录状态
         this.imageHistories = new Map();
@@ -152,6 +160,17 @@ export class LabelingState {
             if (label.isSegmentation) {
                 // 检查点是否在多边形内
                 if (this.isPointInPolygon(x, y, label.points)) {
+                    return label;
+                }
+            } else if (label.isPose) {
+                // 检查点是否在边界框内
+                const halfWidth = label.width / 2;
+                const halfHeight = label.height / 2;
+                
+                if (x >= (label.x - halfWidth) && 
+                    x <= (label.x + halfWidth) && 
+                    y >= (label.y - halfHeight) && 
+                    y <= (label.y + halfHeight)) {
                     return label;
                 }
             } else {

@@ -21,6 +21,7 @@ export class UIManager {
             modeControl: document.getElementById('modeControl'),
             boxModeButton: document.getElementById('boxMode'),
             segModeButton: document.getElementById('segMode'),
+            poseModeButton: document.getElementById('poseMode'),
             toggleLabels: document.getElementById('toggleLabels'),
             searchInput: document.getElementById('imageSearch'),
             searchResults: document.getElementById('searchResults'),
@@ -145,17 +146,34 @@ export class UIManager {
         const button = e.currentTarget;
         const mode = button.dataset.mode;
         
-        // 更新UI
-        this.elements.modeControl.querySelectorAll('.segmented-button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        button.classList.add('active');
+        // 清除所有模式按钮的活动状态并设置当前选择的按钮
+        this.resetModeButtons(mode);
         
         // 更新状态
         this.state.currentMode = mode;
         this.state.polygonPoints = [];
         this.state.isDrawingPolygon = false;
         this.state.requestRedraw();
+    }
+    
+    /**
+     * 重置所有模式按钮，只保留指定模式的活动状态
+     * @param {string} activeMode - 要保持活动状态的模式
+     */
+    resetModeButtons(activeMode) {
+        // 移除所有按钮的活动状态
+        this.elements.modeControl.querySelectorAll('.segmented-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // 设置指定模式的按钮为活动状态
+        if (activeMode === 'box') {
+            this.elements.boxModeButton.classList.add('active');
+        } else if (activeMode === 'seg') {
+            this.elements.segModeButton.classList.add('active');
+        } else if (activeMode === 'pose') {
+            this.elements.poseModeButton?.classList.add('active');
+        }
     }
     
     /**
@@ -631,19 +649,23 @@ export class UIManager {
         if (!this.state.initialLabels || this.state.initialLabels.length === 0) {
             // 如果没有标签，默认使用box模式
             this.state.currentMode = 'box';
-            this.elements.boxModeButton.classList.add('active');
-            this.elements.segModeButton.classList.remove('active');
+            this.resetModeButtons('box');
             return;
         }
 
         // 检查最后一个标签的类型
         const lastLabel = this.state.initialLabels[this.state.initialLabels.length - 1];
-        const mode = lastLabel.isSegmentation ? 'seg' : 'box';
+        let mode = 'box'; // 默认为box模式
+        
+        if (lastLabel.isSegmentation) {
+            mode = 'seg';
+        } else if (lastLabel.isPose) {
+            mode = 'pose';
+        }
         
         // 更新状态和UI
         this.state.currentMode = mode;
-        this.elements.boxModeButton.classList.toggle('active', mode === 'box');
-        this.elements.segModeButton.classList.toggle('active', mode === 'seg');
+        this.resetModeButtons(mode);
     }
 
     /**
