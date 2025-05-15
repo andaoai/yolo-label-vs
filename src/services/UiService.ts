@@ -107,13 +107,13 @@ export class UiService {
         const { classNames, initialImageData, initialLabels, imageInfoText, webview, currentPath, kptShape, flipIdx } = options;
         
         // 获取CSS和JS文件的路径
-        const cssPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'templates', 'labeling-panel.css');
-        const jsPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'templates', 'labeling-panel.js');
+        const cssPath = vscode.Uri.joinPath(this._extensionUri, 'out', 'templates', 'labeling-panel.css');
+        const jsPath = vscode.Uri.joinPath(this._extensionUri, 'out', 'templates', 'labeling-panel.js');
         const cssSrc = webview.asWebviewUri(cssPath);
         const jsSrc = webview.asWebviewUri(jsPath);
 
         // 读取HTML模板
-        const templatePath = path.join(this._extensionUri.fsPath, 'src', 'templates', 'labeling-panel.html');
+        const templatePath = path.join(this._extensionUri.fsPath, 'out', 'templates', 'labeling-panel.html');
         let html = await fs.promises.readFile(templatePath, 'utf8');
 
         // 注入数据到window对象
