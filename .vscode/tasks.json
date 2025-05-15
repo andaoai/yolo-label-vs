@@ -14,6 +14,25 @@
 				"isDefault": true
 			},
 			"label": "tsc: build - tsconfig.json"
+		},
+		{
+			"type": "npm",
+			"script": "copy-templates",
+			"problemMatcher": [],
+			"label": "npm: copy-templates",
+			"detail": "Copy templates from src to out"
+		},
+		{
+			"label": "Build & Copy Templates",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"tsc: build - tsconfig.json",
+				"npm: copy-templates"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
 		}
 	]
 }
