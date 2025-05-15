@@ -55,6 +55,7 @@ export class LabelingState {
         this.startY = 0;
         this.currentMousePos = null;
         this.hoveredLabel = null;
+        this.hoveredPoint = null;  // 当前鼠标悬停的点
         this.lastPanPoint = null;
         this.isPanning = false;
         this.isDragging = false;
@@ -76,6 +77,7 @@ export class LabelingState {
         this.dashOffset = 0;
         this.animationFrameId = null;
         this.dashAnimationActive = false;
+        this.pulsationInterval = null;  // 用于点的闪烁动画
         
         // 历史记录状态
         this.imageHistories = new Map();
