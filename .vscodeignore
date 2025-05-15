@@ -11,8 +11,6 @@ vsc-extension-quickstart.md
 **/.vscode-test.*
 test_label/**
 
-# # 排除node_modules目录，package.json中的依赖会自动处理
-# node_modules/**
 
 # 排除docs目录，只保留图标
 docs/**
