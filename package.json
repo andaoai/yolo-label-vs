@@ -2,7 +2,7 @@
   "name": "yolo-labeling-vs",
   "displayName": "YOLO Labeling",
   "description": "A VS Code extension for YOLO dataset labeling",
-  "version": "0.0.58",
+  "version": "0.0.60",
   "publisher": "andaoai",
   "license": "MIT",
   "icon": "docs/images/icon.png",
@@ -106,11 +106,13 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "compile": "tsc -p ./ && npm run copy-templates",
+    "watch": "tsc -watch -p ./ & npm run watch-templates",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "copy-templates": "node -e \"const fs=require('fs'); const path=require('path'); const srcDir='src/templates'; const destDir='out/templates'; if(!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive: true}); const copyDir=(src,dest)=>{if(!fs.existsSync(dest)) fs.mkdirSync(dest, {recursive: true}); const entries=fs.readdirSync(src, {withFileTypes: true}); for(const entry of entries){const srcPath=path.join(src, entry.name); const destPath=path.join(dest, entry.name); if(entry.isDirectory()) copyDir(srcPath, destPath); else fs.copyFileSync(srcPath, destPath);}}; copyDir(srcDir, destDir);\"",
+    "watch-templates": "node -e \"const fs=require('fs'); const path=require('path'); const chokidar=require('chokidar'); const srcDir='src/templates'; const destDir='out/templates'; if(!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive: true}); const watcher=chokidar.watch(srcDir); watcher.on('all', (event, filepath) => {if(fs.existsSync(filepath) && !fs.lstatSync(filepath).isDirectory()) {const relativePath=path.relative(srcDir, filepath); const destPath=path.join(destDir, relativePath); fs.mkdirSync(path.dirname(destPath), {recursive: true}); fs.copyFileSync(filepath, destPath); console.log(`Copied: ${filepath} -> ${destPath}`)}});\""
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
@@ -121,6 +123,7 @@
     "@typescript-eslint/parser": "^8.28.0",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
+    "chokidar": "^3.5.3",
     "eslint": "^9.23.0",
     "svg2png-cli": "^1.1.1",
     "svgexport": "^0.4.2",
