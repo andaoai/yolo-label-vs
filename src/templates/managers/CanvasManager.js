@@ -9,6 +9,7 @@ export class CanvasManager {
      * @param {LabelingState} state - 应用状态对象
      */
     constructor(state) {
+        // 保存状态引用
         this.state = state;
         
         // 获取DOM元素
@@ -81,6 +82,12 @@ export class CanvasManager {
         window.removeEventListener('resize', this.handleResize);
         window.removeEventListener('keydown', this.handleKeyDown);
         window.removeEventListener('keyup', this.handleKeyUp);
+        
+        // 清理脉动动画
+        if (this.state.pulsationInterval) {
+            clearInterval(this.state.pulsationInterval);
+            this.state.pulsationInterval = null;
+        }
     }
 
     /**
@@ -281,10 +288,12 @@ export class CanvasManager {
         if (!this.state.shouldUpdate()) return;
         this.updateRects();
         this.updateCursorStyle(e);
+        
         if (this.state.isPanning) {
             this.handlePanning(e);
             return;
         }
+        
         const pos = this.getMousePos(e);
         const normalizedX = pos.x / this.state.originalImageWidth;
         const normalizedY = pos.y / this.state.originalImageHeight;
@@ -299,18 +308,34 @@ export class CanvasManager {
             return;
         }
 
-        // 处理标签悬停逻辑 - 无论是否按住 Ctrl 键都允许悬停和高亮
-        if (!this.state.isDrawing && !this.state.isDrawingPolygon) {
-            // 如果按住Ctrl键，检查是否有点在光标下
-            if (e.ctrlKey) {
-                const pointUnderCursor = this.findPointUnderCursor(normalizedX, normalizedY);
-                if (pointUnderCursor) {
-                    this.canvas.style.cursor = 'move';
-                    this.state.requestRedraw();
-                    return;
-                }
+        // 每次鼠标移动时检查点位悬停，不仅在Ctrl键按下时
+        const pointUnderCursor = this.findPointUnderCursor(normalizedX, normalizedY);
+        
+        // 如果鼠标位置变化或新的点被悬停，请求重绘
+        if (pointUnderCursor || this.state.hoveredPoint) {
+            if (
+                (pointUnderCursor && !this.state.hoveredPoint) || 
+                (!pointUnderCursor && this.state.hoveredPoint) ||
+                (pointUnderCursor && this.state.hoveredPoint && 
+                 (pointUnderCursor.label !== this.state.hoveredPoint.label || 
+                  pointUnderCursor.type !== this.state.hoveredPoint.type || 
+                  pointUnderCursor.pointIndex !== this.state.hoveredPoint.pointIndex ||
+                  (pointUnderCursor.type === 'box' && pointUnderCursor.corner !== this.state.hoveredPoint.corner)))
+            ) {
+                // 更新悬停的点
+                this.state.hoveredPoint = pointUnderCursor;
+                // 请求重绘
+                this.state.requestRedraw();
             }
-            
+        }
+        
+        // 如果按住Ctrl键，设置移动光标
+        if (e.ctrlKey && pointUnderCursor) {
+            this.canvas.style.cursor = 'move';
+        }
+
+        // 处理标签悬停逻辑
+        if (!this.state.isDrawing && !this.state.isDrawingPolygon) {
             const label = this.state.findLabelUnderCursor(normalizedX, normalizedY);
             if (this.state.hoveredLabel !== label) {
                 this.state.hoveredLabel = label;
@@ -331,7 +356,9 @@ export class CanvasManager {
             }
             
             // 只有按住 Ctrl 键时才显示移动光标和允许拖动
-            this.canvas.style.cursor = (e.ctrlKey && label) ? 'move' : 'default';
+            if (!pointUnderCursor) {
+                this.canvas.style.cursor = (e.ctrlKey && label) ? 'move' : 'default';
+            }
         }
 
         // 只有Ctrl+拖动才允许移动
@@ -374,8 +401,35 @@ export class CanvasManager {
             this.state.requestRedraw();
             this.state.hasUnsavedChanges = true;
         }
+        
+        // 驱动点的闪烁效果 - 无论鼠标是否移动，都定期重绘
+        if (!this.state.pulsationInterval && 
+            (this.state.hoveredPoint || 
+             this.state.initialLabels.some(l => l.isPose || l.isSegmentation))) {
+            // 启动脉动效果动画
+            this.state.pulsationInterval = setInterval(() => {
+                if (this.state.shouldUpdate()) {
+                    this.state.requestRedraw();
+                } else {
+                    // 如果不需要更新，清除间隔
+                    clearInterval(this.state.pulsationInterval);
+                    this.state.pulsationInterval = null;
+                }
+            }, 50); // 50ms间隔产生流畅的动画
+        }
+        
+        // 如果在多边形绘制过程中，更新预览
+        if (this.state.isDrawingPolygon && this.state.polygonPoints.length >= 2) {
+            this.state.requestRedraw();
+        }
+        
+        // 如果在预览框绘制过程中
+        if (this.state.isDrawing) {
+            this.state.requestRedraw();
+        }
+        
+        // 更新坐标显示
         this.updateCoordinateDisplay(normalizedX, normalizedY);
-        this.state.requestRedraw();
     }
     
     /**
@@ -1053,6 +1107,9 @@ export class CanvasManager {
         this.ctx.setLineDash([]);
         this.ctx.lineDashOffset = 0;
         
+        // 绘制分割多边形的点
+        this.drawLabelPoints(label, 'segmentation', color, isHighlighted);
+        
         // 如果启用，则绘制标签文本
         if (this.state.showLabels && label.points.length >= 2) {
             const labelX = label.points[0] * this.state.originalImageWidth;
@@ -1094,6 +1151,9 @@ export class CanvasManager {
         this.ctx.strokeRect(x - width/2, y - height/2, width, height);
         this.ctx.setLineDash([]);
         this.ctx.lineDashOffset = 0;
+        
+        // 绘制边界框的四个点
+        this.drawLabelPoints(label, 'box', color, isHighlighted);
         
         // 如果启用，则绘制标签文本
         if (this.state.showLabels) {
@@ -1674,23 +1734,31 @@ export class CanvasManager {
 
     /**
      * 绘制关键点预览
-     * @param {number} x - X坐标
-     * @param {number} y - Y坐标
+     * @param {number} x - X坐标（像素）
+     * @param {number} y - Y坐标（像素）
      */
     drawKeypointPreview(x, y) {
         const radius = 5 / this.state.scale;
         
+        // 获取当前标签颜色
+        const colorIndex = this.state.currentLabel % CONFIG.COLORS.length;
+        const color = CONFIG.COLORS[colorIndex];
+        const darkerColor = this.getDarkerColor(color);
+        
         // 绘制外圈
         this.ctx.beginPath();
         this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
-        this.ctx.fillStyle = 'rgba(66, 133, 244, 0.3)'; // 半透明蓝色
+        this.ctx.fillStyle = `${color}4D`; // 添加30%透明度 (4D in hex = ~30%)
         this.ctx.fill();
         
         // 绘制内圈
         this.ctx.beginPath();
         this.ctx.arc(x, y, radius / 2, 0, 2 * Math.PI);
-        this.ctx.fillStyle = 'rgba(66, 133, 244, 0.8)'; // 不太透明蓝色
+        this.ctx.fillStyle = color; // 使用标签原色
         this.ctx.fill();
+        this.ctx.strokeStyle = darkerColor; // 使用更深色的标签颜色作为边框
+        this.ctx.lineWidth = 1 / this.state.scale;
+        this.ctx.stroke();
     }
 
     /**
@@ -1702,6 +1770,11 @@ export class CanvasManager {
         const keypoints = this.state.currentPoseLabel.keypoints;
         const valuePerPoint = this.state.keypointValueCount;
         const numKeypoints = this.state.poseDrawingStep - 1; // 到目前为止已标注的点数量
+        
+        // 获取标签颜色
+        const colorIndex = this.state.currentPoseLabel.class % CONFIG.COLORS.length;
+        const color = CONFIG.COLORS[colorIndex];
+        const darkerColor = this.getDarkerColor(color);
         
         // 绘制已标注的点
         for (let i = 0; i < numKeypoints; i++) {
@@ -1721,30 +1794,30 @@ export class CanvasManager {
             const radius = 5 / this.state.scale;
             
             if (visibility === 1) {
-                // 可见点 - 实心圆
+                // 可见点 - 使用标签颜色
                 this.ctx.beginPath();
                 this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
-                this.ctx.fillStyle = '#4CAF50'; // 绿色
+                this.ctx.fillStyle = color; // 使用标签颜色
                 this.ctx.fill();
-                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.strokeStyle = darkerColor; // 使用更深色的标签颜色作为边框
                 this.ctx.lineWidth = 1 / this.state.scale;
                 this.ctx.stroke();
             } else if (visibility === 2) {
-                // 被遮挡点 - 半透明圆
+                // 被遮挡点 - 使用标签颜色的半透明版本
                 this.ctx.beginPath();
                 this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
-                this.ctx.fillStyle = 'rgba(244, 67, 54, 0.7)'; // 半透明红色
+                this.ctx.fillStyle = `${color}B3`; // 添加70%透明度 (B3 in hex = ~70%)
                 this.ctx.fill();
-                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.strokeStyle = darkerColor; // 使用更深色的标签颜色作为边框
                 this.ctx.lineWidth = 1 / this.state.scale;
                 this.ctx.stroke();
             } else {
-                // 不可见点 - 带X的圆
+                // 不可见点 - 带X的半透明深灰色圆
                 this.ctx.beginPath();
                 this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; // 半透明黑色
+                this.ctx.fillStyle = 'rgba(80, 80, 80, 0.5)'; // 半透明深灰色
                 this.ctx.fill();
-                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.strokeStyle = darkerColor; // 使用更深色的标签颜色作为边框
                 this.ctx.lineWidth = 1 / this.state.scale;
                 this.ctx.stroke();
                 
@@ -1799,49 +1872,8 @@ export class CanvasManager {
         // 如果没有关键点数据，则直接返回
         if (!label.keypoints || !label.keypointShape) return;
         
-        const numKeypoints = label.keypointShape[0];
-        const valuePerPoint = label.keypointShape[1]; // 通常是2或3
-        
-        // 设置关键点大小和线宽（基于缩放）
-        const keypointRadius = (isHighlighted ? 5 : 3) / this.state.scale;
-        this.ctx.lineWidth = (isHighlighted ? 2 : 1) / this.state.scale;
-        
-        // 遍历所有关键点
-        for (let i = 0; i < numKeypoints; i++) {
-            const baseIndex = i * valuePerPoint;
-            
-            // 获取关键点坐标和可见性
-            const kpX = label.keypoints[baseIndex] * this.state.originalImageWidth;
-            const kpY = label.keypoints[baseIndex + 1] * this.state.originalImageHeight;
-            
-            // 如果有可见性值（valuePerPoint=3），则检查可见性
-            let visibility = 1; // 默认可见
-            if (valuePerPoint >= 3) {
-                visibility = label.keypoints[baseIndex + 2];
-                // 如果可见性为0，跳过这个关键点
-                if (visibility === 0) continue;
-            }
-            
-            // 绘制关键点
-            this.ctx.beginPath();
-            this.ctx.arc(kpX, kpY, keypointRadius, 0, 2 * Math.PI);
-            
-            // 根据可见性设置颜色
-            if (valuePerPoint >= 3 && visibility === 1) {
-                // 完全可见
-                this.ctx.fillStyle = color;
-            } else if (valuePerPoint >= 3 && visibility === 2) {
-                // 被遮挡但可见
-                this.ctx.fillStyle = `${color}80`; // 半透明
-            } else {
-                // 默认颜色
-                this.ctx.fillStyle = color;
-            }
-            
-            this.ctx.fill();
-            this.ctx.strokeStyle = '#ffffff';
-            this.ctx.stroke();
-        }
+        // 绘制姿态关键点
+        this.drawLabelPoints(label, 'pose', color, isHighlighted);
         
         // 如果可见，绘制标签文本
         if (this.state.showLabels) {
@@ -2174,6 +2206,14 @@ export class CanvasManager {
         // 绘制高亮效果
         const radius = 6 / this.state.scale;
         
+        // 获取标签颜色
+        const label = selectedPoint.label;
+        const colorIndex = label.class % CONFIG.COLORS.length;
+        const color = CONFIG.COLORS[colorIndex];
+        
+        // 创建更深色版本的标签颜色
+        const darkerColor = this.getDarkerColor(color);
+        
         // 外部高亮圆
         this.ctx.beginPath();
         this.ctx.arc(x, y, radius * 1.5, 0, Math.PI * 2);
@@ -2185,7 +2225,7 @@ export class CanvasManager {
         this.ctx.arc(x, y, radius, 0, Math.PI * 2);
         this.ctx.fillStyle = '#FFFFFF';
         this.ctx.fill();
-        this.ctx.strokeStyle = '#000000';
+        this.ctx.strokeStyle = darkerColor; // 使用更深色版本的标签颜色，而不是黑色
         this.ctx.lineWidth = 1.5 / this.state.scale;
         this.ctx.stroke();
     }
@@ -2305,5 +2345,167 @@ export class CanvasManager {
                 }
             }
         }
+    }
+
+    // 添加新方法：统一绘制标签的点
+    drawLabelPoints(label, type, color, isHighlighted) {
+        // 检查是否有点在鼠标下
+        const hoveredPoint = this.state.currentMousePos ? 
+            this.findPointUnderCursor(this.state.currentMousePos.x, this.state.currentMousePos.y) : null;
+        
+        // 设置点的大小和闪烁效果
+        const basePointRadius = (isHighlighted ? 5 : 3) / this.state.scale;
+        // 闪烁效果 - 使用时间戳创建脉动效果
+        const pulseOffset = Math.sin(Date.now() * 0.01) * 0.2 + 0.8;
+        
+        if (type === 'box') {
+            // 绘制边界框的四个角点
+            const halfWidth = label.width / 2;
+            const halfHeight = label.height / 2;
+            
+            // 左上角
+            let pointX = label.x - halfWidth;
+            let pointY = label.y - halfHeight;
+            this.drawPoint(label, type, 'top-left', pointX, pointY, color, 
+                isHoveredPoint(hoveredPoint, label, type, 'top-left'), basePointRadius, pulseOffset);
+            
+            // 右上角
+            pointX = label.x + halfWidth;
+            pointY = label.y - halfHeight;
+            this.drawPoint(label, type, 'top-right', pointX, pointY, color, 
+                isHoveredPoint(hoveredPoint, label, type, 'top-right'), basePointRadius, pulseOffset);
+            
+            // 左下角
+            pointX = label.x - halfWidth;
+            pointY = label.y + halfHeight;
+            this.drawPoint(label, type, 'bottom-left', pointX, pointY, color, 
+                isHoveredPoint(hoveredPoint, label, type, 'bottom-left'), basePointRadius, pulseOffset);
+            
+            // 右下角
+            pointX = label.x + halfWidth;
+            pointY = label.y + halfHeight;
+            this.drawPoint(label, type, 'bottom-right', pointX, pointY, color, 
+                isHoveredPoint(hoveredPoint, label, type, 'bottom-right'), basePointRadius, pulseOffset);
+        } 
+        else if (type === 'segmentation') {
+            // 绘制分割多边形的所有点
+            for (let i = 0; i < label.points.length; i += 2) {
+                const pointX = label.points[i];
+                const pointY = label.points[i + 1];
+                this.drawPoint(label, type, i, pointX, pointY, color, 
+                    isHoveredPoint(hoveredPoint, label, type, i), basePointRadius, pulseOffset);
+            }
+        } 
+        else if (type === 'pose') {
+            // 绘制姿态关键点
+            const numKeypoints = label.keypointShape[0];
+            const valuePerPoint = label.keypointShape[1]; // 通常是2或3
+            
+            for (let i = 0; i < numKeypoints; i++) {
+                const baseIndex = i * valuePerPoint;
+                
+                // 获取关键点坐标和可见性
+                const pointX = label.keypoints[baseIndex];
+                const pointY = label.keypoints[baseIndex + 1];
+                
+                // 如果有可见性值（valuePerPoint=3），则检查可见性
+                let visibility = 1; // 默认可见
+                if (valuePerPoint >= 3) {
+                    visibility = label.keypoints[baseIndex + 2];
+                    // 如果可见性为0，跳过这个关键点
+                    if (visibility === 0) continue;
+                }
+                
+                // 根据可见性调整透明度
+                let opacity = 1;
+                if (valuePerPoint >= 3 && visibility === 2) {
+                    opacity = 0.5; // 被遮挡但可见
+                }
+                
+                this.drawPoint(label, type, baseIndex, pointX, pointY, color, 
+                    isHoveredPoint(hoveredPoint, label, type, baseIndex), basePointRadius, pulseOffset, opacity);
+            }
+        }
+        
+        // 辅助函数：检查是否是当前悬停的点
+        function isHoveredPoint(hoveredPoint, checkLabel, checkType, checkIndex) {
+            if (!hoveredPoint) return false;
+            
+            if (hoveredPoint.label === checkLabel && hoveredPoint.type === checkType) {
+                if (checkType === 'box') {
+                    return hoveredPoint.corner === checkIndex;
+                } else {
+                    return hoveredPoint.pointIndex === checkIndex;
+                }
+            }
+            return false;
+        }
+    }
+
+    // 添加新方法：绘制单个点
+    drawPoint(label, type, index, x, y, baseColor, isHovered, baseRadius, pulseOffset = 1, opacity = 1) {
+        // 转换为画布坐标
+        const canvasX = x * this.state.originalImageWidth;
+        const canvasY = y * this.state.originalImageHeight;
+        
+        // 计算实际半径（考虑悬停状态和脉动效果）
+        let radius = baseRadius;
+        if (isHovered) {
+            // 悬停时放大并添加脉动效果
+            radius = baseRadius * 1.8 * pulseOffset;
+        }
+        
+        // 为边框创建更深色版本的标签颜色
+        const darkerColor = this.getDarkerColor(baseColor);
+        
+        // 绘制点的外圈（使用更深色的标签颜色作为边框）
+        this.ctx.beginPath();
+        this.ctx.arc(canvasX, canvasY, radius * 1.2, 0, 2 * Math.PI);
+        this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.8})`;
+        this.ctx.fill();
+        
+        // 绘制点的内圈（使用标签颜色）
+        this.ctx.beginPath();
+        this.ctx.arc(canvasX, canvasY, radius, 0, 2 * Math.PI);
+        
+        // 设置填充颜色（根据悬停状态调整）
+        if (isHovered) {
+            // 悬停时使用明亮的颜色
+            this.ctx.fillStyle = baseColor;
+        } else {
+            // 非悬停时使用半透明颜色
+            this.ctx.fillStyle = `${baseColor}${Math.floor(opacity * 255).toString(16).padStart(2, '0')}`;
+        }
+        
+        this.ctx.fill();
+        
+        // 为点添加边框，使用深色版本的标签颜色而不是黑色
+        this.ctx.strokeStyle = isHovered ? '#ffffff' : darkerColor;
+        this.ctx.lineWidth = (isHovered ? 2 : 1) / this.state.scale;
+        this.ctx.stroke();
+    }
+
+    // 添加辅助方法：获取颜色的深色版本
+    getDarkerColor(hexColor) {
+        // 移除可能的 # 前缀
+        const color = hexColor.replace('#', '');
+        
+        // 确保我们有一个有效的颜色
+        if (!/^[0-9A-Fa-f]{6}$/.test(color)) {
+            return '#000000'; // 如果无效则返回黑色
+        }
+        
+        // 解析RGB通道
+        const r = parseInt(color.substr(0, 2), 16);
+        const g = parseInt(color.substr(2, 2), 16);
+        const b = parseInt(color.substr(4, 2), 16);
+        
+        // 将每个通道变暗（乘以0.7）
+        const darkerR = Math.floor(r * 0.7);
+        const darkerG = Math.floor(g * 0.7);
+        const darkerB = Math.floor(b * 0.7);
+        
+        // 转换回十六进制并格式化
+        return `#${darkerR.toString(16).padStart(2, '0')}${darkerG.toString(16).padStart(2, '0')}${darkerB.toString(16).padStart(2, '0')}`;
     }
 } 
