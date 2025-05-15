@@ -74,6 +74,10 @@ export class WebviewMessageHandler {
                 await this.handleOpenTxtInNewTabCommand(openTxtMessage);
                 break;
                 
+            case 'getImagePreviews':
+                await this.handleGetImagePreviewsCommand(message);
+                break;
+                
             default:
                 console.warn(`Unknown command: ${extMessage.command}`);
         }
@@ -324,5 +328,22 @@ export class WebviewMessageHandler {
                 }
             );
         }
+    }
+    
+    /**
+     * 处理批量获取图片缩略图命令
+     */
+    private async handleGetImagePreviewsCommand(message: any): Promise<void> {
+        const paths: string[] = message.paths || [];
+        const previews: string[] = [];
+        for (const p of paths) {
+            try {
+                const thumb = await this._imageService.generateThumbnail(p, 120, 80); // 120x80
+                previews.push(thumb);
+            } catch {
+                previews.push(''); // 失败用空字符串
+            }
+        }
+        this._webview.postMessage({ command: 'imagePreviews', previews });
     }
 } 

@@ -37,7 +37,7 @@ export interface ErrorMessage extends ExtensionToWebviewMessage {
 
 // 从Webview到扩展的消息
 export interface WebviewToExtensionMessage extends WebviewMessage {
-  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab';
+  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab' | 'getImagePreviews';
 }
 
 // 保存标签消息
@@ -106,7 +106,10 @@ export interface BoundingBox {
   width: number;
   height: number;
   isSegmentation?: boolean;
+  isPose?: boolean;
   points?: number[];
+  keypoints?: number[];
+  keypointShape?: number[];
   visible?: boolean;
 }
 

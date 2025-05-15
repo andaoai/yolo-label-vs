@@ -1,7 +1,6 @@
 .vscode/**
 .vscode-test/**
 src/**
-!src/templates/**
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
@@ -12,7 +11,12 @@ vsc-extension-quickstart.md
 **/.vscode-test.*
 test_label/**
 
+
 # 排除docs目录，只保留图标
 docs/**
 !docs/images/icon.png
 !docs/images/icon.svg
+
+# 其他不需要的文件
+.github/**
+CHANGELOG.md

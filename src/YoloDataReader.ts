@@ -13,6 +13,8 @@ export interface YoloConfig {
     val: string | string[];       // 验证图片目录（相对于path）
     test: string | string[];      // 测试图片目录（相对于path）
     names: string[];   // 标签类别名称列表，始终保存为数组形式
+    kpt_shape?: number[];  // 关键点形状，如 [17, 3] 表示17个关键点，每个有3个值（x,y,visible）
+    flip_idx?: number[];  // 关键点翻转索引，用于水平翻转时映射关键点
 }
 
 export class YoloDataReader {
@@ -99,7 +101,9 @@ export class YoloDataReader {
                 train: rawConfig.train || '',
                 val: rawConfig.val || '',
                 test: rawConfig.test || '',
-                names: rawConfig.names
+                names: rawConfig.names,
+                kpt_shape: rawConfig.kpt_shape,
+                flip_idx: rawConfig.flip_idx
             };
 
             this.loadImageFiles();
@@ -238,7 +242,31 @@ export class YoloDataReader {
                             visible: true
                         });
                     }
-                } 
+                }
+                // YOLO-Pose format: class x y width height [keypoints...]
+                // keypoints format: [x1, y1, v1, x2, y2, v2, ...] where v is visibility
+                else if (parts.length > 5 && this.config.kpt_shape && parts.length === 5 + (this.config.kpt_shape[0] * this.config.kpt_shape[1])) {
+                    const classIndex = parseInt(parts[0], 10);
+                    const x = parseFloat(parts[1]);
+                    const y = parseFloat(parts[2]);
+                    const width = parseFloat(parts[3]);
+                    const height = parseFloat(parts[4]);
+                    
+                    // Parse keypoints
+                    const keypoints = parts.slice(5).map(p => parseFloat(p));
+                    
+                    if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height) && 
+                        keypoints.every(p => !isNaN(p))) {
+                        labels.push({
+                            class: classIndex,
+                            x, y, width, height,
+                            isPose: true,
+                            keypoints: keypoints,
+                            keypointShape: this.config.kpt_shape,
+                            visible: true
+                        });
+                    }
+                }
                 // YOLO-Segmentation format: class [points...]
                 else if (parts.length > 5) {
                     const classIndex = parseInt(parts[0], 10);
@@ -282,10 +310,20 @@ export class YoloDataReader {
             for (const label of labels) {
                 if (label.isSegmentation && label.points && label.points.length > 0) {
                     // Segmentation format: class [points...]
-                    content += `${label.class} ${label.points.join(' ')}\n`;
+                    const formattedPoints = label.points.map(p => p.toFixed(6));
+                    content += `${label.class} ${formattedPoints.join(' ')}\n`;
+                } else if (label.isPose && label.keypoints && label.keypoints.length > 0) {
+                    // Pose format: class x y width height [keypoints...]
+                    content += `${label.class} ${label.x.toFixed(6)} ${label.y.toFixed(6)} ${label.width.toFixed(6)} ${label.height.toFixed(6)}`;
+                    
+                    // Add keypoints
+                    for (const kp of label.keypoints) {
+                        content += ` ${kp.toFixed(6)}`;
+                    }
+                    content += '\n';
                 } else {
                     // Standard format: class x y width height
-                    content += `${label.class} ${label.x} ${label.y} ${label.width} ${label.height}\n`;
+                    content += `${label.class} ${label.x.toFixed(6)} ${label.y.toFixed(6)} ${label.width.toFixed(6)} ${label.height.toFixed(6)}\n`;
                 }
             }
             
@@ -332,5 +370,13 @@ export class YoloDataReader {
             return true;
         }
         return false;
+    }
+
+    public getKptShape(): number[] | undefined {
+        return this.config.kpt_shape;
+    }
+
+    public getFlipIdx(): number[] | undefined {
+        return this.config.flip_idx;
     }
 } 

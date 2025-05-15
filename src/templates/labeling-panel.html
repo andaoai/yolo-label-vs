@@ -6,7 +6,7 @@
     <title>YOLO Labeling</title>
     <link rel="stylesheet" href="labeling-panel.css">
 </head>
-<body>
+<body tabindex="0">
     <div class="container">
         <!-- 顶部工具栏 -->
         <header class="toolbar">
@@ -64,6 +64,14 @@
                                 <line x1="16" y1="6" x2="16" y2="22"></line>
                             </svg>
                         </button>
+                        <button id="poseMode" class="segmented-button" data-mode="pose" title="Pose/Keypoint labeling mode">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"></circle>
+                                <line x1="12" y1="8" x2="12" y2="15"></line>
+                                <line x1="8" y1="12" x2="16" y2="12"></line>
+                                <line x1="8" y1="20" x2="16" y2="20"></line>
+                            </svg>
+                        </button>
                     </div>
                 </div>
                 <button class="toggle-button" id="toggleLabels" title="Toggle labels visibility">
@@ -80,6 +88,10 @@
                 </button>
             </div>
         </header>
+        <!-- 进度条 -->
+        <div class="progress-container">
+            <div class="progress-bar" id="imageProgressBar"></div>
+        </div>
         <!-- 主体内容区 -->
         <main class="main-content">
             <!-- 画布区 -->
@@ -89,6 +101,7 @@
             <!-- 侧边栏 -->
             <aside class="sidebar">
                 <section class="sidebar-section">
+                    <div id="currentClassStatus" style="margin-bottom: 10px; font-weight: bold; font-size: 15px;"></div>
                     <div class="label-list" id="labelList"></div>
                 </section>
             </aside>
@@ -123,6 +136,6 @@
             </div>
         </footer>
     </div>
-    <script src="labeling-panel.js"></script>
+    <script type="module" src="labeling-panel.js"></script>
 </body>
 </html> 
