@@ -387,14 +387,12 @@ export class WebviewMessageHandler {
                 await this._inferenceService.updateConfig(newConfig);
             }
             
-            // 如果配置成功，运行测试推理
+            // 如果配置成功，显示成功消息
             if (this._inferenceService.isReady()) {
-                const currentImage = this._yoloReader.getCurrentImage();
-                if (currentImage) {
-                    // 尝试运行推理测试
-                    await this.runInference(currentImage);
-                    vscode.window.showInformationMessage('AI configuration successful! Inference test passed.');
-                }
+                vscode.window.showInformationMessage('AI configuration successful! You can now use inference.');
+                
+                // 不再自动执行推理测试
+                // 如果用户需要测试，可以手动点击Inference按钮
             }
         } catch (error: any) {
             vscode.window.showErrorMessage(`Failed to initialize AI: ${error.message}`);
@@ -404,50 +402,35 @@ export class WebviewMessageHandler {
     
     /**
      * 处理运行推理命令
+     * @private
      */
     private async handleRunInferenceCommand(): Promise<void> {
-        const currentImage = this._yoloReader.getCurrentImage();
-        if (!currentImage) {
-            vscode.window.showWarningMessage('No image loaded for inference.');
+        // 获取当前图片路径
+        const imagePath = this._yoloReader.getCurrentImage();
+        if (!imagePath) {
+            ErrorHandler.handleError(
+                new Error('No image loaded'),
+                'No image loaded for inference',
+                {
+                    webview: this._webview,
+                    type: ErrorType.UNKNOWN_ERROR
+                }
+            );
             return;
         }
         
-        // 确保推理服务已初始化
-        if (!this._inferenceService || !this._inferenceService.isReady()) {
-            // 尝试初始化推理服务
-            await this.initializeInferenceService();
-            
-            // 如果初始化失败，提示用户配置
-            if (!this._inferenceService || !this._inferenceService.isReady()) {
-                const result = await vscode.window.showWarningMessage(
-                    'AI inference is not configured. Configure it now?',
-                    'Configure', 'Cancel'
-                );
-                
-                if (result === 'Configure') {
-                    await this.handleConfigureAICommand();
-                }
+        try {
+            // 初始化推理服务
+            if (!this._inferenceService || !await this.initializeInferenceService()) {
+                // 如果推理服务未就绪，则打开配置
+                await this.handleConfigureAICommand();
                 return;
             }
-        }
-        
-        // 运行推理
-        await this.runInference(currentImage);
-    }
-    
-    /**
-     * 运行推理并处理结果
-     * @param imagePath 图像路径
-     */
-    private async runInference(imagePath: string): Promise<void> {
-        if (!this._inferenceService || !this._inferenceService.isReady()) {
-            throw new Error('Inference service not ready');
-        }
-        
-        try {
-            // 显示状态栏消息
-            const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-            statusBarItem.text = '$(sync~spin) Running YOLOv5 inference...';
+            
+            // 创建状态栏项目
+            const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+            statusBarItem.text = '$(sync~spin) Running YOLO inference...';
+            statusBarItem.tooltip = 'Running YOLO inference on the current image';
             statusBarItem.show();
             
             // 运行推理
@@ -459,11 +442,9 @@ export class WebviewMessageHandler {
                 results: detections
             } as InferenceResultsMessage);
             
-            // 更新状态栏
-            statusBarItem.text = `$(check) Detected ${detections.length} objects`;
-            setTimeout(() => {
-                statusBarItem.dispose();
-            }, 3000);
+            // 更新状态栏并使用VS Code通知
+            statusBarItem.dispose();
+            vscode.window.showInformationMessage(`Detected ${detections.length} objects`);
             
         } catch (error: any) {
             ErrorHandler.handleError(
@@ -491,7 +472,6 @@ export class WebviewMessageHandler {
                 return false;
             }
             
-            // 初始化服务
             if (!this._inferenceService) {
                 this._inferenceService = new YoloInferenceService(config);
             }

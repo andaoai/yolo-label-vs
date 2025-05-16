@@ -143,127 +143,22 @@ export class MessageHandler {
             this.state.requestRedraw();
             this.state.hasUnsavedChanges = true;
             
+            // 再次将标签结果推送到历史记录，确保它被记录
+            this.state.pushHistory();
+            
+            // 确保将当前图片路径与标签的关联存储在历史记录中
+            if (this.state.currentPath) {
+                // 更新当前图片的历史记录
+                const currentHistory = this.state.imageHistories.get(this.state.currentPath);
+                if (currentHistory) {
+                    // 使用最新的标签状态更新历史记录
+                    currentHistory.history[currentHistory.historyIndex] = JSON.parse(JSON.stringify(this.state.initialLabels));
+                }
+            }
+            
             // 更新标签计数
             this.canvasManager.updateLabelsCountDisplay();
-            
-            // 显示检测到对象数的通知
-            this.showNotification(`Detected ${message.results.length} objects`, 'success');
-        } else {
-            this.showNotification('No objects detected', 'info');
         }
-    }
-
-    /**
-     * 显示通知消息
-     * @param {string} message - 通知消息
-     * @param {string} type - 通知类型 (success, info, warning, error)
-     */
-    showNotification(message, type = 'info') {
-        // 创建或更新通知容器
-        let notificationContainer = document.getElementById('notification-container');
-        
-        if (!notificationContainer) {
-            notificationContainer = document.createElement('div');
-            notificationContainer.id = 'notification-container';
-            notificationContainer.style.cssText = `
-                position: absolute;
-                top: 16px;
-                right: 16px;
-                z-index: 1000;
-                transition: opacity 0.3s ease;
-            `;
-            document.body.appendChild(notificationContainer);
-        }
-        
-        // 创建通知元素
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            min-width: 240px;
-            max-width: 400px;
-            animation: slide-in 0.3s ease;
-            opacity: 0;
-        `;
-        
-        // 设置通知类型样式
-        switch (type) {
-            case 'success':
-                notification.style.backgroundColor = '#4caf50';
-                notification.style.color = 'white';
-                break;
-            case 'warning':
-                notification.style.backgroundColor = '#ff9800';
-                notification.style.color = 'white';
-                break;
-            case 'error':
-                notification.style.backgroundColor = '#f44336';
-                notification.style.color = 'white';
-                break;
-            case 'info':
-            default:
-                notification.style.backgroundColor = '#2196f3';
-                notification.style.color = 'white';
-                break;
-        }
-        
-        // 添加关闭按钮
-        const closeButton = document.createElement('button');
-        closeButton.textContent = '×';
-        closeButton.style.cssText = `
-            background: none;
-            border: none;
-            color: white;
-            font-size: 18px;
-            cursor: pointer;
-            padding: 0 0 0 12px;
-            margin: 0;
-        `;
-        
-        // 添加消息元素
-        const messageElement = document.createElement('span');
-        messageElement.textContent = message;
-        
-        // 组合元素
-        notification.appendChild(messageElement);
-        notification.appendChild(closeButton);
-        
-        // 添加到容器
-        notificationContainer.appendChild(notification);
-        
-        // 显示动画
-        setTimeout(() => {
-            notification.style.opacity = '1';
-        }, 10);
-        
-        // 自动关闭
-        const timeout = setTimeout(() => {
-            this.closeNotification(notification);
-        }, 5000);
-        
-        // 点击关闭
-        closeButton.onclick = () => {
-            clearTimeout(timeout);
-            this.closeNotification(notification);
-        };
-    }
-    
-    /**
-     * 关闭通知
-     * @param {HTMLElement} notification - 通知元素
-     */
-    closeNotification(notification) {
-        notification.style.opacity = '0';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
     }
 
     /**

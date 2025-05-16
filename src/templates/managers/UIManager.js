@@ -197,6 +197,16 @@ export class UIManager {
      */
     saveLabels() {
         this.state.vscode.postMessage({ command: 'save', labels: this.state.initialLabels });
+        
+        // 在保存前，确保当前图片的历史记录是最新的
+        if (this.state.currentPath) {
+            const currentHistory = this.state.imageHistories.get(this.state.currentPath);
+            if (currentHistory && currentHistory.historyIndex >= 0) {
+                // 使用当前标签状态更新历史记录中的最新条目
+                currentHistory.history[currentHistory.historyIndex] = JSON.parse(JSON.stringify(this.state.initialLabels));
+            }
+        }
+        
         this.state.markChangesSaved();
     }
     
@@ -321,6 +331,32 @@ export class UIManager {
     loadImage(path) {
         // 检查是否是不同的图像路径
         const isNewImage = path !== this.state.currentPath;
+        
+        if (isNewImage && this.state.currentPath) {
+            // 在切换图片前确保当前标签状态被保存到历史记录
+            // 这可以解决推理结果在图片切换后丢失的问题
+            const currentLabels = this.state.initialLabels;
+            if (currentLabels && currentLabels.length > 0) {
+                // 确保当前图片的历史记录存在
+                if (!this.state.imageHistories.has(this.state.currentPath)) {
+                    this.state.imageHistories.set(this.state.currentPath, {
+                        history: [],
+                        historyIndex: -1
+                    });
+                    
+                    // 添加当前状态到历史记录
+                    this.state.pushHistory();
+                } else {
+                    // 确保当前状态是历史记录的最新状态
+                    const currentHistory = this.state.imageHistories.get(this.state.currentPath);
+                    // 只有当历史记录有条目时才进行更新
+                    if (currentHistory && currentHistory.historyIndex >= 0) {
+                        // 更新当前历史记录的最新状态
+                        currentHistory.history[currentHistory.historyIndex] = JSON.parse(JSON.stringify(currentLabels));
+                    }
+                }
+            }
+        }
         
         // 通知扩展加载图像
         this.state.vscode.postMessage({ command: 'loadImage', path: path });
@@ -790,4 +826,4 @@ export class UIManager {
             tooltip.remove();
         }
     }
-} 
+}

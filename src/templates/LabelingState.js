@@ -331,6 +331,15 @@ export class LabelingState {
         this.hasUnsavedChanges = false;
         this.savedState = JSON.stringify(this.initialLabels || []);
         
+        // 确保当前图片的历史记录包含最新状态
+        if (this.currentPath) {
+            const currentHistory = this.imageHistories.get(this.currentPath);
+            if (currentHistory && currentHistory.historyIndex >= 0) {
+                // 使用当前标签状态更新历史记录中的最新条目
+                currentHistory.history[currentHistory.historyIndex] = JSON.parse(JSON.stringify(this.initialLabels));
+            }
+        }
+        
         // 如果uiManager存在，则更新保存按钮状态
         if (window.uiManager) {
             window.uiManager.updateSaveButtonState();
@@ -360,8 +369,18 @@ export class LabelingState {
      * 在切换图片时使用，确保savedState与当前图片一致
      */
     resetSavedState() {
+        // 保存当前标签状态到JSON字符串
         this.savedState = JSON.stringify(this.initialLabels || []);
         this.hasUnsavedChanges = false;
+        
+        // 确保当前图片的历史记录包含最新状态
+        if (this.currentPath) {
+            const currentHistory = this.imageHistories.get(this.currentPath);
+            if (currentHistory && currentHistory.historyIndex >= 0) {
+                // 使用当前标签状态更新历史记录中的最新条目，确保切换回来时能看到最新状态
+                currentHistory.history[currentHistory.historyIndex] = JSON.parse(JSON.stringify(this.initialLabels));
+            }
+        }
         
         // 如果uiManager存在，则更新保存按钮状态
         if (window.uiManager) {
