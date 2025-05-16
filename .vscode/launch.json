@@ -18,7 +18,7 @@
 			"preLaunchTask": "Build & Copy Templates"
 		},
 		{
-			"name": "Debug SAM$ Inference Test",
+			"name": "Debug SAM Inference Test",
 			"type": "node",
 			"request": "launch",
 			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
@@ -30,6 +30,24 @@
 				"30000",
 				"--colors",
 				"src/test/sam-inference.test.ts"
+			],
+			"cwd": "${workspaceFolder}",
+			"internalConsoleOptions": "openOnSessionStart",
+			"skipFiles": ["<node_internals>/**"]
+		},
+		{
+			"name": "Debug YOLO Inference Test",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+			"args": [
+				"--ui", "tdd",
+				"--require",
+				"ts-node/register",
+				"--timeout",
+				"30000",
+				"--colors",
+				"src/test/yolov5-inference.test.ts"
 			],
 			"cwd": "${workspaceFolder}",
 			"internalConsoleOptions": "openOnSessionStart",

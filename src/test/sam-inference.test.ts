@@ -1,7 +1,6 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as vscode from 'vscode';
 import * as ort from 'onnxruntime-node';
 
 const Jimp = require('jimp');
