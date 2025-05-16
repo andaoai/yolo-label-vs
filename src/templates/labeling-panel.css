@@ -722,6 +722,68 @@ svg {
     color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
 }
 
+/* AI Assistant button styles */
+.toolbar button#aiAssistant {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: 1px solid var(--vscode-button-border);
+    padding: 5px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.toolbar button#aiAssistant:before {
+    content: 'AI';
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background-color: var(--primary-color);
+    color: var(--vscode-button-foreground);
+    font-size: 9px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-weight: bold;
+    opacity: 0.9;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.toolbar button#aiAssistant.active {
+    background-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--vscode-focusBorder, var(--primary-color));
+    animation: pulse-ai-button 2s infinite;
+}
+
+@keyframes pulse-ai-button {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 120, 215, 0.6);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(0, 120, 215, 0);
+        transform: scale(1.03);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 120, 215, 0);
+        transform: scale(1);
+    }
+}
+
+.toolbar button#aiAssistant.active:before {
+    background-color: #22c55e; /* Green badge when active */
+}
+
+.toolbar button#aiAssistant svg {
+    color: var(--vscode-button-foreground);
+}
+
+.toolbar button#aiAssistant:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
 /* 右侧工具栏按钮 */
 .toolbar .right-controls button svg {
     color: var(--vscode-button-foreground);
