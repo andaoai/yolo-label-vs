@@ -91,6 +91,41 @@
         }
       ]
     },
+    "configuration": {
+      "title": "YOLO Labeling",
+      "properties": {
+        "yoloLabeling.inference.modelPath": {
+          "type": "string",
+          "default": "",
+          "description": "ONNX model path for YOLOv5 inference"
+        },
+        "yoloLabeling.inference.inputWidth": {
+          "type": "number",
+          "default": 640,
+          "description": "Input width for YOLOv5 model (typically 640)"
+        },
+        "yoloLabeling.inference.inputHeight": {
+          "type": "number",
+          "default": 640,
+          "description": "Input height for YOLOv5 model (typically 640)"
+        },
+        "yoloLabeling.inference.scoreThreshold": {
+          "type": "number",
+          "default": 0.45,
+          "description": "Score threshold for YOLOv5 detections (0-1)"
+        },
+        "yoloLabeling.inference.nmsThreshold": {
+          "type": "number",
+          "default": 0.45,
+          "description": "NMS threshold for filtering overlapping boxes (0-1)"
+        },
+        "yoloLabeling.inference.confidenceThreshold": {
+          "type": "number",
+          "default": 0.45,
+          "description": "Confidence threshold for box confidence (0-1)"
+        }
+      }
+    },
     "keybindings": [
       {
         "command": "yolo-labeling-vs.openLabelingPanel",

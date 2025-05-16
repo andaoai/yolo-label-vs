@@ -709,6 +709,15 @@ export class CanvasManager {
             return;
         }
 
+        // 空格键运行AI推理
+        if (e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            if (window.messageHandler) {
+                window.messageHandler.runInference();
+            }
+            return;
+        }
+
         // Tab/Shift+Tab 切换标签类型
         if (e.key === 'Tab') {
             e.preventDefault();

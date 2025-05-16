@@ -7,16 +7,20 @@ import {
     SaveLabelsMessage,
     UpdateImageMessage,
     OpenImageInNewTabMessage,
-    OpenTxtInNewTabMessage
+    OpenTxtInNewTabMessage,
+    InferenceResultsMessage
 } from '../model/types';
 import { ErrorHandler, ErrorType } from '../ErrorHandler';
 import { ImageService } from './ImageService';
+import { YoloInferenceService, YoloInferenceConfig } from './YoloInferenceService';
+import { YoloConfigurationService } from './YoloConfigurationService';
 
 /**
  * Webview消息处理器
  * 负责处理从Webview到扩展的所有消息
  */
 export class WebviewMessageHandler {
+    private _inferenceService: YoloInferenceService | null = null;
     
     /**
      * 构造函数
@@ -76,6 +80,14 @@ export class WebviewMessageHandler {
                 
             case 'getImagePreviews':
                 await this.handleGetImagePreviewsCommand(message);
+                break;
+                
+            case 'configureAI':
+                await this.handleConfigureAICommand();
+                break;
+                
+            case 'runInference':
+                await this.handleRunInferenceCommand();
                 break;
                 
             default:
@@ -345,5 +357,149 @@ export class WebviewMessageHandler {
             }
         }
         this._webview.postMessage({ command: 'imagePreviews', previews });
+    }
+    
+    /**
+     * 处理配置AI命令
+     */
+    private async handleConfigureAICommand(): Promise<void> {
+        // 获取当前类名列表
+        const classNames = this._yoloReader.getClassNames();
+        
+        // 获取当前配置
+        const currentConfig = YoloConfigurationService.getConfig(classNames);
+        
+        // 显示配置对话框
+        const newConfig = await YoloConfigurationService.showConfigurationDialog(currentConfig);
+        if (!newConfig) {
+            return;
+        }
+        
+        // 保存新配置
+        await YoloConfigurationService.saveConfig(newConfig);
+        
+        try {
+            // 初始化或更新推理服务
+            if (!this._inferenceService) {
+                this._inferenceService = new YoloInferenceService(newConfig);
+                await this._inferenceService.initialize();
+            } else {
+                await this._inferenceService.updateConfig(newConfig);
+            }
+            
+            // 如果配置成功，运行测试推理
+            if (this._inferenceService.isReady()) {
+                const currentImage = this._yoloReader.getCurrentImage();
+                if (currentImage) {
+                    // 尝试运行推理测试
+                    await this.runInference(currentImage);
+                    vscode.window.showInformationMessage('AI configuration successful! Inference test passed.');
+                }
+            }
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Failed to initialize AI: ${error.message}`);
+            console.error('AI initialization error:', error);
+        }
+    }
+    
+    /**
+     * 处理运行推理命令
+     */
+    private async handleRunInferenceCommand(): Promise<void> {
+        const currentImage = this._yoloReader.getCurrentImage();
+        if (!currentImage) {
+            vscode.window.showWarningMessage('No image loaded for inference.');
+            return;
+        }
+        
+        // 确保推理服务已初始化
+        if (!this._inferenceService || !this._inferenceService.isReady()) {
+            // 尝试初始化推理服务
+            await this.initializeInferenceService();
+            
+            // 如果初始化失败，提示用户配置
+            if (!this._inferenceService || !this._inferenceService.isReady()) {
+                const result = await vscode.window.showWarningMessage(
+                    'AI inference is not configured. Configure it now?',
+                    'Configure', 'Cancel'
+                );
+                
+                if (result === 'Configure') {
+                    await this.handleConfigureAICommand();
+                }
+                return;
+            }
+        }
+        
+        // 运行推理
+        await this.runInference(currentImage);
+    }
+    
+    /**
+     * 运行推理并处理结果
+     * @param imagePath 图像路径
+     */
+    private async runInference(imagePath: string): Promise<void> {
+        if (!this._inferenceService || !this._inferenceService.isReady()) {
+            throw new Error('Inference service not ready');
+        }
+        
+        try {
+            // 显示状态栏消息
+            const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+            statusBarItem.text = '$(sync~spin) Running YOLOv5 inference...';
+            statusBarItem.show();
+            
+            // 运行推理
+            const detections = await this._inferenceService.runInference(imagePath);
+            
+            // 向Webview发送推理结果
+            this._webview.postMessage({
+                command: 'inferenceResults',
+                results: detections
+            } as InferenceResultsMessage);
+            
+            // 更新状态栏
+            statusBarItem.text = `$(check) Detected ${detections.length} objects`;
+            setTimeout(() => {
+                statusBarItem.dispose();
+            }, 3000);
+            
+        } catch (error: any) {
+            ErrorHandler.handleError(
+                error,
+                'Inference failed',
+                {
+                    filePath: imagePath,
+                    webview: this._webview,
+                    type: ErrorType.UNKNOWN_ERROR
+                }
+            );
+        }
+    }
+    
+    /**
+     * 初始化推理服务
+     */
+    private async initializeInferenceService(): Promise<boolean> {
+        try {
+            const classNames = this._yoloReader.getClassNames();
+            const config = YoloConfigurationService.getConfig(classNames);
+            
+            // 如果模型路径为空，则需要配置
+            if (!config.modelPath) {
+                return false;
+            }
+            
+            // 初始化服务
+            if (!this._inferenceService) {
+                this._inferenceService = new YoloInferenceService(config);
+            }
+            
+            return await this._inferenceService.initialize(config);
+        } catch (error) {
+            console.error('Failed to initialize inference service:', error);
+            return false;
+        }
     }
 } 

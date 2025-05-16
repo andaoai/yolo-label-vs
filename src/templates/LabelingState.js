@@ -368,4 +368,47 @@ export class LabelingState {
             window.uiManager.updateSaveButtonState();
         }
     }
+    
+    /**
+     * 添加标签
+     * @param {Object} label - 标签对象
+     */
+    addLabel(label) {
+        if (!label) return;
+        
+        console.log("Adding inference label:", label);
+        
+        // 确保标签有正确的可见性属性
+        if (label.visible === undefined) {
+            label.visible = true;
+        }
+        
+        // 确保类别值是整数
+        if (typeof label.class === 'number') {
+            label.class = Math.floor(label.class);
+            
+            // 确保类别索引在有效范围内
+            if (label.class < 0 || label.class >= this.classNamesList.length) {
+                console.warn(`类别索引 ${label.class} 超出范围，设置为0`);
+                label.class = 0;
+            }
+        }
+        
+        // 确保坐标在0-1范围内
+        if (label.x < 0) label.x = 0;
+        if (label.x > 1) label.x = 1;
+        if (label.y < 0) label.y = 0;
+        if (label.y > 1) label.y = 1;
+        
+        // 确保宽高在有效范围内
+        if (label.width <= 0) label.width = 0.01;
+        if (label.width > 1) label.width = 1;
+        if (label.height <= 0) label.height = 0.01;
+        if (label.height > 1) label.height = 1;
+        
+        console.log("Normalized label:", label);
+        
+        // 添加标签
+        this.initialLabels.push(label);
+    }
 } 

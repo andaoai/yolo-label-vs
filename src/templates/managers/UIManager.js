@@ -15,7 +15,6 @@ export class UIManager {
         
         // AI 助手状态
         this.aiEnabled = false;
-        this.isSpacePressed = false;
         
         // 存储DOM元素以提高性能
         this.elements = {
@@ -130,10 +129,6 @@ export class UIManager {
         
         // AI 助手按钮
         this.elements.aiButton.addEventListener('click', this.toggleAI.bind(this));
-        
-        // 空格键监听，用于AI推理输出
-        document.addEventListener('keydown', this.handleKeyDown.bind(this));
-        document.addEventListener('keyup', this.handleKeyUp.bind(this));
     }
     
     /**
@@ -773,14 +768,9 @@ export class UIManager {
      * 处理AI按钮点击事件
      */
     toggleAI() {
-        this.aiEnabled = !this.aiEnabled;
-        this.elements.aiButton.classList.toggle('active', this.aiEnabled);
-        
-        // 显示提示消息
-        if (this.aiEnabled) {
-            this.showAIAssistantTooltip();
-        } else {
-            this.hideAIAssistantTooltip();
+        // 不再使用激活状态，直接配置AI
+        if (window.messageHandler) {
+            window.messageHandler.configureAI();
         }
     }
 
@@ -788,19 +778,7 @@ export class UIManager {
      * 显示AI助手启用提示
      */
     showAIAssistantTooltip() {
-        const tooltip = document.createElement('div');
-        tooltip.className = 'tooltip';
-        tooltip.id = 'aiTooltip';
-        tooltip.textContent = '按住空格键显示AI推理结果';
-        tooltip.style.top = '60px';
-        tooltip.style.left = '50%';
-        tooltip.style.transform = 'translateX(-50%)';
-        document.body.appendChild(tooltip);
-        
-        // 3秒后自动隐藏提示
-        setTimeout(() => {
-            this.hideAIAssistantTooltip();
-        }, 3000);
+        // 不再显示空格提示
     }
 
     /**
@@ -810,129 +788,6 @@ export class UIManager {
         const tooltip = document.getElementById('aiTooltip');
         if (tooltip) {
             tooltip.remove();
-        }
-    }
-
-    /**
-     * 处理空格键按下事件
-     */
-    handleKeyDown(e) {
-        // 如果正在输入搜索或者其他输入框有焦点，不拦截空格键
-        if (document.activeElement.tagName === 'INPUT' || 
-            document.activeElement.tagName === 'TEXTAREA' || 
-            document.activeElement.isContentEditable) {
-            return;
-        }
-        
-        // 仅在AI助手启用且按下空格键时响应
-        if (this.aiEnabled && e.code === 'Space' && !this.isSpacePressed) {
-            // 防止页面滚动
-            e.preventDefault();
-            this.isSpacePressed = true;
-            
-            // 显示AI推理结果
-            this.showAIInference();
-        }
-    }
-
-    /**
-     * 处理空格键释放事件
-     */
-    handleKeyUp(e) {
-        if (e.code === 'Space') {
-            this.isSpacePressed = false;
-            
-            // 隐藏AI推理结果
-            this.hideAIInference();
-        }
-    }
-
-    /**
-     * 显示AI推理结果
-     */
-    showAIInference() {
-        // 创建或显示AI结果标签
-        let aiOverlay = document.getElementById('aiOverlay');
-        if (!aiOverlay) {
-            aiOverlay = document.createElement('div');
-            aiOverlay.id = 'aiOverlay';
-            aiOverlay.className = 'ai-overlay';
-            aiOverlay.innerHTML = `
-                <div class="ai-content">
-                    <h3>AI推理结果</h3>
-                    <p>检测到当前图像中的物体：</p>
-                    <ul>
-                        <li>人 (Person) - 置信度: 98%</li>
-                        <li>汽车 (Car) - 置信度: 87%</li>
-                        <li>自行车 (Bicycle) - 置信度: 65%</li>
-                    </ul>
-                    <p class="ai-tip">按住空格键显示结果，松开隐藏</p>
-                </div>
-            `;
-            document.body.appendChild(aiOverlay);
-            
-            // 为AI覆盖层添加样式（动态添加，以便样式与应用程序一起加载）
-            const style = document.createElement('style');
-            style.textContent = `
-                .ai-overlay {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background-color: rgba(0,0,0,0.7);
-                    z-index: 1000;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    opacity: 0;
-                    transition: opacity 0.2s ease;
-                }
-                .ai-overlay.visible {
-                    opacity: 1;
-                }
-                .ai-content {
-                    background-color: var(--surface-color);
-                    border-radius: 5px;
-                    padding: 20px;
-                    max-width: 400px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                    border: 1px solid var(--border-color);
-                }
-                .ai-content h3 {
-                    margin-top: 0;
-                    color: var(--primary-color);
-                    font-size: 16px;
-                }
-                .ai-content ul {
-                    padding-left: 20px;
-                }
-                .ai-content li {
-                    margin-bottom: 5px;
-                }
-                .ai-tip {
-                    font-size: 12px;
-                    opacity: 0.8;
-                    margin-top: 15px;
-                    font-style: italic;
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        
-        // 显示覆盖层
-        setTimeout(() => {
-            aiOverlay.classList.add('visible');
-        }, 10);
-    }
-
-    /**
-     * 隐藏AI推理结果
-     */
-    hideAIInference() {
-        const aiOverlay = document.getElementById('aiOverlay');
-        if (aiOverlay) {
-            aiOverlay.classList.remove('visible');
         }
     }
 } 

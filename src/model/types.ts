@@ -9,7 +9,7 @@ export interface WebviewMessage {
 
 // 从扩展到Webview的消息
 export interface ExtensionToWebviewMessage extends WebviewMessage {
-  command: 'updateImage' | 'imageList' | 'error';
+  command: 'updateImage' | 'imageList' | 'error' | 'imagePreviews' | 'inferenceResults';
 }
 
 // 图片更新消息
@@ -37,7 +37,9 @@ export interface ErrorMessage extends ExtensionToWebviewMessage {
 
 // 从Webview到扩展的消息
 export interface WebviewToExtensionMessage extends WebviewMessage {
-  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab' | 'getImagePreviews';
+  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 
+           'openImageInNewTab' | 'openTxtInNewTab' | 'getImagePreviews' | 
+           'configureAI' | 'runInference';
 }
 
 // 保存标签消息
@@ -62,6 +64,12 @@ export interface OpenImageInNewTabMessage extends WebviewToExtensionMessage {
 export interface OpenTxtInNewTabMessage extends WebviewToExtensionMessage {
   command: 'openTxtInNewTab';
   path: string;
+}
+
+// 推理结果消息
+export interface InferenceResultsMessage extends ExtensionToWebviewMessage {
+  command: 'inferenceResults';
+  results: BoundingBox[];
 }
 
 // 消息类型守卫
