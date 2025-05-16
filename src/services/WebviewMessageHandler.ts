@@ -7,20 +7,16 @@ import {
     SaveLabelsMessage,
     UpdateImageMessage,
     OpenImageInNewTabMessage,
-    OpenTxtInNewTabMessage,
-    ConfigureAiMessage,
-    RunAiInferenceMessage
+    OpenTxtInNewTabMessage
 } from '../model/types';
 import { ErrorHandler, ErrorType } from '../ErrorHandler';
 import { ImageService } from './ImageService';
-import { AiInferenceService } from './AiInferenceService';
 
 /**
  * Webview消息处理器
  * 负责处理从Webview到扩展的所有消息
  */
 export class WebviewMessageHandler {
-    private _aiService: AiInferenceService;
     
     /**
      * 构造函数
@@ -32,9 +28,7 @@ export class WebviewMessageHandler {
         private readonly _webview: vscode.Webview,
         private readonly _yoloReader: YoloDataReader,
         private readonly _imageService: ImageService
-    ) {
-        this._aiService = new AiInferenceService();
-    }
+    ) {}
     
     /**
      * 处理从Webview收到的消息
@@ -82,20 +76,6 @@ export class WebviewMessageHandler {
                 
             case 'getImagePreviews':
                 await this.handleGetImagePreviewsCommand(message);
-                break;
-            
-            case 'configureAi':
-                const configAiMessage = message as ConfigureAiMessage;
-                await this.handleConfigureAiCommand(configAiMessage);
-                break;
-                
-            case 'runAiInference':
-                const runAiMessage = message as RunAiInferenceMessage;
-                await this.handleRunAiInferenceCommand();
-                break;
-                
-            case 'browseFile':
-                await this.handleBrowseFileCommand(message);
                 break;
                 
             default:
@@ -365,133 +345,5 @@ export class WebviewMessageHandler {
             }
         }
         this._webview.postMessage({ command: 'imagePreviews', previews });
-    }
-    
-    /**
-     * 处理AI配置命令
-     * @param message AI配置消息
-     */
-    private async handleConfigureAiCommand(message: ConfigureAiMessage): Promise<void> {
-        try {
-            const classNames = this._yoloReader.getClassNames();
-            
-            const success = await this._aiService.configure(
-                message.modelPath,
-                classNames,
-                message.scoreThreshold,
-                message.nmsThreshold,
-                message.confidenceThreshold
-            );
-            
-            // 发送配置结果到Webview
-            this._webview.postMessage({
-                command: 'aiConfigured',
-                success: success,
-                modelPath: message.modelPath,
-                message: success ? 'AI模型配置成功' : '模型配置失败，请检查路径和参数'
-            });
-        } catch (error: any) {
-            ErrorHandler.handleError(
-                error,
-                'Failed to configure AI model',
-                {
-                    webview: this._webview,
-                    type: ErrorType.UNKNOWN_ERROR,
-                    recoverable: true
-                }
-            );
-            
-            this._webview.postMessage({
-                command: 'aiConfigured',
-                success: false,
-                modelPath: message.modelPath,
-                message: `模型配置失败: ${error.message}`
-            });
-        }
-    }
-    
-    /**
-     * 处理AI推理命令
-     */
-    private async handleRunAiInferenceCommand(): Promise<void> {
-        const currentImage = this._yoloReader.getCurrentImage();
-        if (!currentImage) {
-            this._webview.postMessage({
-                command: 'aiInferenceResult',
-                labels: [],
-                message: '无法获取当前图像'
-            });
-            return;
-        }
-        
-        try {
-            // 运行推理
-            const detections = await this._aiService.runInference(currentImage);
-            
-            // 标记为AI检测的结果
-            detections.forEach(box => {
-                box.aiDetected = true;
-            });
-            
-            // 发送推理结果到Webview
-            this._webview.postMessage({
-                command: 'aiInferenceResult',
-                labels: detections,
-                message: `AI检测完成，发现 ${detections.length} 个对象`
-            });
-        } catch (error: any) {
-            ErrorHandler.handleError(
-                error,
-                'AI inference failed',
-                {
-                    filePath: currentImage,
-                    webview: this._webview,
-                    type: ErrorType.UNKNOWN_ERROR,
-                    recoverable: true
-                }
-            );
-            
-            this._webview.postMessage({
-                command: 'aiInferenceResult',
-                labels: [],
-                message: `AI推理失败: ${error.message}`
-            });
-        }
-    }
-    
-    /**
-     * 处理浏览文件命令
-     * @param message 浏览文件消息
-     */
-    private async handleBrowseFileCommand(message: any): Promise<void> {
-        const filters: { [name: string]: string[] } = {};
-        
-        // 根据消息中的过滤器设置文件类型筛选
-        if (message.filter) {
-            if (message.filter === '*.onnx') {
-                filters['ONNX Models'] = ['onnx'];
-            } else if (message.filter === '*.pt') {
-                filters['PyTorch Models'] = ['pt'];
-            } else {
-                filters['All Files'] = ['*'];
-            }
-        } else {
-            filters['All Files'] = ['*'];
-        }
-        
-        // 打开文件对话框
-        const uris = await vscode.window.showOpenDialog({
-            canSelectMany: false,
-            openLabel: '选择',
-            filters: filters
-        });
-        
-        if (uris && uris.length > 0) {
-            // 将选择的文件路径发送回Webview
-            this._webview.postMessage({
-                command: 'fileBrowseResult',
-                path: uris[0].fsPath
-            });
-        }
     }
 } 

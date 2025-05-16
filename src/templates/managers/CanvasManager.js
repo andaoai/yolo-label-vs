@@ -1132,8 +1132,6 @@ export class CanvasManager {
      * @param {boolean} isHighlighted - 是否高亮
      */
     drawBoundingBoxLabel(label, color, isHighlighted) {
-        if (label.visible === false) return;
-        
         // 计算像素坐标
         const x = label.x * this.state.originalImageWidth;
         const y = label.y * this.state.originalImageHeight;
@@ -1143,20 +1141,13 @@ export class CanvasManager {
         // 绘制框
         this.ctx.strokeStyle = color;
         this.ctx.lineWidth = (isHighlighted ? 3 : CONFIG.LINE_WIDTH) / this.state.scale;
-        
-        // 设置线型
         if (isHighlighted) {
             this.ctx.setLineDash([10, 6]);
-            this.ctx.lineDashOffset = this.state.dashOffset;
-        } else if (label.aiDetected) {
-            // 如果是AI检测的标签，使用虚线边框
-            this.ctx.setLineDash([5, 5]);
             this.ctx.lineDashOffset = this.state.dashOffset;
         } else {
             this.ctx.setLineDash([]);
             this.ctx.lineDashOffset = 0;
         }
-        
         this.ctx.strokeRect(x - width/2, y - height/2, width, height);
         this.ctx.setLineDash([]);
         this.ctx.lineDashOffset = 0;
@@ -1171,11 +1162,7 @@ export class CanvasManager {
                 ? this.state.classNamesList[label.class] 
                 : `Class ${label.class}`;
             
-            // 如果是AI检测的标签，添加"AI:"前缀
-            const text = label.aiDetected 
-                ? `AI: ${className} (BOX)` 
-                : `${className} (BOX)`;
-                
+            const text = `${className} (BOX)`;
             this.drawLabelText(text, x - width/2, y - height/2 - CONFIG.LABEL_HEIGHT / this.state.scale, color);
         }
     }

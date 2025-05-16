@@ -144,50 +144,6 @@
             </div>
         </footer>
     </div>
-
-    <!-- AI配置对话框 -->
-    <div class="modal" id="aiConfigModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>AI 检测配置</h2>
-                <button class="close-button" id="closeAiConfigModal">×</button>
-            </div>
-            <div class="modal-body">
-                <form id="aiConfigForm">
-                    <div class="form-group">
-                        <label for="modelPath">YOLO 模型路径:</label>
-                        <div class="input-with-button">
-                            <input type="text" id="modelPath" placeholder="输入 ONNX 模型路径" required>
-                            <button type="button" id="browseModelButton">浏览...</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="scoreThreshold">分数阈值:</label>
-                        <input type="range" id="scoreThreshold" min="0.1" max="0.9" step="0.05" value="0.45">
-                        <span id="scoreThresholdValue">0.45</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="nmsThreshold">NMS阈值:</label>
-                        <input type="range" id="nmsThreshold" min="0.1" max="0.9" step="0.05" value="0.45">
-                        <span id="nmsThresholdValue">0.45</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="confidenceThreshold">置信度阈值:</label>
-                        <input type="range" id="confidenceThreshold" min="0.1" max="0.9" step="0.05" value="0.45">
-                        <span id="confidenceThresholdValue">0.45</span>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" id="applyAiConfig">应用并测试</button>
-                        <button type="button" id="cancelAiConfig">取消</button>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <p class="ai-status" id="aiStatus">点击"应用并测试"配置AI模型</p>
-            </div>
-        </div>
-    </div>
-
     <script type="module" src="labeling-panel.js"></script>
 </body>
 </html> 
