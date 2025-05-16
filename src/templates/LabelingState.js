@@ -5,7 +5,7 @@
 export class LabelingState {
     constructor() {
         // 获取VS Code API
-        this.vscode = acquireVsCodeApi();
+        this.vscode = window.vscode || acquireVsCodeApi();
         
         // 图像状态
         this.image = null;
