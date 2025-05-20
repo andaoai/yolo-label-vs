@@ -97,10 +97,11 @@ export class LabelingState {
     
     /**
      * 请求重绘画布
+     * @param {boolean} [fullRedraw=true] - 是否进行完整重绘，包括十字线
      */
-    requestRedraw() {
+    requestRedraw(fullRedraw = true) {
         if (this.onRedrawRequested) {
-            this.onRedrawRequested();
+            this.onRedrawRequested(fullRedraw);
         }
     }
     
