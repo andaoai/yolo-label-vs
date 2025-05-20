@@ -697,6 +697,13 @@ export class CanvasManager {
             return;
         }
 
+        // 空格键重置图像缩放和位置
+        if (e.key === ' ' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+            e.preventDefault(); // 防止页面滚动
+            this.resetImagePosition();
+            return;
+        }
+
         // ESC键取消分割或关键点绘制
         if (e.key === 'Escape') {
             if (this.state.currentMode === 'seg' && this.state.isDrawingPolygon) {
@@ -2522,5 +2529,35 @@ export class CanvasManager {
         
         // 转换回十六进制并格式化
         return `#${darkerR.toString(16).padStart(2, '0')}${darkerG.toString(16).padStart(2, '0')}${darkerB.toString(16).padStart(2, '0')}`;
+    }
+
+    /**
+     * 重置图像到原始位置和比例
+     */
+    resetImagePosition() {
+        if (!this.state.image) return;
+        
+        // 获取画布容器尺寸
+        const container = this.canvas.parentElement;
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        // 设置合适的缩放以适应画布
+        const scaleX = containerWidth / this.state.originalImageWidth;
+        const scaleY = containerHeight / this.state.originalImageHeight;
+        
+        // 使用较小的缩放比例，确保整个图像都在视口内
+        this.state.scale = Math.min(scaleX, scaleY, 1); // 不要超过原始大小
+        
+        // 计算图片居中位置
+        this.state.translateX = (containerWidth - (this.state.originalImageWidth * this.state.scale)) / 2;
+        this.state.translateY = (containerHeight - (this.state.originalImageHeight * this.state.scale)) / 2;
+        
+        // 更新缩放显示
+        this.updateZoomDisplay();
+        
+        // 调整画布大小并重绘
+        this.resizeCanvas();
+        this.state.requestRedraw();
     }
 }
