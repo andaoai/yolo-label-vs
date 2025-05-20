@@ -755,15 +755,30 @@ export class CanvasManager {
         if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
             switch (e.key.toLowerCase()) {
                 case 'a':
+                case 'd': {
                     e.preventDefault();
-                    console.log("CanvasManager: 按下A键导航到上一张图片");
-                    this.state.vscode.postMessage({ command: 'previous' });
+                    const isPrev = e.key.toLowerCase() === 'a';
+                    const command = isPrev ? 'previous' : 'next';
+                    const saveButton = document.getElementById('saveLabels');
+                    // 判断保存按钮是否可用
+                    const needSave = saveButton && !saveButton.disabled && !saveButton.classList.contains('disabled') && window.uiManager;
+                    if (needSave) {
+                        // 如果 saveLabels 返回 Promise，等待保存完成后再切换
+                        const saveResult = window.uiManager.saveLabels();
+                        if (saveResult && typeof saveResult.then === 'function') {
+                            saveResult.then(() => {
+                                this.state.vscode.postMessage({ command });
+                            });
+                        } else {
+                            // 同步保存
+                            this.state.vscode.postMessage({ command });
+                        }
+                    } else {
+                        // 无需保存，直接切换
+                        this.state.vscode.postMessage({ command });
+                    }
                     break;
-                case 'd':
-                    e.preventDefault();
-                    console.log("CanvasManager: 按下D键导航到下一张图片");
-                    this.state.vscode.postMessage({ command: 'next' });
-                    break;
+                }
             }
         }
     }
@@ -910,7 +925,7 @@ export class CanvasManager {
      * 绘制当前姿态边界框（虚线）
      */
     drawCurrentPoseBoundingBox() {
-        if (!this.state.currentPoseLabel) return;
+        if (!this.state.currentPoseLabel) { return; }
         
         // 获取标签颜色
         const colorIndex = this.state.currentPoseLabel.class % CONFIG.COLORS.length;
@@ -1049,7 +1064,7 @@ export class CanvasManager {
             const label = this.state.initialLabels[i];
             
             // 跳过不可见的标签
-            if (label.visible === false) continue;
+            if (label.visible === false) { continue; }
             
             // 获取标签颜色
             const colorIndex = label.class % colorList.length;
@@ -1265,7 +1280,7 @@ export class CanvasManager {
      * 绘制当前多边形
      */
     drawCurrentPolygon() {
-        if (!this.state.isDrawingPolygon || this.state.polygonPoints.length < 2) return;
+        if (!this.state.isDrawingPolygon || this.state.polygonPoints.length < 2) { return; }
 
         const color = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
         this.ctx.strokeStyle = color;
@@ -1390,7 +1405,7 @@ export class CanvasManager {
      * @returns {boolean} 如果点接近第一个点则为true
      */
     isNearFirstPoint(x, y) {
-        if (this.state.polygonPoints.length < 2) return false;
+        if (this.state.polygonPoints.length < 2) { return false; }
         
         const firstX = this.state.polygonPoints[0];
         const firstY = this.state.polygonPoints[1];
@@ -1439,7 +1454,7 @@ export class CanvasManager {
      * @returns {Object} 包含x, y, width, height的对象
      */
     calculateBoundingBoxFromPolygon(points) {
-        if (points.length < 4) return { x: 0, y: 0, width: 0, height: 0 };
+        if (points.length < 4) { return { x: 0, y: 0, width: 0, height: 0 }; }
         
         // 初始化最小/最大值
         let minX = points[0];
@@ -1476,7 +1491,7 @@ export class CanvasManager {
      */
     updateLabelList() {
         const labelListContainer = document.getElementById('labelList');
-        if (!labelListContainer) return;
+        if (!labelListContainer) { return; }
         
         // 刷新当前class状态栏
         if (window.uiManager) {
@@ -1678,7 +1693,7 @@ export class CanvasManager {
      * 启动虚线动画
      */
     startDashAnimation() {
-        if (!this.state.dashAnimationActive) return;
+        if (!this.state.dashAnimationActive) { return; }
         
         // 更新虚线偏移，使用更大的步长使动画更明显
         this.state.dashOffset -= 1.5;
@@ -1765,7 +1780,7 @@ export class CanvasManager {
      * 绘制当前已标注的关键点
      */
     drawCurrentPoseKeypoints() {
-        if (!this.state.currentPoseLabel || !this.state.currentPoseLabel.keypoints) return;
+        if (!this.state.currentPoseLabel || !this.state.currentPoseLabel.keypoints) { return; }
         
         const keypoints = this.state.currentPoseLabel.keypoints;
         const valuePerPoint = this.state.keypointValueCount;
@@ -1870,7 +1885,7 @@ export class CanvasManager {
         this.ctx.lineDashOffset = 0;
         
         // 如果没有关键点数据，则直接返回
-        if (!label.keypoints || !label.keypointShape) return;
+        if (!label.keypoints || !label.keypointShape) { return; }
         
         // 绘制姿态关键点
         this.drawLabelPoints(label, 'pose', color, isHighlighted);
@@ -1931,7 +1946,7 @@ export class CanvasManager {
      * @param {number} y - 归一化的Y坐标
      */
     completePoseBoxDrawing(x, y) {
-        if (!this.state.isPoseDrawing) return;
+        if (!this.state.isPoseDrawing) { return; }
         
         const { startX, startY } = this.state;
         
@@ -1994,7 +2009,7 @@ export class CanvasManager {
      * @param {number} visibility - 可见性状态 (0=不可见, 1=可见, 2=被遮挡但可见)
      */
     addPoseKeypoint(x, y, visibility) {
-        if (!this.state.isPoseDrawing || !this.state.currentPoseLabel) return;
+        if (!this.state.isPoseDrawing || !this.state.currentPoseLabel) { return; }
         
         const currentKeypoint = this.state.poseDrawingStep - 1;
         const valuePerPoint = this.state.keypointValueCount;
@@ -2031,7 +2046,7 @@ export class CanvasManager {
      * 完成整个姿态标注过程
      */
     completePoseDrawing() {
-        if (!this.state.isPoseDrawing || !this.state.currentPoseLabel) return;
+        if (!this.state.isPoseDrawing || !this.state.currentPoseLabel) { return; }
         
         // 添加标签到列表
         this.state.initialLabels.push(this.state.currentPoseLabel);
@@ -2068,7 +2083,7 @@ export class CanvasManager {
      * @returns {Object|null} 包含点信息的对象或null
      */
     findPointUnderCursor(x, y) {
-        if (!this.state.initialLabels || this.state.initialLabels.length === 0) return null;
+        if (!this.state.initialLabels || this.state.initialLabels.length === 0) { return null; }
         
         // 设置点的选择阈值（根据缩放调整）
         const threshold = CONFIG.CLOSE_POINT_THRESHOLD / this.state.scale;
@@ -2078,7 +2093,7 @@ export class CanvasManager {
             const label = this.state.initialLabels[i];
             
             // 跳过不可见的标签
-            if (label.visible === false) continue;
+            if (label.visible === false) { continue; }
             
             if (label.isSegmentation) {
                 // 检查分割多边形的各个点
@@ -2108,7 +2123,7 @@ export class CanvasManager {
                     const pointY = label.keypoints[baseIndex + 1];
                     
                     // 如果点有可见性值且不可见，则跳过
-                    if (valuePerPoint >= 3 && label.keypoints[baseIndex + 2] === 0) continue;
+                    if (valuePerPoint >= 3 && label.keypoints[baseIndex + 2] === 0) { continue; }
                     
                     const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
                     
@@ -2197,7 +2212,7 @@ export class CanvasManager {
      * @param {Object} selectedPoint - 选中的点信息
      */
     drawSelectedPoint(selectedPoint) {
-        if (!selectedPoint) return;
+        if (!selectedPoint) { return; }
         
         // 获取点的像素坐标
         const x = selectedPoint.x * this.state.originalImageWidth;
@@ -2236,7 +2251,7 @@ export class CanvasManager {
      * @param {number} y - 归一化的Y坐标
      */
     moveSelectedPoint(x, y) {
-        if (!this.state.selectedPoint) return;
+        if (!this.state.selectedPoint) { return; }
         
         const selectedPoint = this.state.selectedPoint;
         const dx = x - this.state.dragStartPos.x;
@@ -2413,7 +2428,7 @@ export class CanvasManager {
                 if (valuePerPoint >= 3) {
                     visibility = label.keypoints[baseIndex + 2];
                     // 如果可见性为0，跳过这个关键点
-                    if (visibility === 0) continue;
+                    if (visibility === 0) { continue; }
                 }
                 
                 // 根据可见性调整透明度
@@ -2429,7 +2444,7 @@ export class CanvasManager {
         
         // 辅助函数：检查是否是当前悬停的点
         function isHoveredPoint(hoveredPoint, checkLabel, checkType, checkIndex) {
-            if (!hoveredPoint) return false;
+            if (!hoveredPoint) { return false; }
             
             if (hoveredPoint.label === checkLabel && hoveredPoint.type === checkType) {
                 if (checkType === 'box') {
@@ -2508,4 +2523,4 @@ export class CanvasManager {
         // 转换回十六进制并格式化
         return `#${darkerR.toString(16).padStart(2, '0')}${darkerG.toString(16).padStart(2, '0')}${darkerB.toString(16).padStart(2, '0')}`;
     }
-} 
+}
