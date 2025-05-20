@@ -26,10 +26,9 @@ jobs:
         id: current_version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
         
-      - name: Delete package-lock.json and install dependencies
+      - name: Install dependencies
         run: |
-          rm -f package-lock.json
-          npm install --no-package-lock --ignore-scripts
+          npm install --ignore-scripts
         
       - name: Compile extension
         run: npm run compile
