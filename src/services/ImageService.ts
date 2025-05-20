@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { CacheManager } from '../model/CacheManager';
 import { ErrorHandler, ErrorType } from '../ErrorHandler';
-import sharp from 'sharp';
+import Jimp from 'jimp';
 
 /**
  * 图像服务类
@@ -98,13 +98,32 @@ export class ImageService {
      * 生成图片缩略图，返回base64字符串（不带data:image/png;base64,前缀）
      */
     public async generateThumbnail(imagePath: string, width: number, height: number): Promise<string> {
-        // 检查文件是否存在
-        await fs.promises.access(imagePath, fs.constants.R_OK);
-        // 用 sharp 生成缩略图
-        const buffer = await sharp(imagePath)
-            .resize(width, height, { fit: 'cover' })
-            .toFormat('png')
-            .toBuffer();
-        return buffer.toString('base64');
+        try {
+            // 检查文件是否存在
+            await fs.promises.access(imagePath, fs.constants.R_OK);
+            
+            // 使用 Jimp 加载图像
+            const image = await Jimp.read(imagePath);
+            
+            // 调整大小
+            image.cover(width, height);
+            
+            // 转换为 PNG buffer
+            const buffer = await image.getBufferAsync(Jimp.MIME_PNG);
+            
+            // 返回 base64 字符串
+            return buffer.toString('base64');
+        } catch (error: any) {
+            const errorDetails = ErrorHandler.handleError(
+                error,
+                'Thumbnail generation error',
+                {
+                    filePath: imagePath,
+                    showNotification: false
+                }
+            );
+            
+            throw new Error(`Failed to generate thumbnail for '${imagePath}': ${error.message}`);
+        }
     }
 } 
