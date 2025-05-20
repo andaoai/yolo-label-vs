@@ -14,6 +14,17 @@
 				"isDefault": true
 			},
 			"label": "tsc: build - tsconfig.json"
+		},
+		{
+			"label": "copy-templates",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-Command",
+				"Copy-Item -Path src/templates/* -Destination out/templates/ -Recurse -Force"
+			],
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }
