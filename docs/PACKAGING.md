@@ -14,16 +14,20 @@
    npm install
    ```
 
-2. Compile the project
+2. Build the project using webpack
    ```bash
-   npm run compile
+   npm run build
    ```
+   This step will:
+   - Bundle all source code using webpack
+   - Output bundled files to `dist` directory 
+   - Copy template files to `dist/templates` directory
 
 3. Package the extension
    ```bash
    vsce package
    ```
-   This will generate `yolo-labeling-vs-0.0.3.vsix` in the project root directory
+   This will generate `yolo-labeling-vs-x.x.x.vsix` in the project root directory (where x.x.x is the version number)
 
 ## Local Testing
 
@@ -45,6 +49,10 @@
    - engines
    - main
    - activationEvents
+4. Webpack build errors: Make sure webpack.config.js is properly configured and all dependencies are installed:
+   ```bash
+   npm install --save-dev webpack webpack-cli ts-loader
+   ```
 
 ## Version Updates
 
