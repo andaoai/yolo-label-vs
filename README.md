@@ -180,6 +180,7 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 ### In Labeling Panel
 - `Tab`: Switch to next label class
 - `Shift+Tab`: Switch to previous label class
+- `Space`: Reset image zoom and position
 - `Ctrl + Mouse Hover`: Highlight box, segmentation, or pose annotations
 - `Ctrl + Mouse Drag`: Move highlighted annotation
 - `D`: Go to next image
