@@ -107,8 +107,8 @@
   "scripts": {
     "build": "cross-env NODE_ENV=production webpack --config webpack.config.js && npm run copy-templates",
     "build:dev": "cross-env NODE_ENV=development webpack --config webpack.config.js && npm run copy-templates",
-    "watch": "cross-env NODE_ENV=development webpack --watch --config webpack.config.js",
-    "copy-templates": "powershell -Command \"Copy-Item -Path src/templates/* -Destination dist/templates/ -Recurse -Force\"",
+    "watch": "cross-env NODE_ENV=development webpack --watch --config webpack.config.js && npm run copy-templates",
+    "copy-templates": "node scripts/copy-templates.js",
     "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
