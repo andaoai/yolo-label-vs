@@ -56,7 +56,7 @@
     "workspaceContains:**/*.yaml",
     "workspaceContains:**/*.yml"
   ],
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
@@ -105,32 +105,36 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./ && npm run copy-templates",
-    "watch": "tsc -watch -p ./ & npm run watch-templates",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test",
-    "copy-templates": "node -e \"const fs=require('fs'); const path=require('path'); const srcDir='src/templates'; const destDir='out/templates'; if(!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive: true}); const copyDir=(src,dest)=>{if(!fs.existsSync(dest)) fs.mkdirSync(dest, {recursive: true}); const entries=fs.readdirSync(src, {withFileTypes: true}); for(const entry of entries){const srcPath=path.join(src, entry.name); const destPath=path.join(dest, entry.name); if(entry.isDirectory()) copyDir(srcPath, destPath); else fs.copyFileSync(srcPath, destPath);}}; copyDir(srcDir, destDir);\"",
-    "watch-templates": "node -e \"const fs=require('fs'); const path=require('path'); const chokidar=require('chokidar'); const srcDir='src/templates'; const destDir='out/templates'; if(!fs.existsSync(destDir)) fs.mkdirSync(destDir, {recursive: true}); const watcher=chokidar.watch(srcDir); watcher.on('all', (event, filepath) => {if(fs.existsSync(filepath) && !fs.lstatSync(filepath).isDirectory()) {const relativePath=path.relative(srcDir, filepath); const destPath=path.join(destDir, relativePath); fs.mkdirSync(path.dirname(destPath), {recursive: true}); fs.copyFileSync(filepath, destPath); console.log(`Copied: ${filepath} -> ${destPath}`)}});\""
+    "build": "cross-env NODE_ENV=production webpack --config webpack.config.js && npm run copy-templates",
+    "build:dev": "cross-env NODE_ENV=development webpack --config webpack.config.js && npm run copy-templates",
+    "watch": "cross-env NODE_ENV=development webpack --watch --config webpack.config.js",
+    "copy-templates": "powershell -Command \"Copy-Item -Path src/templates/* -Destination dist/templates/ -Recurse -Force\"",
+    "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.17.32",
     "@types/vscode": "^1.85.0",
+    "@types/webpack": "^5.28.5",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "chokidar": "^3.5.3",
+    "copy-webpack-plugin": "^13.0.0",
+    "cross-env": "^7.0.3",
     "eslint": "^9.23.0",
     "svg2png-cli": "^1.1.1",
     "svgexport": "^0.4.2",
-    "typescript": "^5.8.2"
+    "terser-webpack-plugin": "^5.3.14",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.2",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "js-yaml": "^4.1.0",
-    "jimp": "^0.22.10"
+    "jimp": "^0.22.10",
+    "js-yaml": "^4.1.0"
   }
 }
