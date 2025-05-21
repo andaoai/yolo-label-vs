@@ -14,14 +14,19 @@
    npm install
    ```
 
-2. Build the project using webpack
+2. Build the project using webpack and copy template files
    ```bash
    npm run build
    ```
    This step will:
    - Bundle all source code using webpack
-   - Output bundled files to `dist` directory 
-   - Copy template files to `dist/templates` directory
+   - Output bundled files to `dist` directory
+   - **Copy template files from `src/templates` to `dist/templates` directory using a custom Node.js script**
+
+   > **Note:**
+   > The template files (such as HTML, CSS, JS, and subdirectories) required by the extension UI are stored in the `src/templates` directory. These files are not bundled by webpack and must be copied manually to the output directory. This is handled by the `scripts/copy-templates.js` script, which recursively copies all files and folders from `src/templates` to `dist/templates`.
+   >
+   > If you add or modify any template files, make sure they are placed in `src/templates` so they will be included in the final package.
 
 3. Package the extension
    ```bash

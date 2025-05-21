@@ -14,14 +14,19 @@
    npm install
    ```
 
-2. 使用webpack构建项目
+2. 使用webpack构建项目并复制模板文件
    ```bash
    npm run build
    ```
    这一步会：
    - 使用webpack打包所有源代码
    - 将打包后的文件输出到 `dist` 目录
-   - 复制模板文件到 `dist/templates` 目录
+   - **通过自定义 Node.js 脚本将模板文件从 `src/templates` 复制到 `dist/templates` 目录**
+
+   > **注意：**
+   > 插件界面所需的模板文件（如 HTML、CSS、JS 及其子目录）都存放在 `src/templates` 目录下。这些文件不会被 webpack 直接打包，必须通过 `scripts/copy-templates.js` 脚本手动复制到输出目录。该脚本会递归复制 `src/templates` 下的所有文件和文件夹到 `dist/templates`。
+   >
+   > 如果你新增或修改了模板文件，请确保它们放在 `src/templates` 下，这样才能被正确打包进最终的插件包中。
 
 3. 打包插件
    ```bash
