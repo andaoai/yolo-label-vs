@@ -45,7 +45,9 @@ export class CanvasManager {
     setupEventListeners() {
         // 使用bind保持方法引用的可读性
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        // 对mousemove事件使用passive选项提高性能
+        this.boundMouseMove = this.handleMouseMove.bind(this);
+        this.canvas.addEventListener('mousemove', this.boundMouseMove, { passive: true });
         this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
         this.canvas.addEventListener('contextmenu', this.handleContextMenu.bind(this));
         this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
@@ -75,7 +77,7 @@ export class CanvasManager {
      */
     cleanupEventListeners() {
         this.canvas.removeEventListener('mousedown', this.handleMouseDown);
-        this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+        this.canvas.removeEventListener('mousemove', this.boundMouseMove);
         this.canvas.removeEventListener('mouseup', this.handleMouseUp);
         this.canvas.removeEventListener('contextmenu', this.handleContextMenu);
         this.canvas.removeEventListener('wheel', this.handleWheel);
@@ -289,147 +291,161 @@ export class CanvasManager {
         this.updateRects();
         this.updateCursorStyle(e);
         
-        if (this.state.isPanning) {
-            this.handlePanning(e);
-            return;
-        }
-        
+        // 保存鼠标位置
         const pos = this.getMousePos(e);
         const normalizedX = pos.x / this.state.originalImageWidth;
         const normalizedY = pos.y / this.state.originalImageHeight;
         this.state.currentMousePos = { x: normalizedX, y: normalizedY };
-
-        // 处理点拖动
-        if (e.ctrlKey && this.state.isDraggingPoint && this.state.selectedPoint) {
-            this.moveSelectedPoint(normalizedX, normalizedY);
-            this.state.hasUnsavedChanges = true;
-            this.state.requestRedraw();
-            this.updateCoordinateDisplay(normalizedX, normalizedY);
-            return;
-        }
-
-        // 每次鼠标移动时检查点位悬停，不仅在Ctrl键按下时
-        const pointUnderCursor = this.findPointUnderCursor(normalizedX, normalizedY);
-        
-        // 如果鼠标位置变化或新的点被悬停，请求重绘
-        if (pointUnderCursor || this.state.hoveredPoint) {
-            if (
-                (pointUnderCursor && !this.state.hoveredPoint) || 
-                (!pointUnderCursor && this.state.hoveredPoint) ||
-                (pointUnderCursor && this.state.hoveredPoint && 
-                 (pointUnderCursor.label !== this.state.hoveredPoint.label || 
-                  pointUnderCursor.type !== this.state.hoveredPoint.type || 
-                  pointUnderCursor.pointIndex !== this.state.hoveredPoint.pointIndex ||
-                  (pointUnderCursor.type === 'box' && pointUnderCursor.corner !== this.state.hoveredPoint.corner)))
-            ) {
-                // 更新悬停的点
-                this.state.hoveredPoint = pointUnderCursor;
-                // 请求重绘
-                this.state.requestRedraw();
-            }
-        }
-        
-        // 如果按住Ctrl键，设置移动光标
-        if (e.ctrlKey && pointUnderCursor) {
-            this.canvas.style.cursor = 'move';
-        }
-
-        // 处理标签悬停逻辑
-        if (!this.state.isDrawing && !this.state.isDrawingPolygon) {
-            const label = this.state.findLabelUnderCursor(normalizedX, normalizedY);
-            if (this.state.hoveredLabel !== label) {
-                this.state.hoveredLabel = label;
-                this.state.updateLabelHighlight();
-                
-                // 如果找到了标签，启动虚线动画
-                if (label) {
-                    if (!this.state.dashAnimationActive) {
-                        this.state.dashAnimationActive = true;
-                        this.startDashAnimation();
-                    }
-                } else {
-                    // 如果没有标签被悬停，停止动画
-                    this.state.dashAnimationActive = false;
-                }
-                
-                this.state.requestRedraw();
-            }
-            
-            // 只有按住 Ctrl 键时才显示移动光标和允许拖动
-            if (!pointUnderCursor) {
-                this.canvas.style.cursor = (e.ctrlKey && label) ? 'move' : 'default';
-            }
-        }
-
-        // 只有Ctrl+拖动才允许移动
-        if (e.ctrlKey && this.state.isDragging && this.state.draggedLabel) {
-            const dx = normalizedX - this.state.dragStartPos.x;
-            const dy = normalizedY - this.state.dragStartPos.y;
-            
-            if (this.state.draggedLabel.isSegmentation) {
-                // 移动分割标签
-                for (let i = 0; i < this.state.draggedLabel.points.length; i += 2) {
-                    this.state.draggedLabel.points[i] += dx;
-                    this.state.draggedLabel.points[i + 1] += dy;
-                }
-            } else if (this.state.draggedLabel.isPose) {
-                // 移动姿态标签
-                // 首先移动边界框
-                this.state.draggedLabel.x += dx;
-                this.state.draggedLabel.y += dy;
-                
-                // 然后移动所有关键点
-                if (this.state.draggedLabel.keypoints && this.state.draggedLabel.keypointShape) {
-                    const valuePerPoint = this.state.draggedLabel.keypointShape[1];
-                    const numKeypoints = this.state.draggedLabel.keypointShape[0];
-                    
-                    // 遍历所有关键点并移动它们
-                    for (let i = 0; i < numKeypoints; i++) {
-                        const baseIndex = i * valuePerPoint;
-                        // 只更新x和y坐标，不更改可见性值
-                        this.state.draggedLabel.keypoints[baseIndex] += dx;
-                        this.state.draggedLabel.keypoints[baseIndex + 1] += dy;
-                    }
-                }
-            } else {
-                // 移动普通边界框
-                this.state.draggedLabel.x += dx;
-                this.state.draggedLabel.y += dy;
-            }
-            
-            this.state.dragStartPos = { x: normalizedX, y: normalizedY };
-            this.state.requestRedraw();
-            this.state.hasUnsavedChanges = true;
-        }
-        
-        // 驱动点的闪烁效果 - 无论鼠标是否移动，都定期重绘
-        if (!this.state.pulsationInterval && 
-            (this.state.hoveredPoint || 
-             this.state.initialLabels.some(l => l.isPose || l.isSegmentation))) {
-            // 启动脉动效果动画
-            this.state.pulsationInterval = setInterval(() => {
-                if (this.state.shouldUpdate()) {
-                    this.state.requestRedraw();
-                } else {
-                    // 如果不需要更新，清除间隔
-                    clearInterval(this.state.pulsationInterval);
-                    this.state.pulsationInterval = null;
-                }
-            }, 50); // 50ms间隔产生流畅的动画
-        }
-        
-        // 如果在多边形绘制过程中，更新预览
-        if (this.state.isDrawingPolygon && this.state.polygonPoints.length >= 2) {
-            this.state.requestRedraw();
-        }
-        
-        // 如果在预览框绘制过程中
-        if (this.state.isDrawing) {
-            this.state.requestRedraw();
-        }
         
         // 更新坐标显示
         this.updateCoordinateDisplay(normalizedX, normalizedY);
+        
+        // 直接请求重绘而不是调用drawCrosshairs
+        this.state.requestRedraw();
+        
+        // 使用requestAnimationFrame来处理其他交互元素
+        if (!this.crosshairUpdateScheduled) {
+            this.crosshairUpdateScheduled = true;
+            requestAnimationFrame(() => {
+                this.crosshairUpdateScheduled = false;
+                
+                // 如果处于平移或特定操作模式，则继续正常处理
+                if (this.state.isPanning) {
+                    this.handlePanning(e);
+                    return;
+                }
+                
+                // 处理点拖动
+                if (e.ctrlKey && this.state.isDraggingPoint && this.state.selectedPoint) {
+                    this.moveSelectedPoint(normalizedX, normalizedY);
+                    this.state.hasUnsavedChanges = true;
+                    this.state.requestRedraw();
+                    return;
+                }
+                
+                // 每次鼠标移动时检查点位悬停，不仅在Ctrl键按下时
+                const pointUnderCursor = this.findPointUnderCursor(normalizedX, normalizedY);
+                
+                // 如果鼠标位置变化或新的点被悬停，请求重绘
+                if (pointUnderCursor || this.state.hoveredPoint) {
+                    if (
+                        (pointUnderCursor && !this.state.hoveredPoint) || 
+                        (!pointUnderCursor && this.state.hoveredPoint) ||
+                        (pointUnderCursor && this.state.hoveredPoint && 
+                         (pointUnderCursor.label !== this.state.hoveredPoint.label || 
+                          pointUnderCursor.type !== this.state.hoveredPoint.type || 
+                          pointUnderCursor.pointIndex !== this.state.hoveredPoint.pointIndex ||
+                          (pointUnderCursor.type === 'box' && pointUnderCursor.corner !== this.state.hoveredPoint.corner)))
+                    ) {
+                        // 更新悬停的点
+                        this.state.hoveredPoint = pointUnderCursor;
+                        // 请求重绘
+                        this.state.requestRedraw();
+                    }
+                }
+                
+                // 如果按住Ctrl键，设置移动光标
+                if (e.ctrlKey && pointUnderCursor) {
+                    this.canvas.style.cursor = 'move';
+                }
+
+                // 处理标签悬停逻辑
+                if (!this.state.isDrawing && !this.state.isDrawingPolygon) {
+                    const label = this.state.findLabelUnderCursor(normalizedX, normalizedY);
+                    if (this.state.hoveredLabel !== label) {
+                        this.state.hoveredLabel = label;
+                        this.state.updateLabelHighlight();
+                        
+                        // 如果找到了标签，启动虚线动画
+                        if (label) {
+                            if (!this.state.dashAnimationActive) {
+                                this.state.dashAnimationActive = true;
+                                this.startDashAnimation();
+                            }
+                        } else {
+                            // 如果没有标签被悬停，停止动画
+                            this.state.dashAnimationActive = false;
+                        }
+                        
+                        this.state.requestRedraw();
+                    }
+                    
+                    // 只有按住 Ctrl 键时才显示移动光标和允许拖动
+                    if (!pointUnderCursor) {
+                        this.canvas.style.cursor = (e.ctrlKey && label) ? 'move' : 'default';
+                    }
+                }
+
+                // 只有Ctrl+拖动才允许移动
+                if (e.ctrlKey && this.state.isDragging && this.state.draggedLabel) {
+                    // 标签拖动逻辑保持不变
+                    const dx = normalizedX - this.state.dragStartPos.x;
+                    const dy = normalizedY - this.state.dragStartPos.y;
+                    
+                    // 根据标签类型处理移动
+                    if (this.state.draggedLabel.isSegmentation) {
+                        // 移动分割标签
+                        for (let i = 0; i < this.state.draggedLabel.points.length; i += 2) {
+                            this.state.draggedLabel.points[i] += dx;
+                            this.state.draggedLabel.points[i + 1] += dy;
+                        }
+                    } else if (this.state.draggedLabel.isPose) {
+                        // 移动姿态标签
+                        // 首先移动边界框
+                        this.state.draggedLabel.x += dx;
+                        this.state.draggedLabel.y += dy;
+                        
+                        // 然后移动所有关键点
+                        if (this.state.draggedLabel.keypoints && this.state.draggedLabel.keypointShape) {
+                            const valuePerPoint = this.state.draggedLabel.keypointShape[1];
+                            const numKeypoints = this.state.draggedLabel.keypointShape[0];
+                            
+                            // 遍历所有关键点并移动它们
+                            for (let i = 0; i < numKeypoints; i++) {
+                                const baseIndex = i * valuePerPoint;
+                                // 只更新x和y坐标，不更改可见性值
+                                this.state.draggedLabel.keypoints[baseIndex] += dx;
+                                this.state.draggedLabel.keypoints[baseIndex + 1] += dy;
+                            }
+                        }
+                    } else {
+                        // 移动普通边界框
+                        this.state.draggedLabel.x += dx;
+                        this.state.draggedLabel.y += dy;
+                    }
+                    
+                    this.state.dragStartPos = { x: normalizedX, y: normalizedY };
+                    this.state.requestRedraw();
+                    this.state.hasUnsavedChanges = true;
+                }
+                
+                // 驱动点的闪烁效果 - 无论鼠标是否移动，都定期重绘
+                if (!this.state.pulsationInterval && 
+                    (this.state.hoveredPoint || 
+                     this.state.initialLabels.some(l => l.isPose || l.isSegmentation))) {
+                    // 启动脉动效果动画
+                    this.state.pulsationInterval = setInterval(() => {
+                        if (this.state.shouldUpdate()) {
+                            this.state.requestRedraw();
+                        } else {
+                            // 如果不需要更新，清除间隔
+                            clearInterval(this.state.pulsationInterval);
+                            this.state.pulsationInterval = null;
+                        }
+                    }, 50); // 50ms间隔产生流畅的动画
+                }
+                
+                // 如果在多边形绘制过程中，更新预览
+                if (this.state.isDrawingPolygon && this.state.polygonPoints.length >= 2) {
+                    this.state.requestRedraw();
+                }
+                
+                // 如果在预览框绘制过程中
+                if (this.state.isDrawing) {
+                    this.state.requestRedraw();
+                }
+            });
+        }
     }
     
     /**
@@ -697,6 +713,13 @@ export class CanvasManager {
             return;
         }
 
+        // 空格键重置图像缩放和位置
+        if (e.key === ' ' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+            e.preventDefault(); // 防止页面滚动
+            this.resetImagePosition();
+            return;
+        }
+
         // ESC键取消分割或关键点绘制
         if (e.key === 'Escape') {
             if (this.state.currentMode === 'seg' && this.state.isDrawingPolygon) {
@@ -755,15 +778,30 @@ export class CanvasManager {
         if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
             switch (e.key.toLowerCase()) {
                 case 'a':
+                case 'd': {
                     e.preventDefault();
-                    console.log("CanvasManager: 按下A键导航到上一张图片");
-                    this.state.vscode.postMessage({ command: 'previous' });
+                    const isPrev = e.key.toLowerCase() === 'a';
+                    const command = isPrev ? 'previous' : 'next';
+                    const saveButton = document.getElementById('saveLabels');
+                    // 判断保存按钮是否可用
+                    const needSave = saveButton && !saveButton.disabled && !saveButton.classList.contains('disabled') && window.uiManager;
+                    if (needSave) {
+                        // 如果 saveLabels 返回 Promise，等待保存完成后再切换
+                        const saveResult = window.uiManager.saveLabels();
+                        if (saveResult && typeof saveResult.then === 'function') {
+                            saveResult.then(() => {
+                                this.state.vscode.postMessage({ command });
+                            });
+                        } else {
+                            // 同步保存
+                            this.state.vscode.postMessage({ command });
+                        }
+                    } else {
+                        // 无需保存，直接切换
+                        this.state.vscode.postMessage({ command });
+                    }
                     break;
-                case 'd':
-                    e.preventDefault();
-                    console.log("CanvasManager: 按下D键导航到下一张图片");
-                    this.state.vscode.postMessage({ command: 'next' });
-                    break;
+                }
             }
         }
     }
@@ -910,7 +948,7 @@ export class CanvasManager {
      * 绘制当前姿态边界框（虚线）
      */
     drawCurrentPoseBoundingBox() {
-        if (!this.state.currentPoseLabel) return;
+        if (!this.state.currentPoseLabel) { return; }
         
         // 获取标签颜色
         const colorIndex = this.state.currentPoseLabel.class % CONFIG.COLORS.length;
@@ -938,8 +976,9 @@ export class CanvasManager {
 
     /**
      * 使用变换重绘画布
+     * @param {boolean} [fullRedraw=true] - 是否进行完整重绘，包括十字线
      */
-    redrawWithTransform() {
+    redrawWithTransform(fullRedraw = true) {
         // 清除画布
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
@@ -1026,11 +1065,33 @@ export class CanvasManager {
             
             this.ctx.restore();
             
-            // 在鼠标位置绘制十字线 - 在恢复之后，以确保它们跨越整个画布
-            if (this.state.currentMousePos) {
+            // 仅在完整重绘时绘制十字线
+            if (fullRedraw && this.state.currentMousePos) {
                 const canvasX = this.state.currentMousePos.x * this.state.originalImageWidth * this.state.scale + this.state.translateX;
                 const canvasY = this.state.currentMousePos.y * this.state.originalImageHeight * this.state.scale + this.state.translateY;
-                this.drawCrosshairs(canvasX, canvasY);
+                
+                // 使用内联代码绘制十字线，避免调用可能导致循环重绘的方法
+                this.ctx.save();
+                this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+                
+                // 设置十字线样式
+                this.ctx.strokeStyle = CONFIG.CROSSHAIR_COLOR; 
+                this.ctx.lineWidth = 1.5;
+                this.ctx.setLineDash([5, 5]);
+                
+                // 绘制水平线
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, canvasY);
+                this.ctx.lineTo(this.canvas.width, canvasY);
+                this.ctx.stroke();
+                
+                // 绘制垂直线
+                this.ctx.beginPath();
+                this.ctx.moveTo(canvasX, 0);
+                this.ctx.lineTo(canvasX, this.canvas.height);
+                this.ctx.stroke();
+                
+                this.ctx.restore();
             }
         }
     }
@@ -1049,7 +1110,7 @@ export class CanvasManager {
             const label = this.state.initialLabels[i];
             
             // 跳过不可见的标签
-            if (label.visible === false) continue;
+            if (label.visible === false) { continue; }
             
             // 获取标签颜色
             const colorIndex = label.class % colorList.length;
@@ -1234,29 +1295,50 @@ export class CanvasManager {
      * @param {number} y - Y坐标
      */
     drawCrosshairs(x, y) {
-        // 现在x,y参数已经在画布坐标空间中
-        // 所以我们不需要转换它们
+        // 首先触发完整重绘，确保画布内容是最新的
+        this.state.requestRedraw(false); // 不包括十字线的重绘
         
         // 在画布坐标空间中绘制
         this.ctx.save();
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         
+        // 使用单独的画布进行十字线绘制
+        if (!this.crosshairCanvas) {
+            this.crosshairCanvas = document.createElement('canvas');
+            this.crosshairCanvas.width = this.canvas.width;
+            this.crosshairCanvas.height = this.canvas.height;
+            this.crosshairCtx = this.crosshairCanvas.getContext('2d');
+        }
+        
+        // 确保缓存画布大小与主画布相同
+        if (this.crosshairCanvas.width !== this.canvas.width || 
+            this.crosshairCanvas.height !== this.canvas.height) {
+            this.crosshairCanvas.width = this.canvas.width;
+            this.crosshairCanvas.height = this.canvas.height;
+        }
+        
+        // 清除十字线画布
+        this.crosshairCtx.clearRect(0, 0, this.crosshairCanvas.width, this.crosshairCanvas.height);
+        
         // 设置十字线样式
-        this.ctx.strokeStyle = 'rgba(76, 217, 100, 0.8)'; // 绿色，0.8透明度
-        this.ctx.lineWidth = 1.5; // 增加线宽以提高可见度
-        this.ctx.setLineDash([5, 5]);
+        this.crosshairCtx.strokeStyle = CONFIG.CROSSHAIR_COLOR; 
+        this.crosshairCtx.lineWidth = 1.5; // 增加线宽以提高可见度
+        this.crosshairCtx.setLineDash([5, 5]);
         
         // 绘制水平线
-        this.ctx.beginPath();
-        this.ctx.moveTo(0, y);
-        this.ctx.lineTo(this.canvas.width, y);
-        this.ctx.stroke();
+        this.crosshairCtx.beginPath();
+        this.crosshairCtx.moveTo(0, y);
+        this.crosshairCtx.lineTo(this.crosshairCanvas.width, y);
+        this.crosshairCtx.stroke();
         
         // 绘制垂直线
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, 0);
-        this.ctx.lineTo(x, this.canvas.height);
-        this.ctx.stroke();
+        this.crosshairCtx.beginPath();
+        this.crosshairCtx.moveTo(x, 0);
+        this.crosshairCtx.lineTo(x, this.crosshairCanvas.height);
+        this.crosshairCtx.stroke();
+        
+        // 将十字线画布叠加到主画布上
+        this.ctx.drawImage(this.crosshairCanvas, 0, 0);
         
         this.ctx.restore();
     }
@@ -1265,7 +1347,7 @@ export class CanvasManager {
      * 绘制当前多边形
      */
     drawCurrentPolygon() {
-        if (!this.state.isDrawingPolygon || this.state.polygonPoints.length < 2) return;
+        if (!this.state.isDrawingPolygon || this.state.polygonPoints.length < 2) { return; }
 
         const color = CONFIG.COLORS[this.state.currentLabel % CONFIG.COLORS.length];
         this.ctx.strokeStyle = color;
@@ -1390,7 +1472,7 @@ export class CanvasManager {
      * @returns {boolean} 如果点接近第一个点则为true
      */
     isNearFirstPoint(x, y) {
-        if (this.state.polygonPoints.length < 2) return false;
+        if (this.state.polygonPoints.length < 2) { return false; }
         
         const firstX = this.state.polygonPoints[0];
         const firstY = this.state.polygonPoints[1];
@@ -1439,7 +1521,7 @@ export class CanvasManager {
      * @returns {Object} 包含x, y, width, height的对象
      */
     calculateBoundingBoxFromPolygon(points) {
-        if (points.length < 4) return { x: 0, y: 0, width: 0, height: 0 };
+        if (points.length < 4) { return { x: 0, y: 0, width: 0, height: 0 }; }
         
         // 初始化最小/最大值
         let minX = points[0];
@@ -1476,7 +1558,7 @@ export class CanvasManager {
      */
     updateLabelList() {
         const labelListContainer = document.getElementById('labelList');
-        if (!labelListContainer) return;
+        if (!labelListContainer) { return; }
         
         // 刷新当前class状态栏
         if (window.uiManager) {
@@ -1678,7 +1760,7 @@ export class CanvasManager {
      * 启动虚线动画
      */
     startDashAnimation() {
-        if (!this.state.dashAnimationActive) return;
+        if (!this.state.dashAnimationActive) { return; }
         
         // 更新虚线偏移，使用更大的步长使动画更明显
         this.state.dashOffset -= 1.5;
@@ -1765,7 +1847,7 @@ export class CanvasManager {
      * 绘制当前已标注的关键点
      */
     drawCurrentPoseKeypoints() {
-        if (!this.state.currentPoseLabel || !this.state.currentPoseLabel.keypoints) return;
+        if (!this.state.currentPoseLabel || !this.state.currentPoseLabel.keypoints) { return; }
         
         const keypoints = this.state.currentPoseLabel.keypoints;
         const valuePerPoint = this.state.keypointValueCount;
@@ -1870,7 +1952,7 @@ export class CanvasManager {
         this.ctx.lineDashOffset = 0;
         
         // 如果没有关键点数据，则直接返回
-        if (!label.keypoints || !label.keypointShape) return;
+        if (!label.keypoints || !label.keypointShape) { return; }
         
         // 绘制姿态关键点
         this.drawLabelPoints(label, 'pose', color, isHighlighted);
@@ -1931,7 +2013,7 @@ export class CanvasManager {
      * @param {number} y - 归一化的Y坐标
      */
     completePoseBoxDrawing(x, y) {
-        if (!this.state.isPoseDrawing) return;
+        if (!this.state.isPoseDrawing) { return; }
         
         const { startX, startY } = this.state;
         
@@ -1994,7 +2076,7 @@ export class CanvasManager {
      * @param {number} visibility - 可见性状态 (0=不可见, 1=可见, 2=被遮挡但可见)
      */
     addPoseKeypoint(x, y, visibility) {
-        if (!this.state.isPoseDrawing || !this.state.currentPoseLabel) return;
+        if (!this.state.isPoseDrawing || !this.state.currentPoseLabel) { return; }
         
         const currentKeypoint = this.state.poseDrawingStep - 1;
         const valuePerPoint = this.state.keypointValueCount;
@@ -2031,7 +2113,7 @@ export class CanvasManager {
      * 完成整个姿态标注过程
      */
     completePoseDrawing() {
-        if (!this.state.isPoseDrawing || !this.state.currentPoseLabel) return;
+        if (!this.state.isPoseDrawing || !this.state.currentPoseLabel) { return; }
         
         // 添加标签到列表
         this.state.initialLabels.push(this.state.currentPoseLabel);
@@ -2068,7 +2150,7 @@ export class CanvasManager {
      * @returns {Object|null} 包含点信息的对象或null
      */
     findPointUnderCursor(x, y) {
-        if (!this.state.initialLabels || this.state.initialLabels.length === 0) return null;
+        if (!this.state.initialLabels || this.state.initialLabels.length === 0) { return null; }
         
         // 设置点的选择阈值（根据缩放调整）
         const threshold = CONFIG.CLOSE_POINT_THRESHOLD / this.state.scale;
@@ -2078,7 +2160,7 @@ export class CanvasManager {
             const label = this.state.initialLabels[i];
             
             // 跳过不可见的标签
-            if (label.visible === false) continue;
+            if (label.visible === false) { continue; }
             
             if (label.isSegmentation) {
                 // 检查分割多边形的各个点
@@ -2108,7 +2190,7 @@ export class CanvasManager {
                     const pointY = label.keypoints[baseIndex + 1];
                     
                     // 如果点有可见性值且不可见，则跳过
-                    if (valuePerPoint >= 3 && label.keypoints[baseIndex + 2] === 0) continue;
+                    if (valuePerPoint >= 3 && label.keypoints[baseIndex + 2] === 0) { continue; }
                     
                     const distance = Math.sqrt(Math.pow(x - pointX, 2) + Math.pow(y - pointY, 2));
                     
@@ -2197,7 +2279,7 @@ export class CanvasManager {
      * @param {Object} selectedPoint - 选中的点信息
      */
     drawSelectedPoint(selectedPoint) {
-        if (!selectedPoint) return;
+        if (!selectedPoint) { return; }
         
         // 获取点的像素坐标
         const x = selectedPoint.x * this.state.originalImageWidth;
@@ -2236,7 +2318,7 @@ export class CanvasManager {
      * @param {number} y - 归一化的Y坐标
      */
     moveSelectedPoint(x, y) {
-        if (!this.state.selectedPoint) return;
+        if (!this.state.selectedPoint) { return; }
         
         const selectedPoint = this.state.selectedPoint;
         const dx = x - this.state.dragStartPos.x;
@@ -2413,7 +2495,7 @@ export class CanvasManager {
                 if (valuePerPoint >= 3) {
                     visibility = label.keypoints[baseIndex + 2];
                     // 如果可见性为0，跳过这个关键点
-                    if (visibility === 0) continue;
+                    if (visibility === 0) { continue; }
                 }
                 
                 // 根据可见性调整透明度
@@ -2429,7 +2511,7 @@ export class CanvasManager {
         
         // 辅助函数：检查是否是当前悬停的点
         function isHoveredPoint(hoveredPoint, checkLabel, checkType, checkIndex) {
-            if (!hoveredPoint) return false;
+            if (!hoveredPoint) { return false; }
             
             if (hoveredPoint.label === checkLabel && hoveredPoint.type === checkType) {
                 if (checkType === 'box') {
@@ -2508,4 +2590,34 @@ export class CanvasManager {
         // 转换回十六进制并格式化
         return `#${darkerR.toString(16).padStart(2, '0')}${darkerG.toString(16).padStart(2, '0')}${darkerB.toString(16).padStart(2, '0')}`;
     }
-} 
+
+    /**
+     * 重置图像到原始位置和比例
+     */
+    resetImagePosition() {
+        if (!this.state.image) return;
+        
+        // 获取画布容器尺寸
+        const container = this.canvas.parentElement;
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        // 设置合适的缩放以适应画布
+        const scaleX = containerWidth / this.state.originalImageWidth;
+        const scaleY = containerHeight / this.state.originalImageHeight;
+        
+        // 使用较小的缩放比例，确保整个图像都在视口内
+        this.state.scale = Math.min(scaleX, scaleY, 1); // 不要超过原始大小
+        
+        // 计算图片居中位置
+        this.state.translateX = (containerWidth - (this.state.originalImageWidth * this.state.scale)) / 2;
+        this.state.translateY = (containerHeight - (this.state.originalImageHeight * this.state.scale)) / 2;
+        
+        // 更新缩放显示
+        this.updateZoomDisplay();
+        
+        // 调整画布大小并重绘
+        this.resizeCanvas();
+        this.state.requestRedraw();
+    }
+}

@@ -1,22 +1,30 @@
 .vscode/**
 .vscode-test/**
 src/**
+out/**
+node_modules/**
+test_label/**
 .gitignore
 .yarnrc
-vsc-extension-quickstart.md
+webpack.config.js
 **/tsconfig.json
 **/eslint.config.mjs
 **/*.map
 **/*.ts
-**/.vscode-test.*
-test_label/**
 
-
-# 排除docs目录，只保留图标
+# 排除docs目录，只保留图标和readme
 docs/**
 !docs/images/icon.png
 !docs/images/icon.svg
+!docs/README.md
 
 # 其他不需要的文件
 .github/**
 CHANGELOG.md
+
+# Development files
+.eslintrc.json
+.prettierrc
+jest.config.js
+yarn.lock
+*.vsix

@@ -14,16 +14,20 @@
    npm install
    ```
 
-2. 编译项目
+2. 使用webpack构建项目
    ```bash
-   npm run compile
+   npm run build
    ```
+   这一步会：
+   - 使用webpack打包所有源代码
+   - 将打包后的文件输出到 `dist` 目录
+   - 复制模板文件到 `dist/templates` 目录
 
 3. 打包插件
    ```bash
    vsce package
    ```
-   执行成功后会在项目根目录生成 `yolo-labeling-vs-0.0.3.vsix` 文件
+   执行成功后会在项目根目录生成 `yolo-labeling-vs-x.x.x.vsix` 文件（其中x.x.x为版本号）
 
 ## 本地测试安装
 
@@ -45,6 +49,10 @@
    - engines
    - main
    - activationEvents
+4. Webpack构建错误：确保 webpack.config.js 配置正确且已安装所有依赖：
+   ```bash
+   npm install --save-dev webpack webpack-cli ts-loader
+   ```
 
 ## 版本更新
 
