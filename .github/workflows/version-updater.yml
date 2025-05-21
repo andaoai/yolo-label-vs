@@ -57,10 +57,10 @@ jobs:
           rm -f package-lock.json
           npm install --no-package-lock --ignore-scripts
         
-      - name: Compile extension
-        run: npm run compile
+      - name: Build extension with webpack (development)
+        run: npm run build:dev
         
       - name: Package extension
         run: |
           npm install -g @vscode/vsce
-          vsce package 
+          vsce package

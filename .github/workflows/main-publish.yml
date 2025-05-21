@@ -30,8 +30,10 @@ jobs:
         run: |
           npm install --no-package-lock --ignore-scripts
         
-      - name: Compile extension
-        run: npm run compile
+      - name: Build extension with webpack (production)
+        run: npm run build
+        env:
+          NODE_ENV: production
         
       - name: Package extension
         run: |
@@ -66,4 +68,4 @@ jobs:
         uses: HaaLeo/publish-vscode-extension@v1
         with:
           pat: ${{ secrets.VSCE_TOKEN }}
-          registryUrl: https://marketplace.visualstudio.com 
+          registryUrl: https://marketplace.visualstudio.com
