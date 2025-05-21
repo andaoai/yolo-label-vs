@@ -4,3 +4,4 @@ test_label
 *.vsix
 .vscode-test
 package-lock.json
+dist
