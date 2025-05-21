@@ -13,9 +13,10 @@
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
 			"outFiles": [
-				"${workspaceFolder}/out/**/*.js"
+				"${workspaceFolder}/dist/**/*.js"
 			],
-			"preLaunchTask": "copy-templates"
+			"preLaunchTask": "npm: watch",
+			"sourceMaps": true
 		}
 	]
 }
