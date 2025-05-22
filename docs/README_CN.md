@@ -12,6 +12,7 @@
 [![VS Code引擎版本](https://img.shields.io/badge/vscode-%5E1.85.0-blue)](https://code.visualstudio.com/)
 [![Node.js版本](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 [![赞助支持](https://img.shields.io/badge/赞助-支持-brightgreen)](https://github.com/andaoai/yolo-label-vs/blob/main/docs/README_CN.md#赞助支持)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/andaoai/yolo-label-vs)
 
 一个专门用于快速浏览和编辑 YOLO 数据集标注的 VS Code 扩展。通过 YAML 配置文件，您可以直接在 VS Code 中高效地查看和修改 YOLO 格式的标注数据，让数据集管理变得轻松简单。
 
