@@ -210,6 +210,7 @@ export class UIManager {
         if (this.state.undo()) {
             this.state.requestRedraw();
             this.canvasManager.updateLabelList();
+            this.updateSaveButtonState();
         }
     }
 
