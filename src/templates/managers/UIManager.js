@@ -88,6 +88,17 @@ export class UIManager {
         this.setupActionListeners();
         this.setupProgressBarListeners();
         this.setupSearch();
+
+        // Listen for messages from the extension
+        window.addEventListener('message', event => {
+            const message = event.data; // The JSON data from the extension
+            switch (message.command) {
+                case 'saveSuccess':
+                    this.state.markChangesSaved();
+                    break;
+                // Add other cases if you have more messages from extension to webview
+            }
+        });
     }
     
     /**
@@ -190,7 +201,6 @@ export class UIManager {
      */
     saveLabels() {
         this.state.vscode.postMessage({ command: 'save', labels: this.state.initialLabels });
-        this.state.markChangesSaved();
     }
     
     /**

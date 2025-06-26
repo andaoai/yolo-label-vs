@@ -156,6 +156,7 @@ export class WebviewMessageHandler {
         try {
             this._yoloReader.saveLabels(currentImage, message.labels);
             vscode.window.showInformationMessage('Labels saved successfully!');
+            this._webview.postMessage({ command: 'saveSuccess' });
         } catch (error: any) {
             ErrorHandler.handleError(
                 error,
