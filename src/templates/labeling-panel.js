@@ -82,11 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.ctrlKey && event.key.toLowerCase() === 's') {
                 event.preventDefault(); // 阻止浏览器默认保存行为
                 
-                // 只有在保存按钮启用时才触发保存
-                const saveButton = document.getElementById('saveLabels');
-                if (!saveButton.disabled && !saveButton.classList.contains('disabled')) {
+                // Remove this check, as updateSaveButtonState will handle it
+                // const saveButton = document.getElementById('saveLabels');
+                // if (!saveButton.disabled && !saveButton.classList.contains('disabled')) {
                     uiManager.saveLabels();
-                }
+                // }
             }
             
             // 注意：a和d键的导航由CanvasManager.handleKeyDown处理，这里不需要重复处理

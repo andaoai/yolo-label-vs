@@ -124,7 +124,7 @@ export class YoloDataReader {
 
     private loadImageFiles() {
         try {
-            const yamlDir = path.dirname(path.resolve(this.yamlPath));
+            const yamlDir = path.dirname(this.yamlPath);
             let imagesPath = this.config.path;
             
             if (!path.isAbsolute(imagesPath)) {

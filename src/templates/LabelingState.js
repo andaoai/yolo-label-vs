@@ -332,7 +332,7 @@ export class LabelingState {
         this.hasUnsavedChanges = false;
         this.savedState = JSON.stringify(this.initialLabels || []);
         
-        // 如果uiManager存在，则更新保存按钮状态
+        // Instead, directly update the save button state if UIManager is available
         if (window.uiManager) {
             window.uiManager.updateSaveButtonState();
         }
