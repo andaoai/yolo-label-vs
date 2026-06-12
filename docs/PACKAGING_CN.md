@@ -1,7 +1,7 @@
 # <img src="./images/icon.png" width="32" height="32" alt="YOLO标注工具图标"> 打包指南
 
 ## 环境准备
-1. 确保已安装 Node.js (建议版本 >= 14.0.0)
+1. 确保已安装 Node.js (>= 20.0.0)
 2. 安装必要的开发工具：
    ```bash
    npm install -g @vscode/vsce
@@ -14,19 +14,20 @@
    npm install
    ```
 
-2. 使用webpack构建项目并复制模板文件
+2. 使用 webpack 构建项目
    ```bash
    npm run build
    ```
    这一步会：
-   - 使用webpack打包所有源代码
-   - 将打包后的文件输出到 `dist` 目录
-   - **通过自定义 Node.js 脚本将模板文件从 `src/templates` 复制到 `dist/templates` 目录**
+   - 使用 webpack 多编译器配置打包源代码，输出三个 bundle：
+     - `dist/extension.js` — VS Code 扩展主进程（Node.js target）
+     - `dist/templates/main.js` — WebView 主线程（Web target）
+     - `dist/templates/worker.js` — 渲染 Worker（WebWorker target）
+   - 通过 CopyPlugin 将 HTML/CSS 模板文件复制到 `dist/templates/` 目录
+   - TypeScript 文件（`.ts`）不会被复制，只通过 ts-loader 编译输出
 
    > **注意：**
-   > 插件界面所需的模板文件（如 HTML、CSS、JS 及其子目录）都存放在 `src/templates` 目录下。这些文件不会被 webpack 直接打包，必须通过 `scripts/copy-templates.js` 脚本手动复制到输出目录。该脚本会递归复制 `src/templates` 下的所有文件和文件夹到 `dist/templates`。
-   >
-   > 如果你新增或修改了模板文件，请确保它们放在 `src/templates` 下，这样才能被正确打包进最终的插件包中。
+   > 前端源码位于 `src/templates/` 目录，分为 `shared/`、`main/`、`worker/` 三个子目录。TypeScript 文件由 webpack 的 ts-loader 编译，HTML/CSS 文件由 CopyPlugin 复制。`.ts` 和旧的 `.js` 文件会被 CopyPlugin 排除（ignore 规则）。
 
 3. 打包插件
    ```bash

@@ -104,19 +104,21 @@ export class UiService {
         kptShape?: number[];
         flipIdx?: number[];
     }): Promise<string> {
-        const { classNames, initialImageData, initialLabels, imageInfoText, webview, currentPath, kptShape, flipIdx } = options;
-        
-        // 获取CSS和JS文件的路径
-        const cssPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'templates', 'labeling-panel.css');
-        const jsPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'templates', 'labeling-panel.js');
-        const cssSrc = webview.asWebviewUri(cssPath);
-        const jsSrc = webview.asWebviewUri(jsPath);
+        const { classNames, initialImageData, initialLabels, webview, currentPath, kptShape, flipIdx } = options;
 
-        // 读取HTML模板
-        const templatePath = path.join(this._extensionUri.fsPath, 'dist', 'templates', 'labeling-panel.html');
+        // 获取资源文件的路径
+        const cssPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'templates', 'labeling-panel.css');
+        const mainJsPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'templates', 'main.js');
+        const workerJsPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'templates', 'worker.js');
+        const cssSrc = webview.asWebviewUri(cssPath);
+        const mainJsSrc = webview.asWebviewUri(mainJsPath);
+        const workerJsSrc = webview.asWebviewUri(workerJsPath);
+
+        // 读取HTML模板（新架构使用 index.html）
+        const templatePath = path.join(this._extensionUri.fsPath, 'dist', 'templates', 'index.html');
         let html = await fs.promises.readFile(templatePath, 'utf8');
 
-        // 注入数据到window对象
+        // 注入数据到window对象（新架构的 App.ts 会读取这些全局变量）
         const dataScript = `
             <script>
                 window.initialImageData = ${JSON.stringify(initialImageData)};
@@ -125,15 +127,14 @@ export class UiService {
                 window.currentPath = ${JSON.stringify(currentPath || '')};
                 window.kptShape = ${JSON.stringify(kptShape || null)};
                 window.flipIdx = ${JSON.stringify(flipIdx || null)};
+                // Worker 脚本 URL（App.ts 会使用这个）
+                window.__workerUrl = ${JSON.stringify(workerJsSrc.toString())};
             </script>
         `;
 
-        // 替换占位符
-        html = html.replace('{{classNames}}', classNames.map((name, index) => 
-            `<option value="${index}">${name}</option>`).join(''));
-        html = html.replace('labeling-panel.css', cssSrc.toString());
-        html = html.replace('labeling-panel.js', jsSrc.toString());
-        html = html.replace('{{imageInfo}}', imageInfoText);
+        // 替换资源路径
+        html = html.replace('href="labeling-panel.css"', `href="${cssSrc.toString()}"`);
+        html = html.replace('src="main.js"', `src="${mainJsSrc.toString()}"`);
 
         // 在</head>标签前插入数据脚本
         html = html.replace('</head>', `${dataScript}</head>`);

@@ -57,13 +57,85 @@ yolo-label-vs/
 │   └── ...                   # Other documentation files
 ├── node_modules/             # Dependencies (gitignore)
 ├── src/                      # Source code
+│   ├── services/             # Extension service layer
+│   │   └── UiService.ts     # WebView panel management
+│   ├── templates/            # Frontend templates and source
+│   │   ├── shared/           # Shared between main thread and Worker
+│   │   │   ├── types.ts      # Shared type definitions
+│   │   │   ├── messages.ts   # Message protocol (discriminated union)
+│   │   │   └── config.ts     # Configuration constants
+│   │   ├── worker/           # Worker thread (Canvas rendering)
+│   │   │   ├── worker.ts             # Worker entry point
+│   │   │   ├── RenderEngine.ts       # Render engine coordinator
+│   │   │   ├── Renderer.ts           # Canvas drawing module
+│   │   │   ├── HitTestEngine.ts      # Hit testing
+│   │   │   ├── CoordinateTransform.ts # Coordinate transformation
+│   │   │   └── AnimationController.ts # Animation control
+│   │   ├── main/             # Main thread (input and UI)
+│   │   │   ├── main.ts               # Entry point
+│   │   │   ├── App.ts                # Application orchestrator
+│   │   │   ├── state/                # State management
+│   │   │   │   ├── Store.ts          # Proxy-based reactive state
+│   │   │   │   ├── HistoryManager.ts # Undo/Redo
+│   │   │   │   └── LabelOperations.ts # Pure label operations
+│   │   │   ├── communication/        # Communication layer
+│   │   │   │   ├── ExtensionBridge.ts # Extension communication
+│   │   │   │   └── WorkerBridge.ts   # Worker communication
+│   │   │   ├── input/                # Input handling
+│   │   │   │   ├── InputManager.ts   # Input event management
+│   │   │   │   └── tools/            # Annotation tools
+│   │   │   │       ├── Tool.ts       # Tool interface
+│   │   │   │       ├── BoxTool.ts    # Box drawing tool
+│   │   │   │       ├── SegTool.ts    # Segmentation tool
+│   │   │   │       ├── PoseTool.ts   # Pose tool
+│   │   │   │       └── ToolManager.ts # Tool registry
+│   │   │   └── ui/                   # DOM UI components
+│   │   │       ├── DOMManager.ts     # UI orchestrator
+│   │   │       ├── Toolbar.ts        # Toolbar
+│   │   │       ├── Sidebar.ts        # Sidebar
+│   │   │       ├── StatusBar.ts      # Status bar
+│   │   │       ├── ProgressBar.ts    # Progress bar
+│   │   │       └── ThemeManager.ts   # Theme management
+│   │   ├── index.html        # WebView HTML template
+│   │   └── labeling-panel.css # Stylesheet
 │   ├── YoloDataReader.ts     # YOLO data reader
 │   └── ...                   # Other source files
 ├── test_label/               # Test data
+├── webpack.config.js         # Triple-config build (extension/main/worker)
 ├── .gitignore                # Git ignore configuration
 ├── package.json              # Project configuration
 ├── README.md                 # English documentation
 └── tsconfig.json             # TypeScript configuration
+```
+
+### Frontend Architecture Overview
+
+The frontend uses a **Main Thread + Worker dual-thread architecture**:
+
+- **Main Thread**: Handles user input (mouse/keyboard), manages DOM UI, maintains reactive state Store
+- **Worker Thread**: Handles Canvas rendering, coordinate transformation, hit testing via zero-copy `OffscreenCanvas`
+- **Communication**: TypeScript discriminated union typed messages, ImageBitmap zero-copy transfer
+
+Key design patterns:
+- **Proxy-based Reactive Store**: State changes auto-notify subscribers and sync to Worker
+- **Tool Interface**: Each annotation type (Box/Seg/Pose) implements a common Tool interface; extending requires only adding a new implementation + registration
+- **LRU HistoryManager**: Per-image undo/redo history stack (max 50 entries)
+- **CoordinateTransform**: Unified coordinate system (normalized 0-1 ↔ image pixels ↔ canvas pixels)
+
+### Webpack Build
+
+The project uses webpack multi-compiler configuration, producing three separate bundles:
+
+| Bundle | Target | Entry | Description |
+|--------|--------|-------|-------------|
+| extension.js | node | src/extension.ts | VS Code extension host process |
+| main.js | web | src/templates/main/main.ts | WebView main thread |
+| worker.js | webworker | src/templates/worker/worker.ts | Rendering Worker |
+
+Build commands:
+```bash
+npm run compile    # Production build
+npm run dev        # Development mode (watch)
 ```
 
 ## Branch Management Strategy

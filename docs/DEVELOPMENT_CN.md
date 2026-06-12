@@ -57,13 +57,85 @@ yolo-label-vs/
 │   └── ...                   # 其他文档文件
 ├── node_modules/             # 依赖项 (gitignore)
 ├── src/                      # 源代码
+│   ├── services/             # 扩展服务层
+│   │   └── UiService.ts     # WebView 面板管理
+│   ├── templates/            # 前端模板与源码
+│   │   ├── shared/           # 主线程与Worker共享代码
+│   │   │   ├── types.ts      # 共享类型定义
+│   │   │   ├── messages.ts   # 消息协议（discriminated union）
+│   │   │   └── config.ts     # 配置常量
+│   │   ├── worker/           # Worker 线程（Canvas渲染）
+│   │   │   ├── worker.ts             # Worker 入口
+│   │   │   ├── RenderEngine.ts       # 渲染引擎主控
+│   │   │   ├── Renderer.ts           # Canvas 绘制模块
+│   │   │   ├── HitTestEngine.ts      # 命中检测
+│   │   │   ├── CoordinateTransform.ts # 坐标变换
+│   │   │   └── AnimationController.ts # 动画控制
+│   │   ├── main/             # 主线程（输入与UI）
+│   │   │   ├── main.ts               # 入口
+│   │   │   ├── App.ts                # 应用编排器
+│   │   │   ├── state/                # 状态管理
+│   │   │   │   ├── Store.ts          # Proxy 响应式状态
+│   │   │   │   ├── HistoryManager.ts # Undo/Redo
+│   │   │   │   └── LabelOperations.ts # 标签操作纯函数
+│   │   │   ├── communication/        # 通信层
+│   │   │   │   ├── ExtensionBridge.ts # 扩展通信
+│   │   │   │   └── WorkerBridge.ts   # Worker 通信
+│   │   │   ├── input/                # 输入处理
+│   │   │   │   ├── InputManager.ts   # 输入事件管理
+│   │   │   │   └── tools/            # 标注工具
+│   │   │   │       ├── Tool.ts       # 工具接口
+│   │   │   │       ├── BoxTool.ts    # 框选工具
+│   │   │   │       ├── SegTool.ts    # 分割工具
+│   │   │   │       ├── PoseTool.ts   # 姿态工具
+│   │   │   │       └── ToolManager.ts # 工具注册
+│   │   │   └── ui/                   # DOM UI 组件
+│   │   │       ├── DOMManager.ts     # UI 编排
+│   │   │       ├── Toolbar.ts        # 工具栏
+│   │   │       ├── Sidebar.ts        # 侧边栏
+│   │   │       ├── StatusBar.ts      # 状态栏
+│   │   │       ├── ProgressBar.ts    # 进度条
+│   │   │       └── ThemeManager.ts   # 主题管理
+│   │   ├── index.html        # WebView HTML 模板
+│   │   └── labeling-panel.css # 样式表
 │   ├── YoloDataReader.ts     # YOLO数据读取器
 │   └── ...                   # 其他源文件
 ├── test_label/               # 测试数据
+├── webpack.config.js         # 三配置打包（extension/main/worker）
 ├── .gitignore                # Git忽略配置
 ├── package.json              # 项目配置
 ├── README.md                 # 英文文档
 └── tsconfig.json             # TypeScript配置
+```
+
+### 前端架构概览
+
+前端采用 **主线程 + Worker 双线程架构**：
+
+- **主线程**：处理用户输入（鼠标/键盘）、管理 DOM UI、维护响应式状态 Store
+- **Worker 线程**：负责 Canvas 渲染、坐标变换、命中检测，通过 `OffscreenCanvas` 零拷贝绘制
+- **通信协议**：TypeScript discriminated union 类型消息，ImageBitmap 零拷贝传输
+
+关键设计模式：
+- **Proxy 响应式 Store**：状态变更自动通知订阅者并同步至 Worker
+- **Tool 接口**：每种标注类型（Box/Seg/Pose）实现统一 Tool 接口，扩展只需新增实现 + 注册
+- **LRU HistoryManager**：每图独立 undo/redo 历史栈（最大 50 条）
+- **CoordinateTransform**：统一坐标系（归一化 0-1 ↔ 图片像素 ↔ Canvas 像素）
+
+### Webpack 构建
+
+项目使用 webpack 多编译器配置，输出三个独立 bundle：
+
+| Bundle | Target | 入口 | 说明 |
+|--------|--------|------|------|
+| extension.js | node | src/extension.ts | VS Code 扩展主进程 |
+| main.js | web | src/templates/main/main.ts | WebView 主线程 |
+| worker.js | webworker | src/templates/worker/worker.ts | 渲染 Worker |
+
+构建命令：
+```bash
+npm run compile    # 生产构建
+npm run dev        # 开发模式（watch）
 ```
 
 ## 分支管理策略

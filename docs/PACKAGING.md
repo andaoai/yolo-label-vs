@@ -1,7 +1,7 @@
 # <img src="./images/icon.png" width="32" height="32" alt="YOLO Label Tool Icon"> Packaging Guide
 
 ## Environment Setup
-1. Ensure Node.js is installed (recommended version >= 14.0.0)
+1. Ensure Node.js is installed (>= 20.0.0)
 2. Install required development tools:
    ```bash
    npm install -g @vscode/vsce
@@ -14,19 +14,20 @@
    npm install
    ```
 
-2. Build the project using webpack and copy template files
+2. Build the project using webpack
    ```bash
    npm run build
    ```
    This step will:
-   - Bundle all source code using webpack
-   - Output bundled files to `dist` directory
-   - **Copy template files from `src/templates` to `dist/templates` directory using a custom Node.js script**
+   - Bundle source code using webpack multi-compiler configuration, producing three bundles:
+     - `dist/extension.js` — VS Code extension host process (Node.js target)
+     - `dist/templates/main.js` — WebView main thread (Web target)
+     - `dist/templates/worker.js` — Rendering Worker (WebWorker target)
+   - Copy HTML/CSS template files to `dist/templates/` via CopyPlugin
+   - TypeScript files (`.ts`) are compiled by ts-loader, not copied
 
    > **Note:**
-   > The template files (such as HTML, CSS, JS, and subdirectories) required by the extension UI are stored in the `src/templates` directory. These files are not bundled by webpack and must be copied manually to the output directory. This is handled by the `scripts/copy-templates.js` script, which recursively copies all files and folders from `src/templates` to `dist/templates`.
-   >
-   > If you add or modify any template files, make sure they are placed in `src/templates` so they will be included in the final package.
+   > Frontend source code lives in `src/templates/`, split into `shared/`, `main/`, and `worker/` subdirectories. TypeScript files are compiled by webpack's ts-loader; HTML/CSS files are copied by CopyPlugin. `.ts` and legacy `.js` files are excluded by the CopyPlugin ignore rules.
 
 3. Package the extension
    ```bash
