@@ -150,8 +150,10 @@ export class Renderer {
     ctx.strokeRect(ix, iy, iw, ih);
     ctx.setLineDash([]);
 
-    // 角点
-    this.drawBoxPoints(ctx, label, config);
+    // 角点（仅高亮时显示）
+    if (highlighted) {
+      this.drawBoxPoints(ctx, label, config);
+    }
 
     // 标签文字
     if (showLabels) {
@@ -193,8 +195,10 @@ export class Renderer {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // 顶点
-    this.drawPolygonPoints(ctx, points, config);
+    // 顶点（仅高亮时显示）
+    if (highlighted) {
+      this.drawPolygonPoints(ctx, points, config);
+    }
 
     // 标签文字
     if (showLabels && points.length >= 2) {
@@ -244,7 +248,7 @@ export class Renderer {
         const kx = label.keypoints[ki] * this.transform.imageWidth;
         const ky = label.keypoints[ki + 1] * this.transform.imageHeight;
         const radius = config.pointRadius / s;
-        const pulseScale = this.animation.getPulseScale();
+        const pulseScale = highlighted ? this.animation.getPulseScale() : 1;
 
         ctx.beginPath();
         ctx.arc(kx, ky, radius * pulseScale, 0, Math.PI * 2);
