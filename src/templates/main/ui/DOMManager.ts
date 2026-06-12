@@ -28,6 +28,7 @@ export interface DOMCallbacks {
   onDeleteLabel: (labelIndex: number) => void;
   onToggleVisibility: (labelIndex: number) => void;
   onHoverLabel: (labelIndex: number | null) => void;
+  onPreviewHover?: (startIndex: number, endIndex: number) => void;
 }
 
 export class DOMManager {
@@ -62,6 +63,7 @@ export class DOMManager {
     this.statusBar = new StatusBar(store);
     this.progressBar = new ProgressBar(store, {
       onLoadImage: callbacks.onLoadImage,
+      onPreviewHover: callbacks.onPreviewHover,
     });
   }
 

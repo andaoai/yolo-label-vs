@@ -1,7 +1,12 @@
 /**
  * 进度条 — 图片导航、缩略图预览
+ *
+ * 缩略图按需懒加载：悬停时请求 ±PRELOAD_RADIUS 张窗口
  */
 import type { Store } from '../state/Store';
+
+/** 预加载半径：悬停位置前后各加载多少张 */
+const PRELOAD_RADIUS = 10;
 
 export class ProgressBar {
   private container: HTMLElement | null = null;
@@ -9,11 +14,13 @@ export class ProgressBar {
   private preview: HTMLElement | null = null;
   private previewImg: HTMLImageElement | null = null;
   private previewText: HTMLElement | null = null;
+  private lastRequestedRange: { start: number; end: number } | null = null;
 
   constructor(
     private store: Store,
     private callbacks: {
       onLoadImage: (path: string) => void;
+      onPreviewHover?: (startIndex: number, endIndex: number) => void;
     },
   ) {}
 
@@ -75,6 +82,29 @@ export class ProgressBar {
         this.previewImg.style.display = 'none';
       }
     }
+
+    // 按需请求缩略图范围
+    this.requestPreviewIfNeeded(index);
+  }
+
+  /**
+   * 检查悬停位置附近是否有未加载的缩略图，有则请求
+   */
+  private requestPreviewIfNeeded(index: number): void {
+    const start = Math.max(0, index - PRELOAD_RADIUS);
+    const end = index + PRELOAD_RADIUS;
+
+    // 避免重复请求相同范围
+    if (
+      this.lastRequestedRange &&
+      this.lastRequestedRange.start <= start &&
+      this.lastRequestedRange.end >= end
+    ) {
+      return;
+    }
+
+    this.lastRequestedRange = { start, end };
+    this.callbacks.onPreviewHover?.(start, end);
   }
 
   private onClick(e: MouseEvent): void {

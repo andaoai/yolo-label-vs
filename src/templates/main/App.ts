@@ -35,6 +35,9 @@ export class App {
   private inputManager: InputManager | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private savedState: string = ''; // JSON.stringify of labels for unsaved check
+  private previewCache: Map<number, string> = new Map(); // index → base64
+  private pendingPreviewRange: { startIndex: number; endIndex: number } | null = null;
+  private previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     // 1. Store
@@ -137,9 +140,12 @@ export class App {
     const w = window as any;
     if (w.classNames) {
       this.store.set('classNames', w.classNames);
+      // 同步到 Worker（Worker 初始化时用的是默认值）
+      this.worker.updateConfig({ classNames: w.classNames });
     }
     if (w.kptShape) {
       this.store.set('kptShape', w.kptShape);
+      this.worker.updateConfig({ kptShape: w.kptShape });
     }
     if (w.initialImageData) {
       // 有初始图片数据
@@ -167,21 +173,90 @@ export class App {
       case 'imagePreviews':
         this.store.set('imagePreviews', msg.previews);
         break;
+      case 'imagePreviewRange':
+        this.handleImagePreviewRange(msg.startIndex, msg.previews);
+        break;
     }
   }
 
   private handleImageList(paths: string[]): void {
     this.store.set('allPaths', paths);
-
-    // 请求缩略图
-    if (paths.length > 0) {
-      this.extension.getImagePreviews(paths);
-    }
+    // 不再一次性请求所有缩略图，改为按需懒加载
 
     // 如果没有当前图片，加载第一张
     if (!this.store.get('currentPath') && paths.length > 0) {
       this.extension.loadImage(paths[0]);
     }
+  }
+
+  /**
+   * 按需请求缩略图范围 — 防抖 + 缓存
+   * 由 ProgressBar 在 hover 时调用
+   */
+  requestPreviewRange(startIndex: number, endIndex: number): void {
+    const paths = this.store.get('allPaths');
+    if (paths.length === 0) return;
+
+    // 限制范围
+    const clampedStart = Math.max(0, startIndex);
+    const clampedEnd = Math.min(paths.length - 1, endIndex);
+
+    // 找出未缓存的索引
+    const missing: number[] = [];
+    for (let i = clampedStart; i <= clampedEnd; i++) {
+      if (!this.previewCache.has(i)) {
+        missing.push(i);
+      }
+    }
+    if (missing.length === 0) return;
+
+    // 合并到待请求范围
+    const minIdx = missing[0];
+    const maxIdx = missing[missing.length - 1];
+
+    if (this.pendingPreviewRange) {
+      // 扩展已有待请求范围
+      this.pendingPreviewRange.startIndex = Math.min(this.pendingPreviewRange.startIndex, minIdx);
+      this.pendingPreviewRange.endIndex = Math.max(this.pendingPreviewRange.endIndex, maxIdx);
+    } else {
+      this.pendingPreviewRange = { startIndex: minIdx, endIndex: maxIdx };
+    }
+
+    // 防抖 200ms
+    if (this.previewDebounceTimer) clearTimeout(this.previewDebounceTimer);
+    this.previewDebounceTimer = setTimeout(() => this.flushPreviewRequest(), 200);
+  }
+
+  private flushPreviewRequest(): void {
+    if (!this.pendingPreviewRange) return;
+    const { startIndex, endIndex } = this.pendingPreviewRange;
+    this.pendingPreviewRange = null;
+
+    const paths = this.store.get('allPaths');
+    const slice = paths.slice(startIndex, endIndex + 1);
+    if (slice.length > 0) {
+      this.extension.getImagePreviewRange(slice, startIndex);
+    }
+  }
+
+  private handleImagePreviewRange(startIndex: number, previews: string[]): void {
+    // 写入缓存
+    for (let i = 0; i < previews.length; i++) {
+      if (previews[i]) {
+        this.previewCache.set(startIndex + i, previews[i]);
+      }
+    }
+    // 同步到 Store（用于 ProgressBar 读取）
+    this.syncPreviewCacheToStore();
+  }
+
+  private syncPreviewCacheToStore(): void {
+    const paths = this.store.get('allPaths');
+    const arr: string[] = new Array(paths.length).fill('');
+    for (const [idx, data] of this.previewCache) {
+      arr[idx] = data;
+    }
+    this.store.set('imagePreviews', arr);
   }
 
   private async handleImageData(
@@ -400,6 +475,7 @@ export class App {
         this.store.set('hoveredLabelIndex', idx);
         this.worker.setHoveredLabel(idx);
       },
+      onPreviewHover: (start, end) => this.requestPreviewRange(start, end),
     };
   }
 
