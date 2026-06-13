@@ -95,7 +95,10 @@ yolo-label-vs/
 │   │   │       ├── Sidebar.ts        # 侧边栏
 │   │   │       ├── StatusBar.ts      # 状态栏
 │   │   │       ├── ProgressBar.ts    # 进度条
+│   │   │       ├── ModelPanel.ts     # 模型管理面板
 │   │   │       └── ThemeManager.ts   # 主题管理
+│   │   ├── inference/        # AI 推理模块
+│   │   │   └── inferenceRunner.ts    # ONNX 模型推理
 │   │   ├── index.html        # WebView HTML 模板
 │   │   └── labeling-panel.css # 样式表
 │   ├── YoloDataReader.ts     # YOLO数据读取器
@@ -112,7 +115,7 @@ yolo-label-vs/
 
 前端采用 **主线程 + Worker 双线程架构**：
 
-- **主线程**：处理用户输入（鼠标/键盘）、管理 DOM UI、维护响应式状态 Store
+- **主线程**：处理用户输入（鼠标/键盘）、管理 DOM UI、维护响应式状态 Store、运行 AI 推理
 - **Worker 线程**：负责 Canvas 渲染、坐标变换、命中检测，通过 `OffscreenCanvas` 零拷贝绘制
 - **通信协议**：TypeScript discriminated union 类型消息，ImageBitmap 零拷贝传输
 
@@ -121,6 +124,7 @@ yolo-label-vs/
 - **Tool 接口**：每种标注类型（Box/Seg/Pose）实现统一 Tool 接口，扩展只需新增实现 + 注册
 - **LRU HistoryManager**：每图独立 undo/redo 历史栈（最大 50 条）
 - **CoordinateTransform**：统一坐标系（归一化 0-1 ↔ 图片像素 ↔ Canvas 像素）
+- **InferenceRunner**：ONNX Runtime 集成，支持 AI 目标检测、NMS 和 mask 转多边形
 
 ### Webpack 构建
 
@@ -129,13 +133,14 @@ yolo-label-vs/
 | Bundle | Target | 入口 | 说明 |
 |--------|--------|------|------|
 | extension.js | node | src/extension.ts | VS Code 扩展主进程 |
-| main.js | web | src/templates/main/main.ts | WebView 主线程 |
+| main.js | web | src/templates/main/main.ts | WebView 主线程（包含推理） |
 | worker.js | webworker | src/templates/worker/worker.ts | 渲染 Worker |
 
 构建命令：
 ```bash
-npm run compile    # 生产构建
-npm run dev        # 开发模式（watch）
+npm run build      # 生产构建
+npm run build:dev  # 开发构建
+npm run watch      # 开发模式（watch）
 ```
 
 ## 分支管理策略

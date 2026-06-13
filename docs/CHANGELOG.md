@@ -5,6 +5,68 @@ All notable changes to the "yolo-labeling-vs" extension will be documented in th
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.75] - 2025-06
+
+### Added
+- Support workspace-relative paths in YAML configuration files
+- Helpful error messages when image paths cannot be resolved
+
+### Changed
+- Improved path resolution for YAML directory-based image loading
+
+## [0.0.74] - 2025-06
+
+### Added
+- AI inference runner with ONNX Runtime integration
+- Model panel in sidebar for loading and managing ONNX models
+- Confidence and IoU threshold sliders for inference tuning
+- Accept/Reject buttons for adding detected objects as labels
+- Support for YOLO detection and segmentation models
+- Automatic mask-to-polygon conversion using Marching Squares algorithm
+
+### Changed
+- Enhanced sidebar with collapsible model section
+
+## [0.0.73] - 2025-06
+
+### Added
+- Worker-based rendering architecture with OffscreenCanvas
+- Zero-copy ImageBitmap transfer for better performance
+- Proxy-based reactive state management
+- Copy/paste label functionality (Ctrl+C/Ctrl+V)
+- Auto tool switching based on label type
+- Hover animation for highlighted labels
+
+### Changed
+- Complete frontend architecture rewrite
+- Improved coordinate transformation system
+- Enhanced hit testing with Worker thread
+
+## [0.0.72] - 2025-06
+
+### Fixed
+- Thumbnail lazy loading issues
+- Class name synchronization to Worker
+- Save button state after undo operation
+
+## [0.0.71] - 2025-06
+
+### Added
+- DeepWiki sponsorship link in README
+- DevContainer configuration
+- Dependabot update configuration
+
+## [0.0.70] - 2025-06
+
+### Added
+- Webpack build system with triple configuration
+- Template copying functionality for build process
+- Keyboard shortcut to reset image position and scale
+
+### Changed
+- Refactored build scripts for webpack integration
+- Updated packaging documentation
+
 ## [0.0.56] - 2025-05
 
 ### Added
