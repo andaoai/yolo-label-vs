@@ -95,7 +95,10 @@ yolo-label-vs/
 │   │   │       ├── Sidebar.ts        # Sidebar
 │   │   │       ├── StatusBar.ts      # Status bar
 │   │   │       ├── ProgressBar.ts    # Progress bar
+│   │   │       ├── ModelPanel.ts     # Model management panel
 │   │   │       └── ThemeManager.ts   # Theme management
+│   │   ├── inference/        # AI inference module
+│   │   │   └── inferenceRunner.ts    # ONNX model inference
 │   │   ├── index.html        # WebView HTML template
 │   │   └── labeling-panel.css # Stylesheet
 │   ├── YoloDataReader.ts     # YOLO data reader
@@ -112,7 +115,7 @@ yolo-label-vs/
 
 The frontend uses a **Main Thread + Worker dual-thread architecture**:
 
-- **Main Thread**: Handles user input (mouse/keyboard), manages DOM UI, maintains reactive state Store
+- **Main Thread**: Handles user input (mouse/keyboard), manages DOM UI, maintains reactive state Store, runs AI inference
 - **Worker Thread**: Handles Canvas rendering, coordinate transformation, hit testing via zero-copy `OffscreenCanvas`
 - **Communication**: TypeScript discriminated union typed messages, ImageBitmap zero-copy transfer
 
@@ -121,6 +124,7 @@ Key design patterns:
 - **Tool Interface**: Each annotation type (Box/Seg/Pose) implements a common Tool interface; extending requires only adding a new implementation + registration
 - **LRU HistoryManager**: Per-image undo/redo history stack (max 50 entries)
 - **CoordinateTransform**: Unified coordinate system (normalized 0-1 ↔ image pixels ↔ canvas pixels)
+- **InferenceRunner**: ONNX Runtime integration for AI-powered object detection with NMS and mask-to-polygon conversion
 
 ### Webpack Build
 
@@ -129,13 +133,14 @@ The project uses webpack multi-compiler configuration, producing three separate 
 | Bundle | Target | Entry | Description |
 |--------|--------|-------|-------------|
 | extension.js | node | src/extension.ts | VS Code extension host process |
-| main.js | web | src/templates/main/main.ts | WebView main thread |
+| main.js | web | src/templates/main/main.ts | WebView main thread (includes inference) |
 | worker.js | webworker | src/templates/worker/worker.ts | Rendering Worker |
 
 Build commands:
 ```bash
-npm run compile    # Production build
-npm run dev        # Development mode (watch)
+npm run build      # Production build
+npm run build:dev  # Development build
+npm run watch      # Development mode (watch)
 ```
 
 ## Branch Management Strategy

@@ -91,7 +91,8 @@ export class LabelingPanel {
         this._uiService = new UiService(this._extensionUri);
         
         try {
-            this._yoloReader = new YoloDataReader(yamlUri.fsPath);
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            this._yoloReader = new YoloDataReader(yamlUri.fsPath, workspaceFolder);
             this._validateYoloReader();
         } catch (error: any) {
             this._handleInitializationError(error, yamlUri);

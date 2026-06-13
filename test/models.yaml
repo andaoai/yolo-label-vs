@@ -1,0 +1,26 @@
+# YOLO 模型权重下载配置
+# 运行 test/setup.ts 会自动下载缺失的模型到 test/data/models/
+
+yolov5s:
+  url: https://github.com/ultralytics/assets/releases/download/v8.4.0/yolov5s.onnx
+  task: det
+
+yolov8n:
+  url: https://github.com/ultralytics/assets/releases/download/v8.4.0/yolov8n.onnx
+  task: det
+
+yolov8n-seg:
+  url: https://github.com/ultralytics/assets/releases/download/v8.4.0/yolov8n-seg.onnx
+  task: seg
+
+yolo11n:
+  url: https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo11n.onnx
+  task: det
+
+yolo11n-seg:
+  url: https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo11n-seg.onnx
+  task: seg
+
+yolo11s:
+  url: https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo11s.onnx
+  task: det

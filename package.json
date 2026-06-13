@@ -2,7 +2,7 @@
   "name": "yolo-labeling-vs",
   "displayName": "YOLO Labeling",
   "description": "A VS Code extension for YOLO dataset labeling",
-  "version": "0.0.74",
+  "version": "0.0.78",
   "publisher": "andaoai",
   "license": "MIT",
   "icon": "docs/images/icon.png",
@@ -109,9 +109,11 @@
     "build:dev": "cross-env NODE_ENV=development webpack --config webpack.config.js && npm run copy-templates",
     "watch": "cross-env NODE_ENV=development webpack --watch --config webpack.config.js && npm run copy-templates",
     "copy-templates": "node scripts/copy-templates.js",
+    "test:inference": "tsx test/test-inference-all.ts",
     "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
     "@types/js-yaml": "^4.0.9",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.17.32",
@@ -121,10 +123,14 @@
     "@typescript-eslint/parser": "^8.28.0",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
+    "adm-zip": "^0.5.17",
     "chokidar": "^3.5.3",
     "copy-webpack-plugin": "^13.0.0",
     "cross-env": "^7.0.3",
     "eslint": "^9.23.0",
+    "js-yaml": "^4.2.0",
+    "onnxruntime-node": "^1.26.0",
+    "sharp": "^0.35.1",
     "svg2png-cli": "^1.1.1",
     "svgexport": "^0.4.2",
     "terser-webpack-plugin": "^5.3.14",
@@ -135,6 +141,6 @@
   },
   "dependencies": {
     "jimp": "^0.22.10",
-    "js-yaml": "^4.1.0"
+    "onnxruntime-web": "^1.26.0"
   }
 }

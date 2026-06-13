@@ -1,7 +1,10 @@
 node_modules
 out
-test_label
 *.vsix
 .vscode-test
 package-lock.json
 dist
+
+# test data & output
+test/data
+test/output

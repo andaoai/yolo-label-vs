@@ -1,9 +1,9 @@
 # <img src="docs/images/icon.png" width="32" height="32" alt="YOLO Label Tool Icon"> YOLO Labeling
 
 [![Publish to VS Code Marketplace](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml/badge.svg)](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml)
-[![VS Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
-[![VS Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
-[![VS Marketplace Rating](https://img.shields.io/visual-studio-marketplace/r/andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS Marketplace Version](https://img.shields.io/badge/VS_Marketplace-v0.0.75-blue)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS Marketplace Downloads](https://img.shields.io/badge/Downloads-4.5K-brightgreen)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS Marketplace Rating](https://img.shields.io/badge/Rating-★★★★★-yellow)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Contributors](https://img.shields.io/github/contributors/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/graphs/contributors)
 [![Repo Size](https://img.shields.io/github/repo-size/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs)
@@ -54,12 +54,14 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
 
 ## Key Features
 
+- **AI-Powered Inference**: Load ONNX models to automatically detect objects in images with configurable confidence and IoU thresholds
 - **Quick Dataset Browsing**: Instantly view YOLO-labeled images through YAML configuration files
 - **Efficient Label Management**: Easily modify existing labels without leaving VS Code
 - **Intuitive Preview**: Real-time visualization of bounding boxes and labels
 - **Streamlined Navigation**: Quick movement between images using keyboard shortcuts
 - **YAML Integration**: Direct support for YAML configuration files
 - **Batch Processing**: Browse and edit multiple images in sequence
+- **Copy/Paste Labels**: Quickly duplicate labels with Ctrl+C/Ctrl+V shortcuts
 
 ## Supported Data Formats
 
@@ -172,6 +174,12 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 - **Show Labels**: Toggle visibility of labels on the image
 - **Save Labels**: Save current annotations to disk
 - **Search Box**: Search for specific images in the dataset
+- **Model Panel**: Load ONNX models and run AI inference for automatic object detection
+  - Load/Change Model: Select .onnx model file
+  - Confidence Threshold: Adjust detection confidence (0.05-0.95)
+  - IoU Threshold: Adjust Non-Maximum Suppression overlap (0.1-0.9)
+  - Run Inference: Detect objects in current image
+  - Accept/Reject: Add or discard detected objects as labels
 
 ## Keyboard Shortcuts
 
@@ -188,6 +196,9 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 - `A`: Go to previous image
 - `Ctrl+S`: Save labels
 - `Ctrl+Z`: Undo the last labeling action
+- `Ctrl+Y`: Redo the last undone action
+- `Ctrl+C`: Copy hovered label
+- `Ctrl+V`: Paste copied label
 - `Ctrl+Wheel`: Zoom in/out at mouse position
 - `Alt+Drag`: Pan the image when zoomed in
 - `Wheel`: Scroll vertically when zoomed in
