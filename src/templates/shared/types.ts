@@ -134,6 +134,8 @@ export interface Detection {
   y: number;
   width: number;
   height: number;
+  /** 分割多边形点 [x1,y1,x2,y2,...]，归一化坐标，仅 seg 模型有 */
+  points?: number[];
 }
 
 // ─── 修饰键 ──────────────────────────────────────────────

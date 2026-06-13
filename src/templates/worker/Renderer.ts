@@ -509,16 +509,37 @@ export class Renderer {
       const w = det.width * iw;
       const h = det.height * ih;
 
-      // 半透明填充
-      ctx.fillStyle = `${color}20`; // ~12% 透明度
-      ctx.fillRect(x, y, w, h);
+      // 如果有分割点，绘制多边形
+      if (det.points && det.points.length >= 6) {
+        // 半透明填充多边形
+        ctx.fillStyle = `${color}20`;
+        ctx.beginPath();
+        ctx.moveTo(det.points[0] * iw, det.points[1] * ih);
+        for (let i = 2; i < det.points.length; i += 2) {
+          ctx.lineTo(det.points[i] * iw, det.points[i + 1] * ih);
+        }
+        ctx.closePath();
+        ctx.fill();
 
-      // 虚线边框
-      ctx.strokeStyle = color;
-      ctx.lineWidth = (config.lineWidth + 1) / s;
-      ctx.setLineDash([8 / s, 4 / s]);
-      ctx.strokeRect(x, y, w, h);
-      ctx.setLineDash([]);
+        // 虚线边框
+        ctx.strokeStyle = color;
+        ctx.lineWidth = (config.lineWidth + 1) / s;
+        ctx.setLineDash([8 / s, 4 / s]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        // 没有分割点，绘制 bbox
+        // 半透明填充
+        ctx.fillStyle = `${color}20`;
+        ctx.fillRect(x, y, w, h);
+
+        // 虚线边框
+        ctx.strokeStyle = color;
+        ctx.lineWidth = (config.lineWidth + 1) / s;
+        ctx.setLineDash([8 / s, 4 / s]);
+        ctx.strokeRect(x, y, w, h);
+        ctx.setLineDash([]);
+      }
 
       // 标签文字：className + confidence
       const text = `${det.className} ${(det.confidence * 100).toFixed(0)}%`;

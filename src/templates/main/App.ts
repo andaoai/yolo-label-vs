@@ -632,14 +632,30 @@ export class App {
     if (detections.length === 0) return;
 
     // Detection 用左上角坐标，Label 用中心点坐标，需要转换
-    const newLabels: Label[] = detections.map(d => ({
-      class: d.class,
-      x: d.x + d.width / 2,
-      y: d.y + d.height / 2,
-      width: d.width,
-      height: d.height,
-      visible: true,
-    }));
+    const newLabels: Label[] = detections.map(d => {
+      // 如果有分割点，创建 seg 标签
+      if (d.points && d.points.length >= 6) {
+        return {
+          class: d.class,
+          x: d.x + d.width / 2,
+          y: d.y + d.height / 2,
+          width: d.width,
+          height: d.height,
+          isSegmentation: true,
+          points: d.points,
+          visible: true,
+        };
+      }
+      // 否则创建 bbox 标签
+      return {
+        class: d.class,
+        x: d.x + d.width / 2,
+        y: d.y + d.height / 2,
+        width: d.width,
+        height: d.height,
+        visible: true,
+      };
+    });
 
     const labels = [...this.store.get('labels'), ...newLabels];
     this.store.set('labels', labels);

@@ -125,6 +125,8 @@
     "copy-webpack-plugin": "^13.0.0",
     "cross-env": "^7.0.3",
     "eslint": "^9.23.0",
+    "onnxruntime-node": "^1.26.0",
+    "sharp": "^0.35.1",
     "svg2png-cli": "^1.1.1",
     "svgexport": "^0.4.2",
     "terser-webpack-plugin": "^5.3.14",
