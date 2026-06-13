@@ -13,13 +13,14 @@ import sharp from 'sharp';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { ensureModels, ensureDatasets } from './setup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const MODEL_PATH = path.resolve(__dirname, '../test_label/model/yolo11n-seg.onnx');
-const IMAGE_PATH = path.resolve(__dirname, '../test_label/coco8-seg/images/val/000000000049.jpg');
-const LABEL_PATH = path.resolve(__dirname, '../test_label/coco8-seg/labels/val/000000000049.txt');
+const MODEL_PATH = path.resolve(__dirname, '../test/data/models/yolo11n-seg.onnx');
+const IMAGE_PATH = path.resolve(__dirname, '../test/data/datasets/coco8-seg/images/val/000000000049.jpg');
+const LABEL_PATH = path.resolve(__dirname, '../test/data/datasets/coco8-seg/labels/val/000000000049.txt');
 const INPUT_SIZE = 640;
 const CONF_THRESHOLD = 0.25;
 const IOU_THRESHOLD = 0.45;
@@ -254,7 +255,9 @@ function postprocess(
       }
     }
   }
-  const outPath = path.resolve(__dirname, 'mask_output.png');
+  const outDir = path.resolve(__dirname, 'output');
+  fs.mkdirSync(outDir, { recursive: true });
+  const outPath = path.join(outDir, 'mask_output.png');
   sharp(maskVis, { raw: { width: origW, height: origH, channels: 3 } }).png().toFile(outPath);
   console.log(`  mask 可视化已保存: ${outPath}`);
 
@@ -500,6 +503,12 @@ function readLabels(p: string): number[][] {
 
 async function main() {
   console.log('=== YOLO11-seg 推理测试（官方后处理） ===\n');
+
+  // 0. 自动下载缺失的模型和数据集
+  console.log('📦 检查测试数据...');
+  await ensureModels(['yolo11n-seg']);
+  await ensureDatasets(['coco8-seg']);
+  console.log('');
 
   // 1. 加载模型
   console.log('1. 加载模型...');
