@@ -10,7 +10,7 @@
  * 6. 恢复变换
  * 7. 绘制十字准线（屏幕坐标）
  */
-import type { Label, DrawPreview, PointRef } from '../shared/types';
+import type { Label, DrawPreview, PointRef, Detection } from '../shared/types';
 import type { RenderConfig } from '../shared/messages';
 import { CoordinateTransform } from './CoordinateTransform';
 import { AnimationController } from './AnimationController';
@@ -57,6 +57,7 @@ export class Renderer {
     preview: DrawPreview | null,
     showLabels: boolean,
     hoverStrength: number = 0,
+    previewDetections: Detection[] | null = null,
   ): void {
     const ctx = this.ctx;
     if (!ctx || !this.canvas) return;
@@ -82,9 +83,14 @@ export class Renderer {
     // 4. 绘制标签
     this.drawLabels(ctx, labels, hoveredLabelIndex, selectedPoint, config, showLabels, hoverStrength, cursor);
 
-    // 5. 绘制预览
+    // 5. 绘制工具预览
     if (preview) {
       this.drawPreview(ctx, preview, config);
+    }
+
+    // 5b. 绘制推理预览检测框
+    if (previewDetections && previewDetections.length > 0) {
+      this.drawPreviewDetections(ctx, previewDetections, config);
     }
 
     // 恢复变换
@@ -483,6 +489,112 @@ export class Renderer {
         break;
       }
     }
+  }
+
+  // ─── 推理预览检测框 ────────────────────────────────────
+
+  private drawPreviewDetections(
+    ctx: RenderContext,
+    detections: Detection[],
+    config: RenderConfig,
+  ): void {
+    const s = this.transform.scale;
+    const iw = this.transform.imageWidth;
+    const ih = this.transform.imageHeight;
+
+    for (const det of detections) {
+      const color = config.colors[det.class % config.colors.length];
+      const x = det.x * iw;
+      const y = det.y * ih;
+      const w = det.width * iw;
+      const h = det.height * ih;
+
+      // 如果有分割点，绘制多边形
+      if (det.points && det.points.length >= 6) {
+        // 半透明填充多边形
+        ctx.fillStyle = `${color}20`;
+        ctx.beginPath();
+        ctx.moveTo(det.points[0] * iw, det.points[1] * ih);
+        for (let i = 2; i < det.points.length; i += 2) {
+          ctx.lineTo(det.points[i] * iw, det.points[i + 1] * ih);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // 虚线边框
+        ctx.strokeStyle = color;
+        ctx.lineWidth = (config.lineWidth + 1) / s;
+        ctx.setLineDash([8 / s, 4 / s]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        // 没有分割点，绘制 bbox
+        // 半透明填充
+        ctx.fillStyle = `${color}20`;
+        ctx.fillRect(x, y, w, h);
+
+        // 虚线边框
+        ctx.strokeStyle = color;
+        ctx.lineWidth = (config.lineWidth + 1) / s;
+        ctx.setLineDash([8 / s, 4 / s]);
+        ctx.strokeRect(x, y, w, h);
+        ctx.setLineDash([]);
+      }
+
+      // 标签文字：className + confidence
+      const text = `${det.className} ${(det.confidence * 100).toFixed(0)}%`;
+      this.drawPreviewLabelText(ctx, x, y - 4 / s, text, color, config);
+    }
+  }
+
+  private drawPreviewLabelText(
+    ctx: RenderContext,
+    x: number, y: number,
+    text: string, color: string,
+    config: RenderConfig,
+  ): void {
+    const s = this.transform.scale;
+    const fontSize = (config.labelFontSize - 1) / s;
+    const padding = config.labelPadding / s;
+    const radius = 3 / s;
+
+    ctx.font = `${fontSize}px sans-serif`;
+    const textWidth = ctx.measureText(text).width;
+    const bgW = textWidth + padding * 2;
+    const bgH = fontSize + padding * 2;
+
+    const bgX = x;
+    const bgY = y - bgH;
+
+    // 深色半透明圆角背景
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.beginPath();
+    ctx.moveTo(bgX + radius, bgY);
+    ctx.lineTo(bgX + bgW - radius, bgY);
+    ctx.arcTo(bgX + bgW, bgY, bgX + bgW, bgY + radius, radius);
+    ctx.lineTo(bgX + bgW, bgY + bgH - radius);
+    ctx.arcTo(bgX + bgW, bgY + bgH, bgX + bgW - radius, bgY + bgH, radius);
+    ctx.lineTo(bgX + radius, bgY + bgH);
+    ctx.arcTo(bgX, bgY + bgH, bgX, bgY + bgH - radius, radius);
+    ctx.lineTo(bgX, bgY + radius);
+    ctx.arcTo(bgX, bgY, bgX + radius, bgY, radius);
+    ctx.closePath();
+    ctx.fill();
+
+    // 左侧彩色虚线指示
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2 / s;
+    ctx.setLineDash([3 / s, 2 / s]);
+    ctx.beginPath();
+    ctx.moveTo(bgX, bgY);
+    ctx.lineTo(bgX, bgY + bgH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 白色文字
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, bgX + padding + 2 / s, bgY + bgH / 2);
   }
 
   private drawStepIndicator(ctx: RenderContext, text: string, scale: number): void {

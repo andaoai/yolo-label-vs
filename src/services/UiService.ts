@@ -110,9 +110,13 @@ export class UiService {
         const cssPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'templates', 'labeling-panel.css');
         const mainJsPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'templates', 'main.js');
         const workerJsPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'templates', 'worker.js');
+        const ortWasmDirPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'templates', 'ort');
+        const ortJsPath = vscode.Uri.joinPath(this._extensionUri, 'node_modules', 'onnxruntime-web', 'dist', 'ort.wasm.min.mjs');
         const cssSrc = webview.asWebviewUri(cssPath);
         const mainJsSrc = webview.asWebviewUri(mainJsPath);
         const workerJsSrc = webview.asWebviewUri(workerJsPath);
+        const ortWasmDirSrc = webview.asWebviewUri(ortWasmDirPath);
+        const ortJsSrc = webview.asWebviewUri(ortJsPath);
 
         // 读取HTML模板（新架构使用 index.html）
         const templatePath = path.join(this._extensionUri.fsPath, 'dist', 'templates', 'index.html');
@@ -129,6 +133,10 @@ export class UiService {
                 window.flipIdx = ${JSON.stringify(flipIdx || null)};
                 // Worker 脚本 URL（App.ts 会使用这个）
                 window.__workerUrl = ${JSON.stringify(workerJsSrc.toString())};
+                // ONNX Runtime WASM 文件目录 URL
+                window.__ortWasmPaths = ${JSON.stringify(ortWasmDirSrc.toString() + '/')};
+                // ONNX Runtime JS 文件 URL
+                window.__ortJsUrl = ${JSON.stringify(ortJsSrc.toString())};
             </script>
         `;
 

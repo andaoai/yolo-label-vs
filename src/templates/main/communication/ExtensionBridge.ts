@@ -16,7 +16,9 @@ export type ExtensionMessage =
   | { command: 'error'; error: string; type?: string; recoverable?: boolean }
   | { command: 'saveSuccess' }
   | { command: 'imagePreviews'; previews: string[] }
-  | { command: 'imagePreviewRange'; startIndex: number; previews: string[] };
+  | { command: 'imagePreviewRange'; startIndex: number; previews: string[] }
+  | { command: 'modelFileData'; data: ArrayBuffer; fileName: string }
+  | { command: 'modelFileError'; error: string };
 
 /** Webview → 扩展 消息 */
 export type WebviewMessage =
@@ -29,7 +31,9 @@ export type WebviewMessage =
   | { command: 'openImageInNewTab'; path: string }
   | { command: 'openTxtInNewTab'; path: string }
   | { command: 'getImagePreviews'; paths: string[] }
-  | { command: 'getImagePreviewRange'; paths: string[]; startIndex: number };
+  | { command: 'getImagePreviewRange'; paths: string[]; startIndex: number }
+  | { command: 'openModelFile' }
+  | { command: 'loadModelFile'; filePath: string };
 
 type MessageHandler = (msg: ExtensionMessage) => void;
 
@@ -106,5 +110,13 @@ export class ExtensionBridge {
 
   getImagePreviewRange(paths: string[], startIndex: number): void {
     this.send({ command: 'getImagePreviewRange', paths, startIndex });
+  }
+
+  openModelFile(): void {
+    this.send({ command: 'openModelFile' });
+  }
+
+  loadModelFile(filePath: string): void {
+    this.send({ command: 'loadModelFile', filePath });
   }
 }

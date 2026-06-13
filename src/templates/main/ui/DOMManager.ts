@@ -12,6 +12,7 @@ import { Toolbar } from './Toolbar';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
 import { ProgressBar } from './ProgressBar';
+import { ModelPanel } from './ModelPanel';
 import { ThemeManager } from './ThemeManager';
 
 export interface DOMCallbacks {
@@ -29,6 +30,12 @@ export interface DOMCallbacks {
   onToggleVisibility: (labelIndex: number) => void;
   onHoverLabel: (labelIndex: number | null) => void;
   onPreviewHover?: (startIndex: number, endIndex: number) => void;
+  onLoadModel: () => void;
+  onRunInference: () => void;
+  onAcceptDetections: () => void;
+  onRejectDetections: () => void;
+  onConfThresholdChange: (value: number) => void;
+  onIouThresholdChange: (value: number) => void;
 }
 
 export class DOMManager {
@@ -36,6 +43,7 @@ export class DOMManager {
   readonly sidebar: Sidebar;
   readonly statusBar: StatusBar;
   readonly progressBar: ProgressBar;
+  readonly modelPanel: ModelPanel;
   readonly themeManager: ThemeManager;
 
   constructor(store: Store, callbacks: DOMCallbacks, themeManager: ThemeManager) {
@@ -65,6 +73,15 @@ export class DOMManager {
       onLoadImage: callbacks.onLoadImage,
       onPreviewHover: callbacks.onPreviewHover,
     });
+
+    this.modelPanel = new ModelPanel(store, {
+      onLoadModel: callbacks.onLoadModel,
+      onRunInference: callbacks.onRunInference,
+      onAcceptDetections: callbacks.onAcceptDetections,
+      onRejectDetections: callbacks.onRejectDetections,
+      onConfThresholdChange: callbacks.onConfThresholdChange,
+      onIouThresholdChange: callbacks.onIouThresholdChange,
+    });
   }
 
   /** 初始化所有 UI 组件 */
@@ -73,6 +90,7 @@ export class DOMManager {
     this.sidebar.init();
     this.statusBar.init();
     this.progressBar.init();
+    this.modelPanel.init();
     this.themeManager.startListening();
   }
 

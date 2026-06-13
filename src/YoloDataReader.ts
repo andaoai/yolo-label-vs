@@ -24,14 +24,20 @@ export class YoloDataReader {
     private basePath: string;
     private readonly SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
 
-    constructor(private yamlPath: string) {
-        this.basePath = path.dirname(yamlPath);
+    constructor(private yamlPath: string, workspaceRoot?: string) {
+        this.basePath = workspaceRoot || path.dirname(yamlPath);
         this.loadConfig();
     }
 
     private validateConfig(config: any): config is YoloConfig {
         if (!config.path) {
-            throw new Error('Missing required field: path');
+            throw new Error(
+                '缺少必填字段: path\n\n' +
+                '请在 YAML 配置中添加数据集根目录路径，例如:\n' +
+                '  path: ./datasets/coco128      # 相对于工作区根目录\n' +
+                '  path: C:\\datasets\\coco128     # 绝对路径\n\n' +
+                '相对路径会相对于工作区根目录解析。'
+            );
         }
 
         // Handle different names formats
@@ -65,15 +71,28 @@ export class YoloDataReader {
 
         // Validate train, val and test paths
         if (config.train && !this._isValidPath(config.train)) {
-            throw new Error('Train path must be a string or an array of strings');
+            throw new Error(
+                'train 路径格式错误\n\n' +
+                '应为字符串或字符串数组，例如:\n' +
+                '  train: images/train2017\n' +
+                '  train: [images/train2017, images/extra]'
+            );
         }
 
         if (config.val && !this._isValidPath(config.val)) {
-            throw new Error('Val path must be a string or an array of strings');
+            throw new Error(
+                'val 路径格式错误\n\n' +
+                '应为字符串或字符串数组，例如:\n' +
+                '  val: images/val2017'
+            );
         }
 
         if (config.test && !this._isValidPath(config.test)) {
-            throw new Error('Test path must be a string or an array of strings');
+            throw new Error(
+                'test 路径格式错误\n\n' +
+                '应为字符串或字符串数组，例如:\n' +
+                '  test: images/test2017'
+            );
         }
 
         return true;
@@ -124,11 +143,25 @@ export class YoloDataReader {
 
     private loadImageFiles() {
         try {
-            const yamlDir = path.dirname(this.yamlPath);
             let imagesPath = this.config.path;
-            
-            if (!path.isAbsolute(imagesPath)) {
-                imagesPath = path.resolve(yamlDir, imagesPath);
+            const isRelative = !path.isAbsolute(imagesPath);
+
+            if (isRelative) {
+                imagesPath = path.resolve(this.basePath, imagesPath);
+            }
+
+            // 验证数据集路径是否存在
+            if (!fs.existsSync(imagesPath)) {
+                const relativeHint = isRelative
+                    ? `\n当前解析: "${this.config.path}" → "${imagesPath}"`
+                    : '';
+                throw new Error(
+                    `数据集路径不存在: "${imagesPath}"${relativeHint}\n\n` +
+                    `请检查 YAML 配置中的 "path" 字段:\n` +
+                    `  • 相对路径: 相对于工作区根目录 (${this.basePath})\n` +
+                    `  • 绝对路径: 使用完整的系统路径，如 C:\\datasets\\coco128\n\n` +
+                    `当前配置: path: ${this.config.path}`
+                );
             }
 
             // 使用 Set 来存储唯一的文件路径
@@ -146,7 +179,8 @@ export class YoloDataReader {
                     directoriesChecked++;
                     
                     if (!fs.existsSync(fullPath)) {
-                        console.warn(`Warning: Directory does not exist: ${fullPath}`);
+                        console.warn(`警告: 目录不存在: ${fullPath}`);
+                        console.warn(`  请检查 YAML 中的 ${label} 路径配置是否正确`);
                         continue;
                     }
                     

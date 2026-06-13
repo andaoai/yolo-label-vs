@@ -11,8 +11,9 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,
-		"moduleResolution": "node", // 添加模块解析策略
+		"moduleResolution": "bundler", // 使用 bundler 解析策略（webpack 项目推荐）
 		"esModuleInterop": true,   // 添加 ES 模块互操作性
+		"types": ["node"],         // 显式声明 node 类型
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", ".vscode-test"]

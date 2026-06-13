@@ -111,6 +111,31 @@ export interface AppState {
 
   // 脏标记
   hasUnsavedChanges: boolean;
+
+  // 推理
+  modelLoaded: boolean;
+  modelPath: string;
+  modelInputSize: number;
+  inferenceRunning: boolean;
+  previewDetections: Detection[];
+  showPreview: boolean;
+  confThreshold: number;
+  iouThreshold: number;
+}
+
+// ─── 推理检测结果 ────────────────────────────────────────
+
+/** 单个检测结果（归一化坐标 0-1） */
+export interface Detection {
+  class: number;
+  className: string;
+  confidence: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** 分割多边形点 [x1,y1,x2,y2,...]，归一化坐标，仅 seg 模型有 */
+  points?: number[];
 }
 
 // ─── 修饰键 ──────────────────────────────────────────────
