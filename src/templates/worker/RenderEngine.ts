@@ -155,6 +155,16 @@ export class RenderEngine {
     if (!this.dirty) return;
     this.dirty = false;
 
+    // 基于鼠标距离计算悬停强度（0~1），用于渐变动画
+    let hoverStrength = 0;
+    if (this.cursor && this.labels.length > 0) {
+      const nearest = this.hitTest.findNearest(this.labels, this.cursor, this.config);
+      if (nearest) {
+        const threshold = this.config.hoverProximityThreshold / this.transform.scale;
+        hoverStrength = 1 - nearest.distance / threshold;
+      }
+    }
+
     this.renderer.render(
       this.image,
       this.labels,
@@ -164,10 +174,11 @@ export class RenderEngine {
       this.selectedPoint,
       this.preview,
       this.showLabels,
+      hoverStrength,
     );
 
-    // 如果有动画（高亮标签或工具绘制中），保持动画循环
-    const needsAnimation = this.hoveredLabelIndex !== null || this.preview !== null;
+    // 如果有动画（悬停强度 > 0 或工具绘制中），保持动画循环
+    const needsAnimation = hoverStrength > 0 || this.preview !== null;
     if (needsAnimation) {
       this.animation.start();
     } else {

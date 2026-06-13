@@ -202,6 +202,9 @@ export class Toolbar {
 
     // 初始状态
     this.updateModeButtons(this.store.get('activeTool'));
+
+    // 订阅 activeTool 变更，自动更新按钮状态
+    this.store.on('activeTool', (tool) => this.updateModeButtons(tool));
   }
 
   private updateModeButtons(active: ToolType): void {

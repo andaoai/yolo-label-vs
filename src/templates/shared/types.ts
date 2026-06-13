@@ -61,6 +61,8 @@ export interface HitTestResult {
   point: PointRef | null;
   /** 命中类型 */
   hitType: 'point' | 'label' | 'none';
+  /** 鼠标与最近标签/点的距离（归一化坐标），-1 表示超出检测范围 */
+  nearestDistance: number;
 }
 
 // ─── 绘制预览 ────────────────────────────────────────────
@@ -100,6 +102,7 @@ export interface AppState {
   hoveredLabelIndex: number | null;
   hoveredPoint: PointRef | null;
   cursor: NormalizedPoint;
+  clipboard: Label | null;  // 复制的标签
 
   // 导航
   allPaths: string[];

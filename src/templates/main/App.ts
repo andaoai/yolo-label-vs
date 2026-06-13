@@ -132,6 +132,8 @@ export class App {
       onRedo: () => this.redo(),
       onResetView: () => this.resetView(),
       onCycleClass: (dir) => this.cycleClass(dir),
+      onCopyLabel: () => this.copyLabel(),
+      onPasteLabel: () => this.pasteLabel(),
     });
   }
 
@@ -146,6 +148,8 @@ export class App {
     if (w.kptShape) {
       this.store.set('kptShape', w.kptShape);
       this.worker.updateConfig({ kptShape: w.kptShape });
+      // 有 kptShape 说明是 pose 模型，自动切换到 pose 模式
+      this.toolManager.setActive('pose');
     }
     if (w.initialImageData) {
       // 有初始图片数据
@@ -290,9 +294,41 @@ export class App {
     // 适应画布
     this.resetView();
 
+    // 根据标签类型自动切换工具模式
+    this.autoSwitchTool(labels as Label[]);
+
     // 更新 UI
     this.dom.updateLabelList();
     this.updateNavButtons();
+  }
+
+  // ─── 工具自动切换 ──────────────────────────────────────
+
+  /**
+   * 根据标签类型自动切换工具模式
+   * - 有 isPose 标签 → pose 模式
+   * - 有 isSegmentation 标签 → seg 模式
+   * - 否则保持当前模式（通常为 box）
+   */
+  private autoSwitchTool(labels: Label[]): void {
+    if (labels.length === 0) return;
+
+    // 优先检测 pose（因为 pose 标签也有 bbox）
+    const hasPose = labels.some(l => l.isPose);
+    if (hasPose) {
+      this.toolManager.setActive('pose');
+      return;
+    }
+
+    // 检测分割
+    const hasSeg = labels.some(l => l.isSegmentation);
+    if (hasSeg) {
+      this.toolManager.setActive('seg');
+      return;
+    }
+
+    // 普通检测标签，切换到 box 模式
+    this.toolManager.setActive('box');
   }
 
   // ─── 导航 ─────────────────────────────────────────────
@@ -384,6 +420,40 @@ export class App {
   };
 
   // ─── 类别 ─────────────────────────────────────────────
+
+  copyLabel(): void {
+    const hoveredIndex = this.store.get('hoveredLabelIndex');
+    if (hoveredIndex === null) return;
+
+    const labels = this.store.get('labels');
+    if (hoveredIndex >= 0 && hoveredIndex < labels.length) {
+      const cloned = LabelOps.cloneLabel(labels[hoveredIndex]);
+      this.store.set('clipboard', cloned);
+    }
+  }
+
+  pasteLabel(): void {
+    const clipboard = this.store.get('clipboard');
+    if (!clipboard) return;
+
+    // 直接粘贴，不偏移
+    const pasted: Label = {
+      ...clipboard,
+      visible: true,
+    };
+
+    // 深拷贝 points/keypoints
+    if (pasted.points) pasted.points = [...pasted.points];
+    if (pasted.keypoints) pasted.keypoints = [...pasted.keypoints];
+    if (pasted.keypointShape) pasted.keypointShape = [...pasted.keypointShape];
+
+    // 添加到标签列表
+    const labels = [...this.store.get('labels'), pasted];
+    this.store.set('labels', labels);
+    this.worker.setLabels(labels);
+    this.pushHistory();
+    this.dom.updateLabelList();
+  }
 
   cycleClass(direction: 1 | -1): void {
     const classNames = this.store.get('classNames');

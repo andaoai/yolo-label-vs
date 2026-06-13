@@ -1,13 +1,28 @@
 /**
- * 侧边栏 — 标签列表、当前类状态
+ * 侧边栏 — 可折叠的 Class 选择器 + Labels 列表
  */
 import type { Store } from '../state/Store';
 import type { Label } from '../../shared/types';
 import { COLORS } from '../../shared/config';
 
 export class Sidebar {
+  // Class 区域
+  private classHeaderEl: HTMLElement | null = null;
+  private classBodyEl: HTMLElement | null = null;
+  private classToggleEl: HTMLElement | null = null;
+  private classNameEl: HTMLElement | null = null;
+  private classBadgeEl: HTMLElement | null = null;
+  private classSearchEl: HTMLInputElement | null = null;
+  private classGridEl: HTMLElement | null = null;
+  private classCollapsed = false;
+
+  // Labels 区域
+  private labelHeaderEl: HTMLElement | null = null;
+  private labelBodyEl: HTMLElement | null = null;
+  private labelToggleEl: HTMLElement | null = null;
+  private labelCountEl: HTMLElement | null = null;
   private labelListEl: HTMLElement | null = null;
-  private classStatusEl: HTMLElement | null = null;
+  private labelCollapsed = false;
 
   constructor(
     private store: Store,
@@ -20,38 +35,55 @@ export class Sidebar {
   ) {}
 
   init(): void {
-    this.labelListEl = document.getElementById('labelList');
-    this.classStatusEl = document.getElementById('currentClassStatus');
+    // Class 区域元素
+    this.classHeaderEl = document.getElementById('classHeader');
+    this.classBodyEl = document.getElementById('classBody');
+    this.classToggleEl = this.classHeaderEl?.querySelector('.section-toggle') ?? null;
+    this.classNameEl = document.getElementById('className');
+    this.classBadgeEl = document.getElementById('classBadge');
+    this.classSearchEl = document.getElementById('classSearch') as HTMLInputElement;
+    this.classGridEl = document.getElementById('classGrid');
 
-    this.store.on('labels', () => this.render());
-    this.store.on('currentClass', () => this.updateClassStatus());
-    this.store.on('classNames', () => this.updateClassStatus());
+    // Labels 区域元素
+    this.labelHeaderEl = document.getElementById('labelHeader');
+    this.labelBodyEl = document.getElementById('labelBody');
+    this.labelToggleEl = this.labelHeaderEl?.querySelector('.section-toggle') ?? null;
+    this.labelCountEl = document.getElementById('labelCount');
+    this.labelListEl = document.getElementById('labelList');
+
+    // 折叠/展开事件
+    this.classHeaderEl?.addEventListener('click', () => this.toggleClassSection());
+    this.labelHeaderEl?.addEventListener('click', () => this.toggleLabelSection());
+
+    // 搜索过滤
+    this.classSearchEl?.addEventListener('input', () => this.renderClassGrid());
+
+    // Store 订阅
+    this.store.on('labels', () => {
+      this.renderLabelList();
+      this.updateLabelCount();
+    });
+    this.store.on('currentClass', () => {
+      this.renderClassGrid();
+      this.renderClassStatus();
+    });
+    this.store.on('classNames', () => {
+      this.renderClassGrid();
+      this.renderClassStatus();
+    });
     this.store.on('hoveredLabelIndex', (idx) => this.highlightLabel(idx));
 
-    this.render();
+    // 初始渲染
+    this.renderClassGrid();
+    this.renderClassStatus();
+    this.renderLabelList();
+    this.updateLabelCount();
   }
 
-  /** 重新渲染标签列表 */
+  /** 重新渲染标签列表（由 DOMManager.updateLabelList 调用） */
   render(): void {
-    if (!this.labelListEl) return;
-
-    const labels = this.store.get('labels');
-    const classNames = this.store.get('classNames');
-
-    if (labels.length === 0) {
-      this.labelListEl.innerHTML = '<div class="empty-state">No labels - click and drag to add</div>';
-      this.updateClassStatus();
-      return;
-    }
-
-    this.labelListEl.innerHTML = '';
-
-    labels.forEach((label, index) => {
-      const item = this.createLabelItem(label, index, classNames);
-      this.labelListEl!.appendChild(item);
-    });
-
-    this.updateClassStatus();
+    this.renderLabelList();
+    this.updateLabelCount();
   }
 
   /** 高亮指定标签 */
@@ -62,7 +94,96 @@ export class Sidebar {
     });
   }
 
-  // ─── 内部 ─────────────────────────────────────────────
+  // ─── Class 区域 ───────────────────────────────────────
+
+  private toggleClassSection(): void {
+    this.classCollapsed = !this.classCollapsed;
+    if (this.classBodyEl) {
+      this.classBodyEl.style.display = this.classCollapsed ? 'none' : '';
+    }
+    if (this.classToggleEl) {
+      this.classToggleEl.textContent = this.classCollapsed ? '▶' : '▼';
+    }
+  }
+
+  private renderClassStatus(): void {
+    const classNames = this.store.get('classNames');
+    const current = this.store.get('currentClass');
+    const total = classNames.length;
+    const name = classNames[current] || String(current);
+    if (this.classNameEl) this.classNameEl.textContent = name;
+    if (this.classBadgeEl) this.classBadgeEl.textContent = `${current + 1}/${total}`;
+  }
+
+  private renderClassGrid(): void {
+    if (!this.classGridEl) return;
+
+    const classNames = this.store.get('classNames');
+    const current = this.store.get('currentClass');
+    const filter = this.classSearchEl?.value?.toLowerCase() || '';
+
+    this.classGridEl.innerHTML = '';
+
+    classNames.forEach((name, i) => {
+      if (filter && !name.toLowerCase().includes(filter)) return;
+
+      const chip = document.createElement('div');
+      chip.className = 'class-chip' + (i === current ? ' active' : '');
+
+      const dot = document.createElement('span');
+      dot.className = 'class-dot';
+      dot.style.backgroundColor = COLORS[i % COLORS.length];
+
+      const label = document.createElement('span');
+      label.className = 'class-name';
+      label.textContent = name;
+
+      chip.append(dot, label);
+      chip.addEventListener('click', () => {
+        this.store.set('currentClass', i);
+      });
+      this.classGridEl!.appendChild(chip);
+    });
+  }
+
+  // ─── Labels 区域 ──────────────────────────────────────
+
+  private toggleLabelSection(): void {
+    this.labelCollapsed = !this.labelCollapsed;
+    if (this.labelBodyEl) {
+      this.labelBodyEl.style.display = this.labelCollapsed ? 'none' : '';
+    }
+    if (this.labelToggleEl) {
+      this.labelToggleEl.textContent = this.labelCollapsed ? '▶' : '▼';
+    }
+  }
+
+  private updateLabelCount(): void {
+    if (!this.labelCountEl) return;
+    const labels = this.store.get('labels');
+    this.labelCountEl.textContent = String(labels.length);
+  }
+
+  private renderLabelList(): void {
+    if (!this.labelListEl) return;
+
+    const labels = this.store.get('labels');
+    const classNames = this.store.get('classNames');
+
+    if (labels.length === 0) {
+      this.labelListEl.innerHTML = '<div class="empty-state">No labels - click and drag to add</div>';
+      return;
+    }
+
+    this.labelListEl.innerHTML = '';
+
+    labels.forEach((label, index) => {
+      const item = this.createLabelItem(label, index, classNames);
+      this.labelListEl!.appendChild(item);
+    });
+  }
+
+  // ─── 标签项 ───────────────────────────────────────────
 
   private createLabelItem(label: Label, index: number, classNames: string[]): HTMLElement {
     const item = document.createElement('div');
@@ -124,14 +245,7 @@ export class Sidebar {
     return item;
   }
 
-  private updateClassStatus(): void {
-    if (!this.classStatusEl) return;
-    const classNames = this.store.get('classNames');
-    const current = this.store.get('currentClass');
-    const total = classNames.length;
-    const name = classNames[current] || String(current);
-    this.classStatusEl.textContent = `Current: ${name} (${current + 1}/${total})`;
-  }
+  // ─── SVG 图标 ─────────────────────────────────────────
 
   private eyeOpenIcon(): string {
     return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';

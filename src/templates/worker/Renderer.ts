@@ -56,6 +56,7 @@ export class Renderer {
     selectedPoint: PointRef | null,
     preview: DrawPreview | null,
     showLabels: boolean,
+    hoverStrength: number = 0,
   ): void {
     const ctx = this.ctx;
     if (!ctx || !this.canvas) return;
@@ -79,7 +80,7 @@ export class Renderer {
     ctx.drawImage(image, 0, 0);
 
     // 4. 绘制标签
-    this.drawLabels(ctx, labels, hoveredLabelIndex, selectedPoint, config, showLabels);
+    this.drawLabels(ctx, labels, hoveredLabelIndex, selectedPoint, config, showLabels, hoverStrength, cursor);
 
     // 5. 绘制预览
     if (preview) {
@@ -104,6 +105,8 @@ export class Renderer {
     selectedPoint: PointRef | null,
     config: RenderConfig,
     showLabels: boolean,
+    hoverStrength: number,
+    cursor: { x: number; y: number } | null,
   ): void {
     for (let i = 0; i < labels.length; i++) {
       const label = labels[i];
@@ -111,13 +114,15 @@ export class Renderer {
 
       const color = config.colors[label.class % config.colors.length];
       const highlighted = i === hoveredIndex;
+      // 高亮标签使用基于距离的悬停强度，非高亮标签强度为 0
+      const strength = highlighted ? hoverStrength : 0;
 
       if (label.isSegmentation && label.points) {
-        this.drawSegmentation(ctx, label, color, highlighted, config, showLabels);
+        this.drawSegmentation(ctx, label, color, highlighted, config, showLabels, strength, cursor);
       } else if (label.isPose) {
-        this.drawPose(ctx, label, color, highlighted, config, showLabels);
+        this.drawPose(ctx, label, color, highlighted, config, showLabels, strength);
       } else {
-        this.drawBox(ctx, label, color, highlighted, config, showLabels);
+        this.drawBox(ctx, label, color, highlighted, config, showLabels, strength, cursor);
       }
     }
   }
@@ -127,6 +132,8 @@ export class Renderer {
   private drawBox(
     ctx: RenderContext, label: Label, color: string,
     highlighted: boolean, config: RenderConfig, showLabels: boolean,
+    strength: number = 0,
+    cursor: { x: number; y: number } | null = null,
   ): void {
     const { x, y, w, h } = this.transform.normalizedRectToCanvas(
       label.x, label.y, label.width, label.height
@@ -138,9 +145,9 @@ export class Renderer {
     const ih = h / this.transform.scale;
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = (highlighted ? 3 : config.lineWidth) / this.transform.scale;
+    ctx.lineWidth = (config.lineWidth + strength * 1.5) / this.transform.scale;
 
-    if (highlighted) {
+    if (strength > 0) {
       ctx.setLineDash(HIGHLIGHT_DASH_PATTERN.map(d => d / this.transform.scale));
       ctx.lineDashOffset = this.animation.getDashOffset() / this.transform.scale;
     } else {
@@ -150,15 +157,15 @@ export class Renderer {
     ctx.strokeRect(ix, iy, iw, ih);
     ctx.setLineDash([]);
 
-    // 角点（仅高亮时显示）
-    if (highlighted) {
-      this.drawBoxPoints(ctx, label, config);
+    // 角点（悬停时显示，仅最近的点脉冲）
+    if (strength > 0) {
+      this.drawBoxPoints(ctx, label, config, strength, cursor);
     }
 
     // 标签文字
     if (showLabels) {
       const className = config.classNames?.[label.class] || String(label.class);
-      this.drawLabelText(ctx, ix, iy - 4 / this.transform.scale, `${className} (BOX)`, color, config);
+      this.drawLabelText(ctx, ix, iy - 4 / this.transform.scale, className, color, config);
     }
   }
 
@@ -167,6 +174,8 @@ export class Renderer {
   private drawSegmentation(
     ctx: RenderContext, label: Label, color: string,
     highlighted: boolean, config: RenderConfig, showLabels: boolean,
+    strength: number = 0,
+    cursor: { x: number; y: number } | null = null,
   ): void {
     const points = label.points!;
     if (points.length < 6) return;
@@ -185,8 +194,8 @@ export class Renderer {
 
     // 边框
     ctx.strokeStyle = color;
-    ctx.lineWidth = (highlighted ? 3 : config.lineWidth) / s;
-    if (highlighted) {
+    ctx.lineWidth = (config.lineWidth + strength * 1.5) / s;
+    if (strength > 0) {
       ctx.setLineDash(HIGHLIGHT_DASH_PATTERN.map(d => d / s));
       ctx.lineDashOffset = this.animation.getDashOffset() / s;
     } else {
@@ -195,9 +204,9 @@ export class Renderer {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // 顶点（仅高亮时显示）
-    if (highlighted) {
-      this.drawPolygonPoints(ctx, points, config);
+    // 顶点（悬停时显示，仅最近的点脉冲）
+    if (strength > 0) {
+      this.drawPolygonPoints(ctx, points, config, color, strength, cursor);
     }
 
     // 标签文字
@@ -207,7 +216,7 @@ export class Renderer {
         ctx,
         points[0] * this.transform.imageWidth,
         points[1] * this.transform.imageHeight - 4 / s,
-        `${className} (SEG)`, color, config
+        className, color, config
       );
     }
   }
@@ -217,6 +226,7 @@ export class Renderer {
   private drawPose(
     ctx: RenderContext, label: Label, color: string,
     highlighted: boolean, config: RenderConfig, showLabels: boolean,
+    strength: number = 0,
   ): void {
     const s = this.transform.scale;
 
@@ -227,8 +237,8 @@ export class Renderer {
     const ih = label.height * this.transform.imageHeight;
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = (highlighted ? 3 : config.lineWidth) / s;
-    if (highlighted) {
+    ctx.lineWidth = (config.lineWidth + strength * 1.5) / s;
+    if (strength > 0) {
       ctx.setLineDash(HIGHLIGHT_DASH_PATTERN.map(d => d / s));
       ctx.lineDashOffset = this.animation.getDashOffset() / s;
     } else {
@@ -248,7 +258,7 @@ export class Renderer {
         const kx = label.keypoints[ki] * this.transform.imageWidth;
         const ky = label.keypoints[ki + 1] * this.transform.imageHeight;
         const radius = config.pointRadius / s;
-        const pulseScale = highlighted ? this.animation.getPulseScale() : 1;
+        const pulseScale = 1 + (this.animation.getPulseScale() - 1) * strength;
 
         ctx.beginPath();
         ctx.arc(kx, ky, radius * pulseScale, 0, Math.PI * 2);
@@ -271,16 +281,19 @@ export class Renderer {
     // 标签文字
     if (showLabels) {
       const className = config.classNames?.[label.class] || String(label.class);
-      this.drawLabelText(ctx, ix, iy - 4 / s, `${className} (POSE)`, color, config);
+      this.drawLabelText(ctx, ix, iy - 4 / s, className, color, config);
     }
   }
 
   // ─── 点绘制 ───────────────────────────────────────────
 
-  private drawBoxPoints(ctx: RenderContext, label: Label, config: RenderConfig): void {
+  private drawBoxPoints(
+    ctx: RenderContext, label: Label, config: RenderConfig,
+    strength: number = 1, cursor: { x: number; y: number } | null = null,
+  ): void {
     const s = this.transform.scale;
     const radius = config.pointRadius / s;
-    const pulseScale = this.animation.getPulseScale();
+    const color = config.colors[label.class % config.colors.length];
     const corners = [
       { x: (label.x - label.width / 2) * this.transform.imageWidth, y: (label.y - label.height / 2) * this.transform.imageHeight },
       { x: (label.x + label.width / 2) * this.transform.imageWidth, y: (label.y - label.height / 2) * this.transform.imageHeight },
@@ -288,22 +301,57 @@ export class Renderer {
       { x: (label.x - label.width / 2) * this.transform.imageWidth, y: (label.y + label.height / 2) * this.transform.imageHeight },
     ];
 
-    for (const corner of corners) {
-      this.drawPoint(ctx, corner.x, corner.y, radius * pulseScale, config.colors[label.class % config.colors.length], s);
+    // 只有鼠标真正靠近某个角点时才脉冲，否则全部静态
+    let nearestIdx = -1;
+    if (cursor) {
+      const threshold = config.closePointThreshold / s;
+      let minDist = Infinity;
+      for (let i = 0; i < corners.length; i++) {
+        const cx = corners[i].x / this.transform.imageWidth;
+        const cy = corners[i].y / this.transform.imageHeight;
+        const dx = cursor.x - cx;
+        const dy = cursor.y - cy;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < threshold && d < minDist) { minDist = d; nearestIdx = i; }
+      }
+    }
+
+    const pulseScale = 1 + (this.animation.getPulseScale() - 1) * strength;
+    for (let i = 0; i < corners.length; i++) {
+      const r = i === nearestIdx ? radius * pulseScale : radius;
+      this.drawPoint(ctx, corners[i].x, corners[i].y, r, color, s);
     }
   }
 
-  private drawPolygonPoints(ctx: RenderContext, points: number[], config: RenderConfig): void {
+  private drawPolygonPoints(
+    ctx: RenderContext, points: number[], config: RenderConfig,
+    color: string, strength: number = 1,
+    cursor: { x: number; y: number } | null = null,
+  ): void {
     const s = this.transform.scale;
     const radius = config.pointRadius / s;
-    const pulseScale = this.animation.getPulseScale();
 
+    // 只有鼠标真正靠近某个顶点时才脉冲，否则全部静态
+    let nearestIdx = -1;
+    if (cursor) {
+      const threshold = config.closePointThreshold / s;
+      let minDist = Infinity;
+      for (let i = 0; i < points.length; i += 2) {
+        const dx = cursor.x - points[i];
+        const dy = cursor.y - points[i + 1];
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < threshold && d < minDist) { minDist = d; nearestIdx = i / 2; }
+      }
+    }
+
+    const pulseScale = 1 + (this.animation.getPulseScale() - 1) * strength;
     for (let i = 0; i < points.length; i += 2) {
       const px = points[i] * this.transform.imageWidth;
       const py = points[i + 1] * this.transform.imageHeight;
+      const ptIdx = i / 2;
 
       if (i === 0) {
-        // 第一个点：高亮环
+        // 第一个点：白色环（标识起点，始终显示）
         ctx.beginPath();
         ctx.arc(px, py, config.highlightRadius / s, 0, Math.PI * 2);
         ctx.strokeStyle = '#ffffff';
@@ -311,7 +359,8 @@ export class Renderer {
         ctx.stroke();
       }
 
-      this.drawPoint(ctx, px, py, radius * pulseScale, '#4cd964', s);
+      const r = ptIdx === nearestIdx ? radius * pulseScale : radius;
+      this.drawPoint(ctx, px, py, r, color, s);
     }
   }
 
@@ -499,19 +548,39 @@ export class Renderer {
     const s = this.transform.scale;
     const fontSize = config.labelFontSize / s;
     const padding = config.labelPadding / s;
+    const radius = 4 / s; // 圆角半径
 
     ctx.font = `bold ${fontSize}px sans-serif`;
-    const metrics = ctx.measureText(text);
-    const textWidth = metrics.width;
-    const textHeight = fontSize;
+    const textWidth = ctx.measureText(text).width;
+    const bgW = textWidth + padding * 2;
+    const bgH = fontSize + padding * 2;
 
-    // 背景
+    // 背景位置：左上角对齐 x，垂直方向让文字居中于 y
+    const bgX = x;
+    const bgY = y - bgH;
+
+    // 深色半透明圆角背景
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.beginPath();
+    ctx.moveTo(bgX + radius, bgY);
+    ctx.lineTo(bgX + bgW - radius, bgY);
+    ctx.arcTo(bgX + bgW, bgY, bgX + bgW, bgY + radius, radius);
+    ctx.lineTo(bgX + bgW, bgY + bgH - radius);
+    ctx.arcTo(bgX + bgW, bgY + bgH, bgX + bgW - radius, bgY + bgH, radius);
+    ctx.lineTo(bgX + radius, bgY + bgH);
+    ctx.arcTo(bgX, bgY + bgH, bgX, bgY + bgH - radius, radius);
+    ctx.lineTo(bgX, bgY + radius);
+    ctx.arcTo(bgX, bgY, bgX + radius, bgY, radius);
+    ctx.closePath();
+    ctx.fill();
+
+    // 左侧彩色指示条
     ctx.fillStyle = color;
-    ctx.fillRect(x, y - textHeight - padding, textWidth + padding * 2, textHeight + padding * 2);
+    ctx.fillRect(bgX, bgY, 3 / s, bgH);
 
-    // 文字
+    // 白色文字，垂直+水平居中
     ctx.fillStyle = '#ffffff';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(text, x + padding, y - padding);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, bgX + padding + 3 / s, bgY + bgH / 2);
   }
 }

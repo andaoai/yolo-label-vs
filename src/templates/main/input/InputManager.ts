@@ -29,6 +29,8 @@ export interface InputCallbacks {
   onRedo: () => void;
   onResetView: () => void;
   onCycleClass: (direction: 1 | -1) => void;
+  onCopyLabel: () => void;
+  onPasteLabel: () => void;
 }
 
 export class InputManager {
@@ -304,6 +306,18 @@ export class InputManager {
     if (e.key === 's' && modifiers.ctrl) {
       e.preventDefault();
       this.callbacks.onSave();
+      return;
+    }
+
+    if (e.key === 'c' && modifiers.ctrl) {
+      e.preventDefault();
+      this.callbacks.onCopyLabel();
+      return;
+    }
+
+    if (e.key === 'v' && modifiers.ctrl) {
+      e.preventDefault();
+      this.callbacks.onPasteLabel();
       return;
     }
 

@@ -178,6 +178,17 @@ export function moveKeypoint(
 }
 
 /**
+ * 深拷贝标签
+ */
+export function cloneLabel(label: Label): Label {
+  const cloned: Label = { ...label };
+  if (label.points) cloned.points = [...label.points];
+  if (label.keypoints) cloned.keypoints = [...label.keypoints];
+  if (label.keypointShape) cloned.keypointShape = [...label.keypointShape];
+  return cloned;
+}
+
+/**
  * 切换标签可见性
  */
 export function toggleVisibility(label: Label): Label {

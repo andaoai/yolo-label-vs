@@ -227,15 +227,24 @@ export class YoloDataReader {
             for (const line of lines) {
                 const parts = line.trim().split(/\s+/);
                 
-                // Standard YOLO format: class x y width height
-                if (parts.length === 5) {
+                // Detection format:
+                //   5 fields: class x y w h
+                //   6 fields: class x y w h confidence (YOLOv8+ export)
+                if (parts.length === 5 || parts.length === 6) {
                     const classIndex = parseInt(parts[0], 10);
                     const x = parseFloat(parts[1]);
                     const y = parseFloat(parts[2]);
                     const width = parseFloat(parts[3]);
                     const height = parseFloat(parts[4]);
-                    
-                    if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
+
+                    // 6th field as confidence: must be in [0, 1]
+                    let valid = !isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height);
+                    if (valid && parts.length === 6) {
+                        const conf = parseFloat(parts[5]);
+                        valid = !isNaN(conf) && conf >= 0 && conf <= 1;
+                    }
+
+                    if (valid) {
                         labels.push({
                             class: classIndex,
                             x, y, width, height,
@@ -243,19 +252,17 @@ export class YoloDataReader {
                         });
                     }
                 }
-                // YOLO-Pose format: class x y width height [keypoints...]
-                // keypoints format: [x1, y1, v1, x2, y2, v2, ...] where v is visibility
-                else if (parts.length > 5 && this.config.kpt_shape && parts.length === 5 + (this.config.kpt_shape[0] * this.config.kpt_shape[1])) {
+                // Pose format: class x y w h [x1,y1,v1, ...] (kpt_shape defined in YAML)
+                else if (parts.length > 5 && this.config.kpt_shape &&
+                         parts.length === 5 + (this.config.kpt_shape[0] * this.config.kpt_shape[1])) {
                     const classIndex = parseInt(parts[0], 10);
                     const x = parseFloat(parts[1]);
                     const y = parseFloat(parts[2]);
                     const width = parseFloat(parts[3]);
                     const height = parseFloat(parts[4]);
-                    
-                    // Parse keypoints
                     const keypoints = parts.slice(5).map(p => parseFloat(p));
-                    
-                    if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height) && 
+
+                    if (!isNaN(classIndex) && !isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height) &&
                         keypoints.every(p => !isNaN(p))) {
                         labels.push({
                             class: classIndex,
@@ -267,18 +274,15 @@ export class YoloDataReader {
                         });
                     }
                 }
-                // YOLO-Segmentation format: class [points...]
-                else if (parts.length > 5) {
+                // Segmentation format: class x1 y1 x2 y2 ... (many fields, no kpt_shape)
+                else if (parts.length > 6) {
                     const classIndex = parseInt(parts[0], 10);
-                    
-                    // Parse points as floats - all the remaining points after class index
                     const points = parts.slice(1).map(p => parseFloat(p));
-                    
+
                     if (!isNaN(classIndex) && points.every(p => !isNaN(p))) {
-                        // For segmentation, we don't need x,y,w,h as they'll be derived from points
                         labels.push({
                             class: classIndex,
-                            x: 0, y: 0, width: 0, height: 0, // Placeholder values
+                            x: 0, y: 0, width: 0, height: 0,
                             isSegmentation: true,
                             points: points,
                             visible: true

@@ -17,6 +17,7 @@ export interface RenderConfig {
   labelFontSize: number;
   labelPadding: number;
   closePointThreshold: number;
+  hoverProximityThreshold: number;
   minBoxSize: number;
   classNames: string[];
   kptShape: number[];

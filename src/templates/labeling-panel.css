@@ -183,27 +183,146 @@ body {
     background-color: var(--vscode-sideBar-background);
     border-radius: 4px;
     border: 1px solid var(--vscode-panel-border);
-    padding: 16px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     min-height: 0;
     flex-shrink: 0;
+    overflow: hidden;
 }
 .sidebar-section {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    flex: 1;
+    gap: 0;
     min-height: 0;
     overflow: hidden;
 }
-.sidebar h3 {
-    margin-top: 0;
-    color: var(--text-color);
-    font-size: 14px;
+.sidebar-section.collapsible {
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* ─── 可折叠区域：标题栏 ─── */
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    user-select: none;
+    background-color: var(--vscode-editor-background);
+    transition: background-color 0.15s;
+}
+.section-header:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+.section-toggle {
+    font-size: 10px;
+    width: 14px;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    flex-shrink: 0;
+}
+.section-title {
+    flex: 1;
+    font-size: 12px;
     font-weight: 500;
-    margin-bottom: 8px;
+    color: var(--vscode-editor-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.section-title strong {
+    color: var(--vscode-textLink-foreground);
+}
+.section-badge {
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    flex-shrink: 0;
+}
+
+/* ─── 可折叠区域：内容区 ─── */
+.section-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ─── Class 选择器 ─── */
+.class-search-input {
+    width: 100%;
+    padding: 4px 8px;
+    border: none;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    font-size: 12px;
+    outline: none;
+    box-sizing: border-box;
+}
+.class-search-input:focus {
+    border-bottom-color: var(--vscode-focusBorder);
+}
+.class-search-input::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+.class-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+}
+.class-grid::-webkit-scrollbar {
+    width: 4px;
+}
+.class-grid::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background);
+    border-radius: 2px;
+}
+.class-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    color: var(--vscode-editor-foreground);
+    transition: all 0.15s;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.class-chip:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    border-color: var(--vscode-focusBorder);
+}
+.class-chip.active {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+    border-color: var(--vscode-focusBorder);
+    border-left: 3px solid var(--vscode-focusBorder);
+}
+.class-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.class-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* =================== 标签列表 =================== */

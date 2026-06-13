@@ -20,16 +20,133 @@ export class HitTestEngine {
     // 1. 先检测点（优先级最高，因为点很小需要精确点击）
     const pointResult = this.findPointUnderCursor(labels, mouse, config);
     if (pointResult) {
-      return { labelIndex: pointResult.labelIndex, point: pointResult, hitType: 'point' };
+      return { labelIndex: pointResult.labelIndex, point: pointResult, hitType: 'point', nearestDistance: pointResult.distance };
     }
 
     // 2. 再检测标签区域
     const labelIndex = this.findLabelUnderCursor(labels, mouse);
     if (labelIndex !== null) {
-      return { labelIndex, point: null, hitType: 'label' };
+      return { labelIndex, point: null, hitType: 'label', nearestDistance: 0 };
     }
 
-    return { labelIndex: null, point: null, hitType: 'none' };
+    return { labelIndex: null, point: null, hitType: 'none', nearestDistance: -1 };
+  }
+
+  /**
+   * 查找鼠标最近的点或标签（用于基于距离的悬停动画）
+   * 优先检测点，再检测标签区域，返回最近的结果和距离
+   */
+  findNearest(
+    labels: Label[], mouse: NormalizedPoint, config: RenderConfig,
+  ): { labelIndex: number; distance: number } | null {
+    const pointThreshold = config.closePointThreshold / this.transform.scale;
+    const hoverThreshold = config.hoverProximityThreshold / this.transform.scale;
+    let bestDist = Infinity;
+    let bestIndex = -1;
+
+    for (let i = 0; i < labels.length; i++) {
+      const label = labels[i];
+      if (label.visible === false) continue;
+
+      // 1. 检测该标签上的所有点
+      let nearestPtDist = Infinity;
+      if (label.isPose && label.keypoints) {
+        const [numKeypoints, valuesPerPoint] = label.keypointShape || [label.keypoints.length / 3, 3];
+        for (let k = 0; k < numKeypoints; k++) {
+          const ki = k * valuesPerPoint;
+          if ((label.keypoints[ki + 2] as number) === 0) continue;
+          const d = this.transform.normalizedDistance(mouse.x, mouse.y, label.keypoints[ki], label.keypoints[ki + 1]);
+          if (d < nearestPtDist) nearestPtDist = d;
+        }
+      } else if (label.isSegmentation && label.points) {
+        for (let p = 0; p < label.points.length; p += 2) {
+          const d = this.transform.normalizedDistance(mouse.x, mouse.y, label.points[p], label.points[p + 1]);
+          if (d < nearestPtDist) nearestPtDist = d;
+        }
+      } else {
+        const corners = this.getBoxCorners(label);
+        for (const c of corners) {
+          const d = this.transform.normalizedDistance(mouse.x, mouse.y, c.x, c.y);
+          if (d < nearestPtDist) nearestPtDist = d;
+        }
+      }
+
+      // 点在精确阈值内：直接命中（最高优先级）
+      if (nearestPtDist < pointThreshold) {
+        return { labelIndex: i, distance: nearestPtDist };
+      }
+
+      // 点在悬停范围内：作为候选
+      if (nearestPtDist < hoverThreshold && nearestPtDist < bestDist) {
+        bestDist = nearestPtDist;
+        bestIndex = i;
+      }
+
+      // 2. 检测鼠标到标签边缘的距离
+      let edgeDist: number;
+      if (label.isSegmentation && label.points) {
+        edgeDist = this.distanceToPolygonEdge(mouse, label.points);
+      } else {
+        edgeDist = this.distanceToBoxEdge(mouse, label);
+      }
+
+      if (edgeDist < hoverThreshold && edgeDist < bestDist) {
+        bestDist = edgeDist;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex >= 0) {
+      return { labelIndex: bestIndex, distance: bestDist };
+    }
+    return null;
+  }
+
+  /**
+   * 计算点到多边形最近边的距离
+   * 点在多边形内部时返回 0
+   */
+  private distanceToPolygonEdge(point: NormalizedPoint, polygon: number[]): number {
+    if (this.isPointInPolygon(point, polygon)) return 0;
+
+    let minDist = Infinity;
+    const n = polygon.length;
+    for (let i = 0, j = n - 2; i < n; j = i, i += 2) {
+      const d = this.distanceToSegment(
+        point,
+        { x: polygon[j], y: polygon[j + 1] },
+        { x: polygon[i], y: polygon[i + 1] },
+      );
+      if (d < minDist) minDist = d;
+    }
+    return minDist;
+  }
+
+  /**
+   * 计算点到边界框边缘的距离
+   * 点在框内部时返回 0
+   */
+  private distanceToBoxEdge(point: NormalizedPoint, label: Label): number {
+    const halfW = label.width / 2;
+    const halfH = label.height / 2;
+    const dx = Math.max(Math.abs(point.x - label.x) - halfW, 0);
+    const dy = Math.max(Math.abs(point.y - label.y) - halfH, 0);
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  /**
+   * 计算点到线段的最短距离
+   */
+  private distanceToSegment(
+    point: NormalizedPoint, a: NormalizedPoint, b: NormalizedPoint,
+  ): number {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return this.transform.normalizedDistance(point.x, point.y, a.x, a.y);
+    let t = ((point.x - a.x) * dx + (point.y - a.y) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    return this.transform.normalizedDistance(point.x, point.y, a.x + t * dx, a.y + t * dy);
   }
 
   /**

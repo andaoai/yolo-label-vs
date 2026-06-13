@@ -36,6 +36,7 @@ export const DEFAULT_RENDER_CONFIG: RenderConfig = {
   labelFontSize: 14,
   labelPadding: 5,
   closePointThreshold: 0.02,
+  hoverProximityThreshold: 0.05,
   minBoxSize: 0.01,
   classNames: DEFAULT_CLASS_NAMES,
   kptShape: [],

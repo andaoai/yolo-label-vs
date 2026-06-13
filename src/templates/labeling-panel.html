@@ -100,9 +100,28 @@
             </section>
             <!-- 侧边栏 -->
             <aside class="sidebar">
-                <section class="sidebar-section">
-                    <div id="currentClassStatus" style="margin-bottom: 10px; font-weight: bold; font-size: 15px;"></div>
-                    <div class="label-list" id="labelList"></div>
+                <!-- Class 选择器（可折叠） -->
+                <section class="sidebar-section collapsible" id="classSection">
+                    <div class="section-header" id="classHeader">
+                        <span class="section-toggle">▼</span>
+                        <span class="section-title">Class: <strong id="className">person</strong></span>
+                        <span class="section-badge" id="classBadge">1/9</span>
+                    </div>
+                    <div class="section-body" id="classBody">
+                        <input type="text" id="classSearch" class="class-search-input" placeholder="Filter classes..." autocomplete="off">
+                        <div class="class-grid" id="classGrid"></div>
+                    </div>
+                </section>
+                <!-- Labels 列表（可折叠） -->
+                <section class="sidebar-section collapsible" id="labelSection">
+                    <div class="section-header" id="labelHeader">
+                        <span class="section-toggle">▼</span>
+                        <span class="section-title">Labels</span>
+                        <span class="section-badge" id="labelCount">0</span>
+                    </div>
+                    <div class="section-body" id="labelBody">
+                        <div class="label-list" id="labelList"></div>
+                    </div>
                 </section>
             </aside>
         </main>
