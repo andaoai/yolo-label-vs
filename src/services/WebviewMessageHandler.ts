@@ -77,6 +77,10 @@ export class WebviewMessageHandler {
             case 'getImagePreviews':
                 await this.handleGetImagePreviewsCommand(message);
                 break;
+
+            case 'getImagePreviewRange':
+                await this.handleGetImagePreviewRangeCommand(message);
+                break;
                 
             default:
                 console.warn(`Unknown command: ${extMessage.command}`);
@@ -332,19 +336,55 @@ export class WebviewMessageHandler {
     }
     
     /**
-     * 处理批量获取图片缩略图命令
+     * 处理批量获取图片缩略图命令（保留兼容）
      */
     private async handleGetImagePreviewsCommand(message: any): Promise<void> {
         const paths: string[] = message.paths || [];
         const previews: string[] = [];
         for (const p of paths) {
             try {
-                const thumb = await this._imageService.generateThumbnail(p, 120, 80); // 120x80
+                const thumb = await this._imageService.generateThumbnail(p, 120, 80);
                 previews.push(thumb);
             } catch {
-                previews.push(''); // 失败用空字符串
+                previews.push('');
             }
         }
         this._webview.postMessage({ command: 'imagePreviews', previews });
     }
-} 
+
+    /**
+     * 处理范围获取缩略图命令 — 按需懒加载
+     * 并发生成缩略图，避免逐个串行等待
+     */
+    private async handleGetImagePreviewRangeCommand(message: any): Promise<void> {
+        const { paths, startIndex } = message as { paths: string[]; startIndex: number };
+        if (!paths || paths.length === 0) return;
+
+        const CONCURRENCY = 4;
+        const results: (string | null)[] = new Array(paths.length).fill(null);
+
+        // 并发处理，每批 CONCURRENCY 个
+        for (let i = 0; i < paths.length; i += CONCURRENCY) {
+            const batch = paths.slice(i, i + CONCURRENCY);
+            const batchResults = await Promise.all(
+                batch.map(async (p, j) => {
+                    try {
+                        const thumb = await this._imageService.generateThumbnail(p, 120, 80);
+                        return { index: i + j, data: thumb };
+                    } catch {
+                        return { index: i + j, data: '' };
+                    }
+                })
+            );
+            for (const r of batchResults) {
+                results[r.index] = r.data;
+            }
+        }
+
+        this._webview.postMessage({
+            command: 'imagePreviewRange',
+            startIndex,
+            previews: results as string[],
+        });
+    }
+}

@@ -1559,10 +1559,11 @@ export class CanvasManager {
     updateLabelList() {
         const labelListContainer = document.getElementById('labelList');
         if (!labelListContainer) { return; }
-        
-        // 刷新当前class状态栏
+
+        // 刷新当前class状态栏和labels计数
         if (window.uiManager) {
             window.uiManager.updateCurrentClassStatus();
+            window.uiManager.updateLabelCount();
         }
         
         labelListContainer.innerHTML = '';

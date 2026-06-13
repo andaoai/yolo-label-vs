@@ -12,7 +12,7 @@ export class UIManager {
     constructor(state, canvasManager) {
         this.state = state;
         this.canvasManager = canvasManager;
-        
+
         // 存储DOM元素以提高性能
         this.elements = {
             prevButton: document.getElementById('prevImage'),
@@ -29,20 +29,38 @@ export class UIManager {
             openTxtTabButton: document.getElementById('openTxtTab'),
             undoButton: this.createUndoRedoButtons(),
             progressBar: document.getElementById('imageProgressBar'),
-            progressContainer: document.querySelector('.progress-container')
+            progressContainer: document.querySelector('.progress-container'),
+            // Class 选择器
+            classHeader: document.getElementById('classHeader'),
+            classBody: document.getElementById('classBody'),
+            classToggle: document.querySelector('#classHeader .section-toggle'),
+            className: document.getElementById('className'),
+            classBadge: document.getElementById('classBadge'),
+            classSearch: document.getElementById('classSearch'),
+            classGrid: document.getElementById('classGrid'),
+            // Labels 区域
+            labelHeader: document.getElementById('labelHeader'),
+            labelBody: document.getElementById('labelBody'),
+            labelToggle: document.querySelector('#labelHeader .section-toggle'),
+            labelCount: document.getElementById('labelCount'),
         };
-        
+
+        // 折叠状态
+        this.classCollapsed = false;
+        this.labelCollapsed = false;
+
         // 首先初始化进度元素
         this.createProgressElements();
-        
+
         this.setupEventListeners();
-        
+        this.setupCollapsibleSections();
+
         // 初始化保存按钮状态
         this.updateSaveButtonState();
-        
+
         // 初始化进度条
         this.updateProgressBar();
-        
+
         // 绑定打开图片/标签按钮事件
         this.setupTabButtons();
 
@@ -50,7 +68,9 @@ export class UIManager {
         this.updateModeBasedOnLabels();
 
         // Initialize UI elements
-        this.updateCurrentClassStatus();
+        this.renderClassGrid();
+        this.renderClassStatus();
+        this.updateLabelCount();
     }
     
     /**
@@ -758,13 +778,103 @@ export class UIManager {
     }
 
     /**
-     * 更新当前类状态显示
+     * 设置可折叠区域
+     */
+    setupCollapsibleSections() {
+        const { classHeader, labelHeader } = this.elements;
+        if (classHeader) {
+            classHeader.addEventListener('click', () => this.toggleClassSection());
+        }
+        if (labelHeader) {
+            labelHeader.addEventListener('click', () => this.toggleLabelSection());
+        }
+        // 搜索过滤
+        const { classSearch } = this.elements;
+        if (classSearch) {
+            classSearch.addEventListener('input', () => this.renderClassGrid());
+        }
+    }
+
+    toggleClassSection() {
+        this.classCollapsed = !this.classCollapsed;
+        const { classBody, classToggle } = this.elements;
+        if (classBody) classBody.style.display = this.classCollapsed ? 'none' : '';
+        if (classToggle) classToggle.textContent = this.classCollapsed ? '▶' : '▼';
+    }
+
+    toggleLabelSection() {
+        this.labelCollapsed = !this.labelCollapsed;
+        const { labelBody, labelToggle } = this.elements;
+        if (labelBody) labelBody.style.display = this.labelCollapsed ? 'none' : '';
+        if (labelToggle) labelToggle.textContent = this.labelCollapsed ? '▶' : '▼';
+    }
+
+    /**
+     * 渲染 Class 选择器网格
+     */
+    renderClassGrid() {
+        const { classGrid, classSearch } = this.elements;
+        if (!classGrid) return;
+
+        const classNames = this.state.classNamesList;
+        const current = this.state.currentLabel;
+        const filter = classSearch?.value?.toLowerCase() || '';
+
+        classGrid.innerHTML = '';
+        const COLORS = ['#ff3b30','#4cd964','#007aff','#ff9500','#5856d6','#ffcc00','#34c759','#ff2d55','#5ac8fa','#af52de'];
+
+        classNames.forEach((name, i) => {
+            if (filter && !name.toLowerCase().includes(filter)) return;
+
+            const chip = document.createElement('div');
+            chip.className = 'class-chip' + (i === current ? ' active' : '');
+
+            const dot = document.createElement('span');
+            dot.className = 'class-dot';
+            dot.style.backgroundColor = COLORS[i % COLORS.length];
+
+            const label = document.createElement('span');
+            label.className = 'class-name';
+            label.textContent = name;
+
+            chip.append(dot, label);
+            chip.addEventListener('click', () => {
+                this.state.currentLabel = i;
+                this.renderClassGrid();
+                this.renderClassStatus();
+            });
+            classGrid.appendChild(chip);
+        });
+    }
+
+    /**
+     * 更新 Class 标题状态
+     */
+    renderClassStatus() {
+        const { className, classBadge } = this.elements;
+        const classNames = this.state.classNamesList;
+        const current = this.state.currentLabel;
+        const total = classNames.length;
+        const name = classNames[current] || `Class ${current}`;
+        if (className) className.textContent = name;
+        if (classBadge) classBadge.textContent = `${current + 1}/${total}`;
+    }
+
+    /**
+     * 更新 Labels 计数
+     */
+    updateLabelCount() {
+        const { labelCount } = this.elements;
+        if (labelCount) {
+            labelCount.textContent = String(this.state.initialLabels?.length || 0);
+        }
+    }
+
+    /**
+     * 更新当前类状态显示（兼容旧调用）
      */
     updateCurrentClassStatus() {
-        const classStatus = document.getElementById('currentClassStatus');
-        if (classStatus && this.state.classNamesList.length > 0) {
-            const currentClassName = this.state.classNamesList[this.state.currentLabel] || `Class ${this.state.currentLabel}`;
-            classStatus.textContent = `当前标签类型: ${currentClassName} (${this.state.currentLabel + 1}/${this.state.classNamesList.length})`;
-        }
+        this.renderClassGrid();
+        this.renderClassStatus();
     }
 } 
