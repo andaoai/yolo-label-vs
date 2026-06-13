@@ -37,7 +37,18 @@ export interface ErrorMessage extends ExtensionToWebviewMessage {
 
 // 从Webview到扩展的消息
 export interface WebviewToExtensionMessage extends WebviewMessage {
-  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab' | 'getImagePreviews' | 'getImagePreviewRange';
+  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab' | 'getImagePreviews' | 'getImagePreviewRange' | 'openModelFile' | 'loadModelFile';
+}
+
+// 打开模型文件消息
+export interface OpenModelFileMessage extends WebviewToExtensionMessage {
+  command: 'openModelFile';
+}
+
+// 加载模型文件消息
+export interface LoadModelFileMessage extends WebviewToExtensionMessage {
+  command: 'loadModelFile';
+  filePath: string;
 }
 
 // 保存标签消息

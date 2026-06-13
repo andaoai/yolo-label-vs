@@ -4,7 +4,7 @@
  * 协调 Renderer、HitTestEngine、AnimationController
  * 接收主线程消息，驱动渲染循环
  */
-import type { Label, DrawPreview, PointRef, HitTestResult } from '../shared/types';
+import type { Label, DrawPreview, PointRef, HitTestResult, Detection } from '../shared/types';
 import type { RenderConfig, MainToWorkerMessage, WorkerToMainMessage } from '../shared/messages';
 import { CoordinateTransform } from './CoordinateTransform';
 import { HitTestEngine } from './HitTestEngine';
@@ -25,6 +25,8 @@ export class RenderEngine {
   private selectedPoint: PointRef | null = null;
   private preview: DrawPreview | null = null;
   private showLabels = true;
+  private previewDetections: Detection[] = [];
+  private showPreviewDetections = false;
   private dirty = true;
 
   constructor(config: RenderConfig) {
@@ -147,6 +149,18 @@ export class RenderEngine {
         this.dirty = true;
         this.renderIfNeeded();
         return null;
+
+      case 'setPreviewDetections':
+        this.previewDetections = msg.detections;
+        this.dirty = true;
+        this.renderIfNeeded();
+        return null;
+
+      case 'setShowPreviewDetections':
+        this.showPreviewDetections = msg.show;
+        this.dirty = true;
+        this.renderIfNeeded();
+        return null;
     }
   }
 
@@ -175,6 +189,7 @@ export class RenderEngine {
       this.preview,
       this.showLabels,
       hoverStrength,
+      this.showPreviewDetections ? this.previewDetections : null,
     );
 
     // 如果有动画（悬停强度 > 0 或工具绘制中），保持动画循环

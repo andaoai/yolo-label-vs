@@ -1023,4 +1023,155 @@ svg {
 
 .progress-marker:hover {
     transform: translate(-50%, -50%) scale(1.2);
-} 
+}
+
+/* ─── Model 推理面板 ─── */
+.model-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+}
+
+.model-info {
+    flex: 1;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.model-btn {
+    flex-shrink: 0;
+    padding: 3px 8px;
+    font-size: 12px;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.model-btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.model-params {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+    border-top: 1px solid var(--vscode-panel-border);
+}
+
+.model-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.model-slider-row label {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    min-width: 36px;
+    flex-shrink: 0;
+}
+
+.model-slider {
+    flex: 1;
+    height: 3px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--vscode-scrollbarSlider-background);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+.model-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    background: var(--vscode-button-background);
+    border-radius: 50%;
+    cursor: pointer;
+}
+.model-slider::-webkit-slider-thumb:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.model-slider-value {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    min-width: 28px;
+    text-align: right;
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.model-run-btn {
+    width: calc(100% - 12px);
+    margin: 0 6px 6px;
+    padding: 3px 8px;
+    font-size: 12px;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.model-run-btn:hover:not(:disabled) {
+    background-color: var(--vscode-button-hoverBackground);
+}
+.model-run-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.model-status {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    min-height: 16px;
+    padding: 4px 6px;
+    text-align: center;
+    background-color: var(--vscode-editor-background);
+    border-radius: 3px;
+    margin: 0 6px 6px;
+}
+
+.model-preview-actions {
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    margin-bottom: 6px;
+    border-top: 1px solid var(--vscode-panel-border);
+}
+
+.model-accept-btn {
+    flex: 1;
+    padding: 3px 8px;
+    font-size: 12px;
+    background-color: var(--vscode-testing-iconPassed);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.model-accept-btn:hover {
+    opacity: 0.9;
+}
+
+.model-reject-btn {
+    flex: 1;
+    padding: 3px 8px;
+    font-size: 12px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.model-reject-btn:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}

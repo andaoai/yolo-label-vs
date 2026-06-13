@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import { YoloDataReader } from '../YoloDataReader';
-import { 
-    WebviewMessage, 
-    WebviewToExtensionMessage, 
-    LoadImageMessage, 
+import {
+    WebviewMessage,
+    WebviewToExtensionMessage,
+    LoadImageMessage,
     SaveLabelsMessage,
     UpdateImageMessage,
     OpenImageInNewTabMessage,
@@ -81,7 +82,15 @@ export class WebviewMessageHandler {
             case 'getImagePreviewRange':
                 await this.handleGetImagePreviewRangeCommand(message);
                 break;
-                
+
+            case 'openModelFile':
+                await this.handleOpenModelFileCommand();
+                break;
+
+            case 'loadModelFile':
+                await this.handleLoadModelFileCommand(message as any);
+                break;
+
             default:
                 console.warn(`Unknown command: ${extMessage.command}`);
         }
@@ -386,5 +395,94 @@ export class WebviewMessageHandler {
             startIndex,
             previews: results as string[],
         });
+    }
+
+    /**
+     * 处理打开模型文件对话框命令
+     * 弹出文件选择器让用户选择 .onnx 文件
+     */
+    private async handleOpenModelFileCommand(): Promise<void> {
+        try {
+            const uris = await vscode.window.showOpenDialog({
+                canSelectFiles: true,
+                canSelectFolders: false,
+                canSelectMany: false,
+                filters: {
+                    'ONNX Model': ['onnx'],
+                },
+                title: 'Select YOLO ONNX Model',
+            });
+
+            if (!uris || uris.length === 0) {
+                return;
+            }
+
+            const filePath = uris[0].fsPath;
+            await this.handleLoadModelFileCommand({ command: 'loadModelFile', filePath } as any);
+        } catch (error: any) {
+            this._webview.postMessage({
+                command: 'modelFileError',
+                error: `Failed to open file dialog: ${error.message}`,
+            });
+        }
+    }
+
+    /**
+     * 处理加载模型文件命令
+     * 读取 .onnx 文件并通过 transferable ArrayBuffer 发送给 webview
+     */
+    private async handleLoadModelFileCommand(message: { filePath: string }): Promise<void> {
+        try {
+            const filePath = message.filePath;
+
+            // 验证文件存在
+            if (!fs.existsSync(filePath)) {
+                this._webview.postMessage({
+                    command: 'modelFileError',
+                    error: `Model file not found: ${filePath}`,
+                });
+                return;
+            }
+
+            // 验证文件扩展名
+            if (!filePath.toLowerCase().endsWith('.onnx')) {
+                this._webview.postMessage({
+                    command: 'modelFileError',
+                    error: 'Invalid file type. Please select an .onnx file.',
+                });
+                return;
+            }
+
+            // 读取文件
+            const buffer = await fs.promises.readFile(filePath);
+            const arrayBuffer = buffer.buffer.slice(
+                buffer.byteOffset,
+                buffer.byteOffset + buffer.byteLength
+            );
+
+            // 获取文件名
+            const fileName = filePath.split(/[\\/]/).pop() || filePath;
+
+            // 发送回 webview（VS Code postMessage 不支持 transferable，使用结构化克隆）
+            this._webview.postMessage({
+                command: 'modelFileData',
+                data: arrayBuffer,
+                fileName,
+            });
+        } catch (error: any) {
+            ErrorHandler.handleError(
+                error,
+                'Failed to load model file',
+                {
+                    filePath: message.filePath,
+                    webview: this._webview,
+                    type: ErrorType.UNKNOWN_ERROR,
+                }
+            );
+            this._webview.postMessage({
+                command: 'modelFileError',
+                error: `Failed to load model: ${error.message}`,
+            });
+        }
     }
 }

@@ -5,10 +5,11 @@
  * 1. Store（状态）
  * 2. WorkerBridge（渲染线程）
  * 3. ExtensionBridge（扩展通信）
- * 4. HistoryManager（历史）
- * 5. ToolManager（工具）
- * 6. InputManager（输入）
- * 7. DOMManager（UI）
+ * 4. InferenceBridge（推理线程）
+ * 5. HistoryManager（历史）
+ * 6. ToolManager（工具）
+ * 7. InputManager（输入）
+ * 8. DOMManager（UI）
  */
 import type { Label } from '../shared/types';
 import type { ExtensionMessage } from './communication/ExtensionBridge';
@@ -18,6 +19,7 @@ import { HistoryManager } from './state/HistoryManager';
 import * as LabelOps from './state/LabelOperations';
 import { ExtensionBridge } from './communication/ExtensionBridge';
 import { WorkerBridge } from './communication/WorkerBridge';
+import { InferenceRunner } from '../inference/inferenceRunner';
 import { ToolManager } from './input/tools/ToolManager';
 import { InputManager } from './input/InputManager';
 import { DOMManager, type DOMCallbacks } from './ui/DOMManager';
@@ -29,12 +31,14 @@ export class App {
   readonly history: HistoryManager;
   readonly extension: ExtensionBridge;
   readonly worker: WorkerBridge;
+  readonly inferenceRunner: InferenceRunner;
   readonly toolManager: ToolManager;
   readonly dom: DOMManager;
 
   private inputManager: InputManager | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private savedState: string = ''; // JSON.stringify of labels for unsaved check
+  private currentImageData: string = ''; // base64 data URI for re-decoding
   private previewCache: Map<number, string> = new Map(); // index → base64
   private pendingPreviewRange: { startIndex: number; endIndex: number } | null = null;
   private previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -50,20 +54,23 @@ export class App {
     // 3. Extension
     this.extension = new ExtensionBridge();
 
-    // 4. History
+    // 4. Inference
+    this.inferenceRunner = new InferenceRunner();
+
+    // 5. History
     this.history = new HistoryManager();
 
-    // 5. Tools
+    // 6. Tools
     this.toolManager = new ToolManager(this.store, this.worker);
 
-    // 6. DOM
+    // 7. DOM
     const themeManager = new ThemeManager(this.store, this.worker);
     this.dom = new DOMManager(this.store, this.createDOMCallbacks(), themeManager);
   }
 
   /** 启动应用 */
   async start(): Promise<void> {
-    // 等待 Worker 就绪
+    // 等待渲染 Worker 就绪
     await this.waitForWorker();
 
     // 监听 Worker 后续消息（transformComputed 等）
@@ -86,6 +93,11 @@ export class App {
 
     // 请求图片列表
     this.extension.getImageList();
+
+    // 初始化推理运行器（非阻塞，失败不影响标注功能）
+    this.initInference().catch((err) => {
+      console.warn('[App] Inference init failed (non-critical):', err);
+    });
 
     // 监听窗口大小变化
     window.addEventListener('resize', this.handleResize);
@@ -180,6 +192,12 @@ export class App {
       case 'imagePreviewRange':
         this.handleImagePreviewRange(msg.startIndex, msg.previews);
         break;
+      case 'modelFileData':
+        this.handleModelFileData(msg.data, msg.fileName);
+        break;
+      case 'modelFileError':
+        this.showError(msg.error);
+        break;
     }
   }
 
@@ -266,6 +284,9 @@ export class App {
   private async handleImageData(
     imageData: string, labels: any[], currentPath: string, imageInfo: string,
   ): Promise<void> {
+    // 保存图片数据 URI（推理时需要重新解码，因为 ImageBitmap 已 transfer 给 Worker）
+    this.currentImageData = imageData;
+
     // 解码图片为 ImageBitmap
     const response = await fetch(imageData);
     const blob = await response.blob();
@@ -517,6 +538,131 @@ export class App {
     });
   }
 
+  // ─── 推理 ───────────────────────────────────────────
+
+  private async initInference(): Promise<void> {
+    const w = window as any;
+    const ortJsUrl = w.__ortJsUrl || '';
+    const wasmDirUrl = w.__ortWasmPaths || '';
+
+    if (!ortJsUrl) {
+      this.dom.modelPanel.setStatus('ONNX Runtime not available');
+      return;
+    }
+
+    try {
+      await this.inferenceRunner.init(ortJsUrl, wasmDirUrl);
+      console.log('[App] Inference runner ready');
+    } catch (err: any) {
+      this.dom.modelPanel.setStatus(`Init failed: ${err.message}`);
+      console.warn('[App] Inference init failed:', err);
+    }
+  }
+
+  private handleModelFileData(data: ArrayBuffer, fileName: string): void {
+    this.store.batch({
+      modelPath: fileName,
+      inferenceRunning: false,
+    });
+    this.dom.modelPanel.setStatus('Loading model...');
+
+    const classNames = this.store.get('classNames');
+    this.inferenceRunner.loadModel(data, classNames).then(() => {
+      this.store.batch({
+        modelLoaded: true,
+        modelInputSize: 640,
+      });
+      this.dom.modelPanel.setStatus('Model loaded');
+    }).catch((err: Error) => {
+      this.store.batch({ modelLoaded: false, modelPath: '' });
+      this.dom.modelPanel.setStatus(`Error: ${err.message}`);
+      this.showError(err.message);
+    });
+  }
+
+  private async handleRunInference(): Promise<void> {
+    if (!this.inferenceRunner.isModelLoaded) {
+      this.showError('No model loaded. Please load an .onnx model first.');
+      return;
+    }
+
+    const image = this.store.get('image');
+    if (!image) {
+      this.showError('No image loaded.');
+      return;
+    }
+
+    this.store.set('inferenceRunning', true);
+    this.dom.modelPanel.setStatus('Running inference...');
+
+    try {
+      // ImageBitmap 已 transfer 给渲染 Worker，需要从原始数据重新解码
+      if (!this.currentImageData) {
+        throw new Error('No image data available');
+      }
+      const resp = await fetch(this.currentImageData);
+      const blob = await resp.blob();
+      const bitmap = await createImageBitmap(blob);
+
+      const detections = await this.inferenceRunner.runInference(
+        bitmap,
+        this.store.get('imageWidth'),
+        this.store.get('imageHeight'),
+        this.store.get('confThreshold'),
+        this.store.get('iouThreshold'),
+      );
+
+      this.store.batch({
+        inferenceRunning: false,
+        previewDetections: detections,
+        showPreview: detections.length > 0,
+      });
+
+      this.worker.send({ type: 'setPreviewDetections', detections });
+      this.worker.send({ type: 'setShowPreviewDetections', show: detections.length > 0 });
+      this.dom.modelPanel.setStatus(detections.length > 0 ? `${detections.length} objects detected` : 'No objects detected');
+    } catch (err: any) {
+      this.store.set('inferenceRunning', false);
+      this.dom.modelPanel.setStatus(`Error: ${err.message}`);
+    }
+  }
+
+  private handleAcceptDetections(): void {
+    const detections = this.store.get('previewDetections');
+    if (detections.length === 0) return;
+
+    // Detection 用左上角坐标，Label 用中心点坐标，需要转换
+    const newLabels: Label[] = detections.map(d => ({
+      class: d.class,
+      x: d.x + d.width / 2,
+      y: d.y + d.height / 2,
+      width: d.width,
+      height: d.height,
+      visible: true,
+    }));
+
+    const labels = [...this.store.get('labels'), ...newLabels];
+    this.store.set('labels', labels);
+    this.worker.setLabels(labels);
+    this.pushHistory();
+    this.dom.updateLabelList();
+
+    this.clearPreview();
+  }
+
+  private handleRejectDetections(): void {
+    this.clearPreview();
+  }
+
+  private clearPreview(): void {
+    this.store.batch({
+      previewDetections: [],
+      showPreview: false,
+    });
+    this.worker.send({ type: 'setPreviewDetections', detections: [] });
+    this.worker.send({ type: 'setShowPreviewDetections', show: false });
+  }
+
   // ─── DOM 回调 ─────────────────────────────────────────
 
   private createDOMCallbacks(): DOMCallbacks {
@@ -546,6 +692,12 @@ export class App {
         this.worker.setHoveredLabel(idx);
       },
       onPreviewHover: (start, end) => this.requestPreviewRange(start, end),
+      onLoadModel: () => this.extension.openModelFile(),
+      onRunInference: () => this.handleRunInference(),
+      onAcceptDetections: () => this.handleAcceptDetections(),
+      onRejectDetections: () => this.handleRejectDetections(),
+      onConfThresholdChange: (v) => this.store.set('confThreshold', v),
+      onIouThresholdChange: (v) => this.store.set('iouThreshold', v),
     };
   }
 
@@ -559,26 +711,44 @@ export class App {
   }
 
   private showError(message: string): void {
-    // 简单的错误显示
     const existing = document.getElementById('errorOverlay');
     if (existing) existing.remove();
 
     const overlay = document.createElement('div');
     overlay.id = 'errorOverlay';
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
-    overlay.innerHTML = `
-      <div style="background:#1e1e1e;padding:24px;border-radius:8px;max-width:500px;color:#f44336;">
-        <h3 style="margin:0 0 12px;">Error</h3>
-        <p style="margin:0 0 16px;">${message}</p>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button id="errorClose" style="padding:8px 16px;cursor:pointer;">Close</button>
-          <button id="errorReload" style="padding:8px 16px;cursor:pointer;background:#007acc;color:white;border:none;">Reload Panel</button>
-        </div>
-      </div>`;
+
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#1e1e1e;padding:24px;border-radius:8px;max-width:500px;color:#f44336;';
+
+    const title = document.createElement('h3');
+    title.style.margin = '0 0 12px';
+    title.textContent = 'Error';
+
+    const msg = document.createElement('p');
+    msg.style.margin = '0 0 16px';
+    msg.textContent = message; // textContent 避免 XSS
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.id = 'errorClose';
+    closeBtn.style.cssText = 'padding:8px 16px;cursor:pointer;';
+    closeBtn.textContent = 'Close';
+
+    const reloadBtn = document.createElement('button');
+    reloadBtn.id = 'errorReload';
+    reloadBtn.style.cssText = 'padding:8px 16px;cursor:pointer;background:#007acc;color:white;border:none;';
+    reloadBtn.textContent = 'Reload Panel';
+
+    btnRow.append(closeBtn, reloadBtn);
+    box.append(title, msg, btnRow);
+    overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    document.getElementById('errorClose')?.addEventListener('click', () => overlay.remove());
-    document.getElementById('errorReload')?.addEventListener('click', () => this.extension.reload());
+    closeBtn.addEventListener('click', () => overlay.remove());
+    reloadBtn.addEventListener('click', () => this.extension.reload());
   }
 
   private resolveWorkerUrl(): string {
@@ -590,4 +760,5 @@ export class App {
     // 回退：相对路径
     return 'worker.js';
   }
+
 }

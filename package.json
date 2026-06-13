@@ -135,6 +135,7 @@
   },
   "dependencies": {
     "jimp": "^0.22.10",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "onnxruntime-web": "^1.26.0"
   }
 }

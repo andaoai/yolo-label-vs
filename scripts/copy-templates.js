@@ -25,17 +25,49 @@ function copyDir(src, dest) {
     }
 }
 
+// 复制单个文件
+function copyFile(src, dest) {
+    const destDir = path.dirname(dest);
+    if (!fs.existsSync(destDir)) {
+        fs.mkdirSync(destDir, { recursive: true });
+    }
+    fs.copyFileSync(src, dest);
+}
+
 // 主函数
 function main() {
     const srcDir = path.join(__dirname, '..', 'src', 'templates');
     const destDir = path.join(__dirname, '..', 'dist', 'templates');
-    
+
     try {
         copyDir(srcDir, destDir);
         console.log('Templates copied successfully!');
     } catch (err) {
         console.error('Error copying templates:', err);
         process.exit(1);
+    }
+
+    // 复制 onnxruntime-web WASM 和 backend JS 到 dist/templates/ort/
+    try {
+        const ortDistDir = path.join(__dirname, '..', 'node_modules', 'onnxruntime-web', 'dist');
+        const ortDestDir = path.join(destDir, 'ort');
+        const filesToCopy = [
+            'ort-wasm-simd-threaded.wasm',
+            'ort-wasm-simd-threaded.mjs',
+        ];
+
+        for (const file of filesToCopy) {
+            const src = path.join(ortDistDir, file);
+            const dest = path.join(ortDestDir, file);
+            if (fs.existsSync(src)) {
+                copyFile(src, dest);
+                console.log(`ONNX Runtime copied: ${file}`);
+            } else {
+                console.warn(`File not found: ${src}`);
+            }
+        }
+    } catch (err) {
+        console.error('Error copying ONNX Runtime files:', err);
     }
 }
 

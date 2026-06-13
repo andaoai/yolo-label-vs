@@ -45,6 +45,17 @@ export class Store {
       imagePreviews: [],
       imageInfo: '',
       hasUnsavedChanges: false,
+
+      // 推理状态
+      modelLoaded: false,
+      modelPath: '',
+      modelInputSize: 640,
+      inferenceRunning: false,
+      previewDetections: [],
+      showPreview: false,
+      confThreshold: 0.25,
+      iouThreshold: 0.45,
+
       ...initialState,
     };
   }

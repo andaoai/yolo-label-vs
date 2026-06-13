@@ -111,6 +111,29 @@ export interface AppState {
 
   // 脏标记
   hasUnsavedChanges: boolean;
+
+  // 推理
+  modelLoaded: boolean;
+  modelPath: string;
+  modelInputSize: number;
+  inferenceRunning: boolean;
+  previewDetections: Detection[];
+  showPreview: boolean;
+  confThreshold: number;
+  iouThreshold: number;
+}
+
+// ─── 推理检测结果 ────────────────────────────────────────
+
+/** 单个检测结果（归一化坐标 0-1） */
+export interface Detection {
+  class: number;
+  className: string;
+  confidence: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 // ─── 修饰键 ──────────────────────────────────────────────
