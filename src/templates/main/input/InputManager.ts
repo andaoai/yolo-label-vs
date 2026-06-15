@@ -485,8 +485,8 @@ export class InputManager {
     if (imgW === 0 || imgH === 0 || scale === 0) return null;
 
     return {
-      x: (canvasX - tx) / (imgW * scale),
-      y: (canvasY - ty) / (imgH * scale),
+      x: Math.max(0, Math.min(1, (canvasX - tx) / (imgW * scale))),
+      y: Math.max(0, Math.min(1, (canvasY - ty) / (imgH * scale))),
     };
   }
 

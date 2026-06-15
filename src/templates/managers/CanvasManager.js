@@ -148,20 +148,24 @@ export class CanvasManager {
     getMousePos(evt) {
         // 确保矩形已更新
         this.updateRects();
-        
+
         // 计算鼠标在画布元素中的像素位置
         const mouseX = evt.clientX - this.state.canvasRect.left;
         const mouseY = evt.clientY - this.state.canvasRect.top;
-        
+
         // 转换为画布坐标系
         const canvasX = mouseX / this.state.canvasRect.width * this.canvas.width;
         const canvasY = mouseY / this.state.canvasRect.height * this.canvas.height;
-        
+
         // 应用逆变换以获取图像坐标
         const imageX = (canvasX - this.state.translateX) / this.state.scale;
         const imageY = (canvasY - this.state.translateY) / this.state.scale;
-        
-        return { x: imageX, y: imageY };
+
+        // 约束到图片范围内
+        return {
+            x: Math.max(0, Math.min(this.state.originalImageWidth, imageX)),
+            y: Math.max(0, Math.min(this.state.originalImageHeight, imageY))
+        };
     }
 
     /**
@@ -379,41 +383,60 @@ export class CanvasManager {
                 // 只有Ctrl+拖动才允许移动
                 if (e.ctrlKey && this.state.isDragging && this.state.draggedLabel) {
                     // 标签拖动逻辑保持不变
-                    const dx = normalizedX - this.state.dragStartPos.x;
-                    const dy = normalizedY - this.state.dragStartPos.y;
-                    
+                    let dx = normalizedX - this.state.dragStartPos.x;
+                    let dy = normalizedY - this.state.dragStartPos.y;
+
+                    const label = this.state.draggedLabel;
+
                     // 根据标签类型处理移动
-                    if (this.state.draggedLabel.isSegmentation) {
-                        // 移动分割标签
-                        for (let i = 0; i < this.state.draggedLabel.points.length; i += 2) {
-                            this.state.draggedLabel.points[i] += dx;
-                            this.state.draggedLabel.points[i + 1] += dy;
+                    if (label.isSegmentation) {
+                        // 先移动所有点，再约束到图片范围
+                        for (let i = 0; i < label.points.length; i += 2) {
+                            label.points[i] = Math.max(0, Math.min(1, label.points[i] + dx));
+                            label.points[i + 1] = Math.max(0, Math.min(1, label.points[i + 1] + dy));
                         }
-                    } else if (this.state.draggedLabel.isPose) {
-                        // 移动姿态标签
-                        // 首先移动边界框
-                        this.state.draggedLabel.x += dx;
-                        this.state.draggedLabel.y += dy;
-                        
-                        // 然后移动所有关键点
-                        if (this.state.draggedLabel.keypoints && this.state.draggedLabel.keypointShape) {
-                            const valuePerPoint = this.state.draggedLabel.keypointShape[1];
-                            const numKeypoints = this.state.draggedLabel.keypointShape[0];
-                            
-                            // 遍历所有关键点并移动它们
+                        // 从点重新计算边界框
+                        let minX = 1, minY = 1, maxX = 0, maxY = 0;
+                        for (let i = 0; i < label.points.length; i += 2) {
+                            minX = Math.min(minX, label.points[i]);
+                            minY = Math.min(minY, label.points[i + 1]);
+                            maxX = Math.max(maxX, label.points[i]);
+                            maxY = Math.max(maxY, label.points[i + 1]);
+                        }
+                        label.x = (minX + maxX) / 2;
+                        label.y = (minY + maxY) / 2;
+                        label.width = maxX - minX;
+                        label.height = maxY - minY;
+                    } else if (label.isPose) {
+                        // 约束姿态标签框不超出图片边界
+                        const halfW = label.width / 2;
+                        const halfH = label.height / 2;
+                        const clampedX = Math.max(halfW, Math.min(1 - halfW, label.x + dx));
+                        const clampedY = Math.max(halfH, Math.min(1 - halfH, label.y + dy));
+                        const adx = clampedX - label.x;
+                        const ady = clampedY - label.y;
+                        label.x = clampedX;
+                        label.y = clampedY;
+
+                        // 移动所有关键点
+                        if (label.keypoints && label.keypointShape) {
+                            const valuePerPoint = label.keypointShape[1];
+                            const numKeypoints = label.keypointShape[0];
+
                             for (let i = 0; i < numKeypoints; i++) {
                                 const baseIndex = i * valuePerPoint;
-                                // 只更新x和y坐标，不更改可见性值
-                                this.state.draggedLabel.keypoints[baseIndex] += dx;
-                                this.state.draggedLabel.keypoints[baseIndex + 1] += dy;
+                                label.keypoints[baseIndex] = Math.max(0, Math.min(1, label.keypoints[baseIndex] + adx));
+                                label.keypoints[baseIndex + 1] = Math.max(0, Math.min(1, label.keypoints[baseIndex + 1] + ady));
                             }
                         }
                     } else {
-                        // 移动普通边界框
-                        this.state.draggedLabel.x += dx;
-                        this.state.draggedLabel.y += dy;
+                        // 移动普通边界框，约束不超出图片边界
+                        const halfW = label.width / 2;
+                        const halfH = label.height / 2;
+                        label.x = Math.max(halfW, Math.min(1 - halfW, label.x + dx));
+                        label.y = Math.max(halfH, Math.min(1 - halfH, label.y + dy));
                     }
-                    
+
                     this.state.dragStartPos = { x: normalizedX, y: normalizedY };
                     this.state.requestRedraw();
                     this.state.hasUnsavedChanges = true;
@@ -2320,38 +2343,36 @@ export class CanvasManager {
      */
     moveSelectedPoint(x, y) {
         if (!this.state.selectedPoint) { return; }
-        
+
         const selectedPoint = this.state.selectedPoint;
         const dx = x - this.state.dragStartPos.x;
         const dy = y - this.state.dragStartPos.y;
-        
+
         // 更新拖动开始位置
         this.state.dragStartPos = { x, y };
-        
+
         // 根据点的类型进行不同的处理
         if (selectedPoint.type === 'segmentation') {
-            // 更新分割多边形的点
+            // 更新分割多边形的点（坐标已被 getMousePos 约束到图片范围）
             const pointIndex = selectedPoint.pointIndex;
             selectedPoint.label.points[pointIndex] = x;
             selectedPoint.label.points[pointIndex + 1] = y;
-            
+
             // 更新选中点的位置信息
             selectedPoint.x = x;
             selectedPoint.y = y;
         } else if (selectedPoint.type === 'pose') {
-            // 更新姿态关键点
+            // 更新姿态关键点（坐标已被 getMousePos 约束到图片范围）
             const pointIndex = selectedPoint.pointIndex;
             selectedPoint.label.keypoints[pointIndex] = x;
             selectedPoint.label.keypoints[pointIndex + 1] = y;
-            
+
             // 更新选中点的位置信息
             selectedPoint.x = x;
             selectedPoint.y = y;
         } else if (selectedPoint.type === 'box') {
             // 更新边界框角点
             const label = selectedPoint.label;
-            const halfWidth = label.width / 2;
-            const halfHeight = label.height / 2;
             
             // 根据拖动的角点更新框的位置和大小
             if (selectedPoint.corner === 'top-left') {
@@ -2414,18 +2435,35 @@ export class CanvasManager {
                 const newY = label.y + dy * 0.5;
                 const newWidth = label.width + dx;
                 const newHeight = label.height + dy;
-                
+
                 // 确保宽度和高度不为负
                 if (newWidth > 0 && newHeight > 0) {
                     label.x = newX;
                     label.y = newY;
                     label.width = newWidth;
                     label.height = newHeight;
-                    
-                    // 更新选中点位置
-                    selectedPoint.x = label.x + label.width / 2;
-                    selectedPoint.y = label.y + label.height / 2;
                 }
+            }
+
+            // 约束框不超出图片边界 [0, 1]
+            const halfW = label.width / 2;
+            const halfH = label.height / 2;
+            label.x = Math.max(halfW, Math.min(1 - halfW, label.x));
+            label.y = Math.max(halfH, Math.min(1 - halfH, label.y));
+
+            // 更新选中点位置
+            if (selectedPoint.corner === 'top-left') {
+                selectedPoint.x = label.x - label.width / 2;
+                selectedPoint.y = label.y - label.height / 2;
+            } else if (selectedPoint.corner === 'top-right') {
+                selectedPoint.x = label.x + label.width / 2;
+                selectedPoint.y = label.y - label.height / 2;
+            } else if (selectedPoint.corner === 'bottom-left') {
+                selectedPoint.x = label.x - label.width / 2;
+                selectedPoint.y = label.y + label.height / 2;
+            } else if (selectedPoint.corner === 'bottom-right') {
+                selectedPoint.x = label.x + label.width / 2;
+                selectedPoint.y = label.y + label.height / 2;
             }
         }
     }

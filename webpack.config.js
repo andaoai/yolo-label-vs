@@ -93,10 +93,21 @@ module.exports = (env, argv) => {
                     }],
                 },
             ],
+            // 抑制 ort.min.js 中动态 require 的告警（浏览器中不触发）
+            exprContextCritical: false,
         },
         optimization: {
             minimize: isProduction,
         },
+        performance: {
+            // ort.min.js (~352 KiB) 是不可裁剪的第三方 WASM 运行时
+            maxAssetSize: 512 * 1024,
+            maxEntrypointSize: 512 * 1024,
+        },
+        ignoreWarnings: [
+            // ort.min.js 使用动态 require 加载可选 Node.js 后端，浏览器中不触发
+            { module: /ort\.min\.js/, message: /Critical dependency/ },
+        ],
     };
 
     // ─── Worker 渲染线程（Web Worker） ───────────────────

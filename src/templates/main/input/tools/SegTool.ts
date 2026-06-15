@@ -39,6 +39,8 @@ export class SegTool implements Tool {
     // 开始或继续绘制
     this.drawing = true;
     this.points.push(pos.x, pos.y);
+    this.mouseX = pos.x;
+    this.mouseY = pos.y;
     return { handled: true };
   }
 
