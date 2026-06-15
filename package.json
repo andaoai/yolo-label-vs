@@ -110,6 +110,7 @@
     "watch": "cross-env NODE_ENV=development webpack --watch --config webpack.config.js && npm run copy-templates",
     "copy-templates": "node scripts/copy-templates.js",
     "test:inference": "tsx test/test-inference-all.ts",
+    "test:sam": "tsx test/test-inference-sam.ts",
     "vscode:prepublish": "npm run build"
   },
   "devDependencies": {
