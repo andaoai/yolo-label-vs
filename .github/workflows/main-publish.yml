@@ -12,15 +12,18 @@ jobs:
   publish-to-marketplace:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]')
+    env:
+      # HaaLeo/publish-vscode-extension@v2 仍使用 node20，暂无更新版本
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.PAT_TOKEN }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20.x'
+          node-version: '24.x'
 
       - name: Get current version
         id: current_version
@@ -41,7 +44,7 @@ jobs:
           vsce package
 
       - name: Create GitHub Release and Upload VSIX
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.current_version.outputs.version }}
           name: Release v${{ steps.current_version.outputs.version }}
