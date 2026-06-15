@@ -54,6 +54,7 @@ function main() {
         const filesToCopy = [
             'ort-wasm-simd-threaded.wasm',
             'ort-wasm-simd-threaded.mjs',
+            'ort-wasm-simd-threaded.jsep.mjs',
         ];
 
         for (const file of filesToCopy) {
