@@ -542,16 +542,15 @@ export class App {
 
   private async initInference(): Promise<void> {
     const w = window as any;
-    const ortJsUrl = w.__ortJsUrl || '';
     const wasmDirUrl = w.__ortWasmPaths || '';
 
-    if (!ortJsUrl) {
+    if (!wasmDirUrl) {
       this.dom.modelPanel.setStatus('ONNX Runtime not available');
       return;
     }
 
     try {
-      await this.inferenceRunner.init(ortJsUrl, wasmDirUrl);
+      await this.inferenceRunner.init(wasmDirUrl);
       console.log('[App] Inference runner ready');
     } catch (err: any) {
       this.dom.modelPanel.setStatus(`Init failed: ${err.message}`);

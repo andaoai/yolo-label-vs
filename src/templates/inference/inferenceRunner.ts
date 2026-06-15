@@ -1,8 +1,8 @@
 /**
  * 推理运行器 — 在主线程中执行 ONNX 推理
  *
- * 通过 dynamic import() 加载 onnxruntime-web ESM 模块，
- * 避免 Web Worker 中 import.meta.url 被 webpack 清空的问题。
+ * onnxruntime-web UMD 模块（ort.min.js）通过 webpack 入口文件打包进 main.js，
+ * 在 main.ts 之前执行，设置 window.ort 全局对象。
  */
 import type { Detection } from '../shared/types';
 
@@ -17,10 +17,10 @@ export class InferenceRunner {
   private initPromise: Promise<void> | null = null;
   private preprocessCanvas: HTMLCanvasElement | null = null;
 
-  async init(ortJsSrc: string, wasmDirSrc: string): Promise<void> {
+  async init(wasmDirSrc: string): Promise<void> {
     if (this.ortReady) return;
     if (this.initPromise) return this.initPromise;
-    this.initPromise = this.doInit(ortJsSrc, wasmDirSrc);
+    this.initPromise = this.doInit(wasmDirSrc);
     try {
       await this.initPromise;
     } catch (e) {
@@ -29,12 +29,14 @@ export class InferenceRunner {
     }
   }
 
-  private async doInit(ortJsSrc: string, wasmDirSrc: string): Promise<void> {
+  private async doInit(wasmDirSrc: string): Promise<void> {
     try {
-      const module = await import(/* webpackIgnore: true */ ortJsSrc);
-      (window as any).ort = module;
-      module.env.wasm.numThreads = 1;
-      module.env.wasm.wasmPaths = wasmDirSrc;
+      const ort = (window as any).ort;
+      if (!ort) {
+        throw new Error('ort global not found — ort-entry.js may not have loaded');
+      }
+      ort.env.wasm.numThreads = 1;
+      ort.env.wasm.wasmPaths = wasmDirSrc;
       this.ortReady = true;
     } catch (error: any) {
       throw new Error(`Failed to load ONNX Runtime: ${error.message}`);
