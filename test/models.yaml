@@ -24,3 +24,14 @@ yolo11n-seg:
 yolo11s:
   url: https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo11s.onnx
   task: det
+
+# SAM (Segment Anything Model)
+sam-vit-b-encoder:
+  url: https://huggingface.co/schmuell/sam-b-fp16/resolve/main/sam_vit_b_01ec64.encoder-fp16.onnx
+  task: seg
+  type: sam-encoder
+
+sam-vit-b-decoder:
+  url: https://huggingface.co/schmuell/sam-b-fp16/resolve/main/sam_vit_b_01ec64.decoder.onnx
+  task: seg
+  type: sam-decoder
