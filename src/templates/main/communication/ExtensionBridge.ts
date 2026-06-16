@@ -15,7 +15,6 @@ export type ExtensionMessage =
   | { command: 'updateImage'; imageData: string; labels: any[]; currentPath: string; imageInfo: string }
   | { command: 'error'; error: string; type?: string; recoverable?: boolean }
   | { command: 'saveSuccess' }
-  | { command: 'imagePreviews'; previews: string[] }
   | { command: 'imagePreviewRange'; startIndex: number; previews: string[] }
   | { command: 'modelFileData'; data: ArrayBuffer; fileName: string }
   | { command: 'modelFileError'; error: string };
@@ -30,7 +29,6 @@ export type WebviewMessage =
   | { command: 'reload' }
   | { command: 'openImageInNewTab'; path: string }
   | { command: 'openTxtInNewTab'; path: string }
-  | { command: 'getImagePreviews'; paths: string[] }
   | { command: 'getImagePreviewRange'; paths: string[]; startIndex: number }
   | { command: 'openModelFile' }
   | { command: 'loadModelFile'; filePath: string };
@@ -102,10 +100,6 @@ export class ExtensionBridge {
 
   openTxtInNewTab(path: string): void {
     this.send({ command: 'openTxtInNewTab', path });
-  }
-
-  getImagePreviews(paths: string[]): void {
-    this.send({ command: 'getImagePreviews', paths });
   }
 
   getImagePreviewRange(paths: string[], startIndex: number): void {

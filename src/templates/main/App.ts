@@ -186,9 +186,6 @@ export class App {
       case 'saveSuccess':
         this.onSaveSuccess();
         break;
-      case 'imagePreviews':
-        this.store.set('imagePreviews', msg.previews);
-        break;
       case 'imagePreviewRange':
         this.handleImagePreviewRange(msg.startIndex, msg.previews);
         break;

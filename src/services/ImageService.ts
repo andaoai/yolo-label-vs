@@ -1,20 +1,20 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { CacheManager } from '../model/CacheManager';
-import { ErrorHandler, ErrorType } from '../ErrorHandler';
+import { ErrorHandler } from '../ErrorHandler';
 
 /**
  * 图像服务类
  * 负责图像加载、缓存和基本的图像操作
  */
 export class ImageService {
-    
+
     /**
      * 构造函数
      * @param _imageCache 图像缓存管理器实例
      */
     constructor(private readonly _imageCache: CacheManager<string>) {}
-    
+
     /**
      * 加载图像并返回base64数据URL
      * @param imagePath 图像文件路径
@@ -32,19 +32,19 @@ export class ImageService {
             await fs.promises.access(imagePath, fs.constants.R_OK);
             // 读取图像文件
             const imageBuffer = await fs.promises.readFile(imagePath);
-            
+
             // 根据文件扩展名确定MIME类型
             const mimeType = this.getMimeType(imagePath);
-            
+
             // 转换为base64数据URL
             const imageData = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
-            
+
             // 存入缓存
             this._imageCache.set(imagePath, imageData);
-            
+
             return imageData;
         } catch (error: any) {
-            const errorDetails = ErrorHandler.handleError(
+            ErrorHandler.handleError(
                 error,
                 'Image loading error',
                 {
@@ -52,7 +52,7 @@ export class ImageService {
                     showNotification: false
                 }
             );
-            
+
             if (error.code === 'ENOENT') {
                 throw new Error(`Image file not found: ${imagePath}`);
             } else if (error.code === 'EACCES') {
@@ -69,7 +69,7 @@ export class ImageService {
      */
     private getMimeType(filePath: string): string {
         const ext = path.extname(filePath).toLowerCase();
-        
+
         switch (ext) {
             case '.png':
                 return 'image/png';
@@ -85,19 +85,12 @@ export class ImageService {
                 return 'image/jpeg';
         }
     }
-    
-    /**
-     * 清除所有图像缓存
-     */
-    public clearCache(): void {
-        this._imageCache.clear();
-    }
 
     /**
      * 生成图片缩略图 — 直接读取文件为 data URI
      * 不做服务端缩放，由浏览器 CSS object-fit 处理尺寸
      */
-    public async generateThumbnail(imagePath: string, _width: number, _height: number): Promise<string> {
+    public async generateThumbnail(imagePath: string): Promise<string> {
         try {
             await fs.promises.access(imagePath, fs.constants.R_OK);
             const buffer = await fs.promises.readFile(imagePath);

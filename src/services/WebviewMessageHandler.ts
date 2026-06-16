@@ -74,10 +74,6 @@ export class WebviewMessageHandler {
                 const openTxtMessage = message as OpenTxtInNewTabMessage;
                 await this.handleOpenTxtInNewTabCommand(openTxtMessage);
                 break;
-                
-            case 'getImagePreviews':
-                await this.handleGetImagePreviewsCommand(message);
-                break;
 
             case 'getImagePreviewRange':
                 await this.handleGetImagePreviewRangeCommand(message);
@@ -345,23 +341,6 @@ export class WebviewMessageHandler {
     }
     
     /**
-     * 处理批量获取图片缩略图命令（保留兼容）
-     */
-    private async handleGetImagePreviewsCommand(message: any): Promise<void> {
-        const paths: string[] = message.paths || [];
-        const previews: string[] = [];
-        for (const p of paths) {
-            try {
-                const thumb = await this._imageService.generateThumbnail(p, 120, 80);
-                previews.push(thumb);
-            } catch {
-                previews.push('');
-            }
-        }
-        this._webview.postMessage({ command: 'imagePreviews', previews });
-    }
-
-    /**
      * 处理范围获取缩略图命令 — 按需懒加载
      * 并发生成缩略图，避免逐个串行等待
      */
@@ -378,7 +357,7 @@ export class WebviewMessageHandler {
             const batchResults = await Promise.all(
                 batch.map(async (p, j) => {
                     try {
-                        const thumb = await this._imageService.generateThumbnail(p, 120, 80);
+                        const thumb = await this._imageService.generateThumbnail(p);
                         return { index: i + j, data: thumb };
                     } catch {
                         return { index: i + j, data: '' };

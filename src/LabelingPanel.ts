@@ -1,16 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { YoloDataReader, BoundingBox } from './YoloDataReader';
+import { YoloDataReader } from './YoloDataReader';
 import { ErrorHandler, ErrorType } from './ErrorHandler';
 import { CacheManager } from './model/CacheManager';
-import { 
-    WebviewMessage, 
-    WebviewToExtensionMessage, 
-    LoadImageMessage, 
-    SaveLabelsMessage,
-    UpdateImageMessage 
-} from './model/types';
+import { WebviewMessage } from './model/types';
 import { ImageService } from './services/ImageService';
 import { UiService } from './services/UiService';
 import { WebviewMessageHandler } from './services/WebviewMessageHandler';

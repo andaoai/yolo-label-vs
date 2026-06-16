@@ -37,7 +37,7 @@ export interface ErrorMessage extends ExtensionToWebviewMessage {
 
 // 从Webview到扩展的消息
 export interface WebviewToExtensionMessage extends WebviewMessage {
-  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab' | 'getImagePreviews' | 'getImagePreviewRange' | 'openModelFile' | 'loadModelFile';
+  command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab' | 'getImagePreviewRange' | 'openModelFile' | 'loadModelFile';
 }
 
 // 打开模型文件消息
@@ -75,40 +75,6 @@ export interface OpenTxtInNewTabMessage extends WebviewToExtensionMessage {
   path: string;
 }
 
-// 消息类型守卫
-export function isUpdateImageMessage(message: WebviewMessage): message is UpdateImageMessage {
-  return message.command === 'updateImage';
-}
-
-export function isImageListMessage(message: WebviewMessage): message is ImageListMessage {
-  return message.command === 'imageList';
-}
-
-export function isErrorMessage(message: WebviewMessage): message is ErrorMessage {
-  return message.command === 'error';
-}
-
-export function isSaveLabelsMessage(message: WebviewMessage): message is SaveLabelsMessage {
-  return message.command === 'save';
-}
-
-export function isLoadImageMessage(message: WebviewMessage): message is LoadImageMessage {
-  return message.command === 'loadImage';
-}
-
-/**
- * 配置类型定义
- */
-
-// YOLO配置接口
-export interface YoloConfig {
-  path: string;
-  train: string | string[];
-  val: string | string[];
-  test: string | string[];
-  names: string[] | Record<string, string>;
-}
-
 // 标签框接口
 export interface BoundingBox {
   class: number;
@@ -124,51 +90,6 @@ export interface BoundingBox {
   visible?: boolean;
 }
 
-// 图片信息接口
-export interface ImageInfo {
-  path: string;
-  width: number;
-  height: number;
-  format: string;
-  hasLabels: boolean;
-}
-
-/**
- * 设置类型定义
- */
-
-// 标注设置
-export interface LabelingSettings {
-  highlightColor: string;
-  boxLineWidth: number;
-  fontSize: number;
-  showLabels: boolean;
-  snapToGrid: boolean;
-  gridSize: number;
-  autoSave: boolean;
-}
-
-/**
- * 状态类型定义
- */
-
-// 面板状态
-export type PanelState = 'loading' | 'ready' | 'error';
-
-// 编辑模式
-export type EditMode = 'create' | 'edit' | 'delete' | 'pan';
-
-// 历史操作类型
-export type HistoryActionType = 'add' | 'edit' | 'delete' | 'bulk';
-
-// 历史操作记录
-export interface HistoryAction {
-  type: HistoryActionType;
-  boxes: BoundingBox[];
-  previousBoxes?: BoundingBox[];
-  timestamp: number;
-}
-
 // 图片缓存项
 export interface CacheItem<T> {
   data: T;
@@ -176,5 +97,5 @@ export interface CacheItem<T> {
   size: number;
 }
 
-// 可缓存的数据类型
-export type CacheableData = string | BoundingBox[] | ImageInfo; 
+// 可缓存的数据类型（仅用于 CacheManager 的类型约束）
+export type CacheableData = string | BoundingBox[] | object;

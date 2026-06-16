@@ -176,21 +176,7 @@ export class ErrorHandler {
     }
     return false;
   }
-  
-  /**
-   * 获取错误历史记录
-   */
-  public static getErrorHistory(): ReadonlyArray<ErrorDetails> {
-    return [...this._errors];
-  }
 
-  /**
-   * 清除错误历史记录
-   */
-  public static clearErrorHistory(): void {
-    this._errors = [];
-  }
-  
   /**
    * 获取错误恢复操作
    */

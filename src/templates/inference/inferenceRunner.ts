@@ -50,20 +50,9 @@ export class InferenceRunner {
       executionProviders: ['wasm'],
       graphOptimizationLevel: 'all',
     });
-    this.modelInputSize = this.detectInputSize();
+    this.modelInputSize = 640; // YOLOv8 默认输入尺寸
     this.modelClassNames = classNames;
     return this.modelInputSize;
-  }
-
-  private detectInputSize(): number {
-    try {
-      if (!this.session) return 640;
-      const inputName = this.session.inputNames[0];
-      const inputMeta = this.session.inputNames;
-      return 640;
-    } catch {
-      return 640;
-    }
   }
 
   async runInference(

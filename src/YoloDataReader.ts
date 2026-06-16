@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-import { BoundingBox, ImageInfo } from './model/types';
+import { BoundingBox } from './model/types';
 import { ErrorHandler, ErrorType } from './ErrorHandler';
 
 export { BoundingBox } from './model/types';
@@ -127,7 +127,7 @@ export class YoloDataReader {
 
             this.loadImageFiles();
         } catch (error: any) {
-            const errorDetails = ErrorHandler.handleError(
+            ErrorHandler.handleError(
                 error,
                 'Failed to load YOLO configuration',
                 {
