@@ -7,10 +7,7 @@
 /** 标注工具类型 */
 export type ToolType = 'box' | 'seg' | 'pose';
 
-/** 关键点可见性：0=不可见, 1=可见, 2=遮挡 */
-export type KeypointVisibility = 0 | 1 | 2;
-
-/** 标签（与扩展端 BoundingBox 兼容） */
+/** 标签 */
 export interface Label {
   class: number;
   x: number;
@@ -33,18 +30,6 @@ export interface NormalizedPoint {
   y: number;
 }
 
-/** Canvas 像素坐标 */
-export interface CanvasPoint {
-  x: number;
-  y: number;
-}
-
-/** 屏幕/CSS 像素坐标 */
-export interface ScreenPoint {
-  clientX: number;
-  clientY: number;
-}
-
 /** 点引用：标签索引 + 点类型 + 点索引 */
 export interface PointRef {
   labelIndex: number;
@@ -61,8 +46,6 @@ export interface HitTestResult {
   point: PointRef | null;
   /** 命中类型 */
   hitType: 'point' | 'label' | 'none';
-  /** 鼠标与最近标签/点的距离（归一化坐标），-1 表示超出检测范围 */
-  nearestDistance: number;
 }
 
 // ─── 绘制预览 ────────────────────────────────────────────

@@ -57,53 +57,79 @@ yolo-label-vs/
 │   └── ...                   # 其他文档文件
 ├── node_modules/             # 依赖项 (gitignore)
 ├── src/                      # 源代码
+│   ├── extension.ts          # VS Code 扩展入口文件
+│   ├── LabelingPanel.ts      # WebView 面板管理器（多实例支持）
+│   ├── ErrorHandler.ts       # 统一错误分类与上报
+│   ├── model/                # Extension Host 类型定义
+│   │   └── types.ts          # BoundingBox = Label（与前端类型对齐）
 │   ├── services/             # 扩展服务层
-│   │   └── UiService.ts     # WebView 面板管理
-│   ├── templates/            # 前端模板与源码
-│   │   ├── shared/           # 主线程与Worker共享代码
-│   │   │   ├── types.ts      # 共享类型定义
-│   │   │   ├── messages.ts   # 消息协议（discriminated union）
-│   │   │   └── config.ts     # 配置常量
-│   │   ├── worker/           # Worker 线程（Canvas渲染）
-│   │   │   ├── worker.ts             # Worker 入口
-│   │   │   ├── RenderEngine.ts       # 渲染引擎主控
-│   │   │   ├── Renderer.ts           # Canvas 绘制模块
-│   │   │   ├── HitTestEngine.ts      # 命中检测
-│   │   │   ├── CoordinateTransform.ts # 坐标变换
-│   │   │   └── AnimationController.ts # 动画控制
-│   │   ├── main/             # 主线程（输入与UI）
-│   │   │   ├── main.ts               # 入口
-│   │   │   ├── App.ts                # 应用编排器
-│   │   │   ├── state/                # 状态管理
-│   │   │   │   ├── Store.ts          # Proxy 响应式状态
-│   │   │   │   ├── HistoryManager.ts # Undo/Redo
-│   │   │   │   └── LabelOperations.ts # 标签操作纯函数
-│   │   │   ├── communication/        # 通信层
-│   │   │   │   ├── ExtensionBridge.ts # 扩展通信
-│   │   │   │   └── WorkerBridge.ts   # Worker 通信
-│   │   │   ├── input/                # 输入处理
-│   │   │   │   ├── InputManager.ts   # 输入事件管理
-│   │   │   │   └── tools/            # 标注工具
-│   │   │   │       ├── Tool.ts       # 工具接口
-│   │   │   │       ├── BoxTool.ts    # 框选工具
-│   │   │   │       ├── SegTool.ts    # 分割工具
-│   │   │   │       ├── PoseTool.ts   # 姿态工具
-│   │   │   │       └── ToolManager.ts # 工具注册
-│   │   │   └── ui/                   # DOM UI 组件
-│   │   │       ├── DOMManager.ts     # UI 编排
-│   │   │       ├── Toolbar.ts        # 工具栏
-│   │   │       ├── Sidebar.ts        # 侧边栏
-│   │   │       ├── StatusBar.ts      # 状态栏
-│   │   │       ├── ProgressBar.ts    # 进度条
-│   │   │       ├── ModelPanel.ts     # 模型管理面板
-│   │   │       └── ThemeManager.ts   # 主题管理
-│   │   ├── inference/        # AI 推理模块
-│   │   │   └── inferenceRunner.ts    # ONNX 模型推理
-│   │   ├── index.html        # WebView HTML 模板
-│   │   └── labeling-panel.css # 样式表
-│   ├── YoloDataReader.ts     # YOLO数据读取器
-│   └── ...                   # 其他源文件
-├── test_label/               # 测试数据
+│   │   └── WebviewMessageHandler.ts  # WebView 消息总线（11种命令）
+│   ├── utils/                # 工具函数
+│   │   ├── imageLoader.ts    # Base64 LRU 图片缓存 + 缩略图
+│   │   ├── pathUtils.ts      # basename/truncate/imagePathToLabelPath
+│   │   └── webviewHtml.ts    # 生成 WebView HTML，注入资源和 ORT WASM 路径
+│   ├── yolo/                 # YOLO 数据层
+│   │   ├── ConfigLoader.ts   # 解析 data.yaml（path/train/val/test/names/kpt_shape）
+│   │   ├── ImageFileScanner.ts  # 扫描 train/val/test 目录下的图片
+│   │   ├── LabelCodec.ts     # YOLO txt 标签编解码（det/seg/pose）
+│   │   └── YoloDataReader.ts # 数据集会话（当前索引、读写标签）
+│   ├── sidebar/              # （预留目录）
+│   ├── types/                # （预留目录）
+│   └── templates/            # 前端模板与源码
+│       ├── index.html        # WebView HTML 模板
+│       ├── index.css         # 统一样式表
+│       ├── ort-entry.ts      # ONNX Runtime 加载器（jsep.mjs 拦截）
+│       ├── shared/           # 主线程与Worker共享代码
+│       │   ├── types.ts      # 共享类型定义（Label, Detection等）
+│       │   ├── messages.ts   # 消息协议（discriminated union）
+│       │   ├── config.ts     # 配置常量（颜色、阈值等）
+│       │   └── math.ts       # 数学工具
+│       ├── worker/           # Worker 线程（Canvas渲染）
+│       │   ├── worker.ts             # Worker 入口
+│       │   ├── RenderEngine.ts       # 渲染引擎主控
+│       │   ├── Renderer.ts           # Canvas 绘制模块
+│       │   ├── HitTestEngine.ts      # 命中检测
+│       │   ├── CoordinateTransform.ts # 坐标变换
+│       │   └── AnimationController.ts # 动画控制
+│       ├── main/             # 主线程（输入与UI）
+│       │   ├── main.ts               # 入口
+│       │   ├── App.ts                # 应用编排器
+│       │   ├── state/                # 状态管理
+│       │   │   ├── Store.ts          # Proxy 响应式状态
+│       │   │   ├── HistoryManager.ts # Undo/Redo（每图独立LRU栈，最大50）
+│       │   │   └── LabelOperations.ts # 标签操作纯函数
+│       │   ├── communication/        # 通信层
+│       │   │   ├── ExtensionBridge.ts # 扩展通信包装
+│       │   │   └── WorkerBridge.ts   # Worker 通信包装
+│       │   ├── input/                # 输入处理
+│       │   │   ├── InputManager.ts   # 输入事件管理
+│       │   │   └── tools/            # 标注工具
+│       │   │       ├── Tool.ts       # 工具接口
+│       │   │       ├── BoxTool.ts    # 框选工具
+│       │   │       ├── SegTool.ts    # 分割工具
+│       │   │       ├── PoseTool.ts   # 姿态工具
+│       │   │       └── ToolManager.ts # 工具注册
+│       │   └── ui/                   # DOM UI 组件
+│       │       ├── DOMManager.ts     # UI 编排
+│       │       ├── Toolbar.ts        # 工具栏
+│       │       ├── Sidebar.ts        # 侧边栏
+│       │       ├── StatusBar.ts      # 状态栏
+│       │       ├── ProgressBar.ts    # 缩略图栏（懒加载，防抖）
+│       │       ├── ModelPanel.ts     # 模型管理面板
+│       │       ├── ThemeManager.ts   # 主题管理
+│       │       └── collapsible.ts    # 可折叠区域工具
+│       └── inference/        # AI 推理模块
+│           └── inferenceRunner.ts    # ONNX 模型推理（YOLOv8/v11, det+seg）
+├── test/                     # 测试数据和推理测试
+│   ├── data/                 # 测试数据集（coco8等）
+│   ├── setup.ts              # 测试设置
+│   ├── test-inference-all.ts  # 所有推理测试
+│   ├── test-inference-sam.ts  # SAM编码器/解码器测试
+│   └── test-inference-seg.ts  # 分割推理测试
+├── models/                   # ONNX 模型存储（用于测试）
+├── scripts/                  # 构建脚本
+│   └── copy-templates.js     # 构建后复制 HTML/CSS 模板
+├── dist/                     # 构建输出
 ├── webpack.config.js         # 三配置打包（extension/main/worker）
 ├── .gitignore                # Git忽略配置
 ├── package.json              # 项目配置
@@ -111,7 +137,17 @@ yolo-label-vs/
 └── tsconfig.json             # TypeScript配置
 ```
 
-### 前端架构概览
+### Extension Host 架构（后端）
+
+后端（VS Code Extension Host）采用模块化面向服务架构：
+
+- **`extension.ts`**：注册 `yolo-labeling-vs.openLabelingPanel` 命令，处理快捷键触发时的 YAML 文件选择逻辑
+- **`LabelingPanel.ts`**：管理 WebView 面板，支持多实例（每个 YAML 文件一个面板），缓存在静态 Map 中，错误页面降级支持 reload
+- **`WebviewMessageHandler.ts`**：中央消息总线，接收来自 WebView 的 11 种命令，包括 ONNX 文件读取并通过结构化克隆传给 WebView
+- **Yolo 数据层**：ConfigLoader（YAML 解析）→ ImageFileScanner（目录扫描）→ LabelCodec（YOLO 格式编解码）→ YoloDataReader（会话管理）
+- **工具层**：imageLoader（LRU 缓存）、pathUtils、webviewHtml（模板生成与资源注入）
+
+### WebView 前端架构
 
 前端采用 **主线程 + Worker 双线程架构**：
 
@@ -125,6 +161,11 @@ yolo-label-vs/
 - **LRU HistoryManager**：每图独立 undo/redo 历史栈（最大 50 条）
 - **CoordinateTransform**：统一坐标系（归一化 0-1 ↔ 图片像素 ↔ Canvas 像素）
 - **InferenceRunner**：ONNX Runtime 集成，支持 AI 目标检测、NMS 和 mask 转多边形
+- **状态注入**：`webviewHtml.ts` 将 classNames、初始图片数据、labels、kptShape、worker URL、ORT WASM 路径注入到 window 对象
+
+### JS 到 TypeScript 迁移
+
+整个代码库已完成 TypeScript 迁移（已完成）。`ort-entry.js` 也已迁移到 `ort-entry.ts`，同时保持了 ONNX Runtime 加载所需的 UMD 兼容性。
 
 ### Webpack 构建
 
@@ -133,7 +174,7 @@ yolo-label-vs/
 | Bundle | Target | 入口 | 说明 |
 |--------|--------|------|------|
 | extension.js | node | src/extension.ts | VS Code 扩展主进程 |
-| main.js | web | src/templates/main/main.ts | WebView 主线程（包含推理） |
+| main.js | web | src/templates/ort-entry.ts + src/templates/main/main.ts | WebView 主线程（包含推理、ORT WASM 初始化） |
 | worker.js | webworker | src/templates/worker/worker.ts | 渲染 Worker |
 
 构建命令：
@@ -286,7 +327,7 @@ feat: 添加COCO8-seg数据格式支持
 A: 按F5启动新的VSCode窗口，该窗口加载了当前开发中的扩展。
 
 ### Q: 测试数据应该放在哪里?
-A: 将测试数据放在`test_label/`目录下，该目录已配置好示例数据。
+A: 将测试数据放在`test/data/`目录下，该目录已配置好示例数据集。测试用的 ONNX 模型放在`models/`目录。
 
 ### Q: 如何处理冲突?
 A: 

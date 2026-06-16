@@ -20,16 +20,16 @@ export class HitTestEngine {
     // 1. 先检测点（优先级最高，因为点很小需要精确点击）
     const pointResult = this.findPointUnderCursor(labels, mouse, config);
     if (pointResult) {
-      return { labelIndex: pointResult.labelIndex, point: pointResult, hitType: 'point', nearestDistance: pointResult.distance };
+      return { labelIndex: pointResult.labelIndex, point: pointResult, hitType: 'point' };
     }
 
     // 2. 再检测标签区域
     const labelIndex = this.findLabelUnderCursor(labels, mouse);
     if (labelIndex !== null) {
-      return { labelIndex, point: null, hitType: 'label', nearestDistance: 0 };
+      return { labelIndex, point: null, hitType: 'label' };
     }
 
-    return { labelIndex: null, point: null, hitType: 'none', nearestDistance: -1 };
+    return { labelIndex: null, point: null, hitType: 'none' };
   }
 
   /**

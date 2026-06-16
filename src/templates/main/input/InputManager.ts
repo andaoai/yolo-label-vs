@@ -13,13 +13,11 @@ import type { WorkerBridge } from '../communication/WorkerBridge';
 import type { ToolManager } from './tools/ToolManager';
 import type { ToolResult } from './tools/Tool';
 import { MIN_ZOOM, MAX_ZOOM, ZOOM_SPEED, SCROLL_SPEED } from '../../shared/config';
+import { clamp01 } from '../../shared/math';
 import * as LabelOps from '../state/LabelOperations';
 
 /** 输入事件回调 */
 export interface InputCallbacks {
-  onLabelAdded: (labels: any[]) => void;
-  onLabelUpdated: (index: number, label: any) => void;
-  onLabelRemoved: (index: number) => void;
   onPushHistory: () => void;
   onUpdateLabelList: () => void;
   onNavigateNext: () => void;
@@ -195,7 +193,6 @@ export class InputManager {
     if (this.isDraggingPoint) {
       this.isDraggingPoint = false;
       this.selectedPoint = null;
-      this.worker.setSelectedPoint(null);
       this.callbacks.onPushHistory();
       return;
     }
@@ -349,7 +346,6 @@ export class InputManager {
     if (result.hitType === 'point' && result.point) {
       this.isDraggingPoint = true;
       this.selectedPoint = result.point;
-      this.worker.setSelectedPoint(result.point);
     } else if (result.hitType === 'label' && result.labelIndex !== null) {
       this.isDraggingLabel = true;
       this.draggedLabelIndex = result.labelIndex;
@@ -485,8 +481,8 @@ export class InputManager {
     if (imgW === 0 || imgH === 0 || scale === 0) return null;
 
     return {
-      x: Math.max(0, Math.min(1, (canvasX - tx) / (imgW * scale))),
-      y: Math.max(0, Math.min(1, (canvasY - ty) / (imgH * scale))),
+      x: clamp01((canvasX - tx) / (imgW * scale)),
+      y: clamp01((canvasY - ty) / (imgH * scale)),
     };
   }
 

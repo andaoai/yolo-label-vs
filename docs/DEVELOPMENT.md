@@ -57,53 +57,79 @@ yolo-label-vs/
 │   └── ...                   # Other documentation files
 ├── node_modules/             # Dependencies (gitignore)
 ├── src/                      # Source code
+│   ├── extension.ts          # VS Code extension entry point
+│   ├── LabelingPanel.ts      # WebView panel manager (multi-instance support)
+│   ├── ErrorHandler.ts       # Unified error classification and reporting
+│   ├── model/                # Type definitions for Extension Host
+│   │   └── types.ts          # BoundingBox = Label (type alignment with frontend)
 │   ├── services/             # Extension service layer
-│   │   └── UiService.ts     # WebView panel management
-│   ├── templates/            # Frontend templates and source
-│   │   ├── shared/           # Shared between main thread and Worker
-│   │   │   ├── types.ts      # Shared type definitions
-│   │   │   ├── messages.ts   # Message protocol (discriminated union)
-│   │   │   └── config.ts     # Configuration constants
-│   │   ├── worker/           # Worker thread (Canvas rendering)
-│   │   │   ├── worker.ts             # Worker entry point
-│   │   │   ├── RenderEngine.ts       # Render engine coordinator
-│   │   │   ├── Renderer.ts           # Canvas drawing module
-│   │   │   ├── HitTestEngine.ts      # Hit testing
-│   │   │   ├── CoordinateTransform.ts # Coordinate transformation
-│   │   │   └── AnimationController.ts # Animation control
-│   │   ├── main/             # Main thread (input and UI)
-│   │   │   ├── main.ts               # Entry point
-│   │   │   ├── App.ts                # Application orchestrator
-│   │   │   ├── state/                # State management
-│   │   │   │   ├── Store.ts          # Proxy-based reactive state
-│   │   │   │   ├── HistoryManager.ts # Undo/Redo
-│   │   │   │   └── LabelOperations.ts # Pure label operations
-│   │   │   ├── communication/        # Communication layer
-│   │   │   │   ├── ExtensionBridge.ts # Extension communication
-│   │   │   │   └── WorkerBridge.ts   # Worker communication
-│   │   │   ├── input/                # Input handling
-│   │   │   │   ├── InputManager.ts   # Input event management
-│   │   │   │   └── tools/            # Annotation tools
-│   │   │   │       ├── Tool.ts       # Tool interface
-│   │   │   │       ├── BoxTool.ts    # Box drawing tool
-│   │   │   │       ├── SegTool.ts    # Segmentation tool
-│   │   │   │       ├── PoseTool.ts   # Pose tool
-│   │   │   │       └── ToolManager.ts # Tool registry
-│   │   │   └── ui/                   # DOM UI components
-│   │   │       ├── DOMManager.ts     # UI orchestrator
-│   │   │       ├── Toolbar.ts        # Toolbar
-│   │   │       ├── Sidebar.ts        # Sidebar
-│   │   │       ├── StatusBar.ts      # Status bar
-│   │   │       ├── ProgressBar.ts    # Progress bar
-│   │   │       ├── ModelPanel.ts     # Model management panel
-│   │   │       └── ThemeManager.ts   # Theme management
-│   │   ├── inference/        # AI inference module
-│   │   │   └── inferenceRunner.ts    # ONNX model inference
-│   │   ├── index.html        # WebView HTML template
-│   │   └── labeling-panel.css # Stylesheet
-│   ├── YoloDataReader.ts     # YOLO data reader
-│   └── ...                   # Other source files
-├── test_label/               # Test data
+│   │   └── WebviewMessageHandler.ts  # WebView message bus (11 commands)
+│   ├── utils/                # Utility helpers
+│   │   ├── imageLoader.ts    # Base64 LRU image cache + thumbnails
+│   │   ├── pathUtils.ts      # Basename/truncate/imagePathToLabelPath
+│   │   └── webviewHtml.ts    # Generate WebView HTML, inject resources and ORT WASM paths
+│   ├── yolo/                 # YOLO data layer
+│   │   ├── ConfigLoader.ts   # Parse data.yaml (path/train/val/test/names/kpt_shape)
+│   │   ├── ImageFileScanner.ts  # Scan images in train/val/test directories
+│   │   ├── LabelCodec.ts     # Encode/decode YOLO txt labels (det/seg/pose)
+│   │   └── YoloDataReader.ts # Dataset session (current index, read/write labels)
+│   ├── sidebar/              # (Reserved for future)
+│   ├── types/                # (Reserved for future)
+│   └── templates/            # Frontend templates and source
+│       ├── index.html        # WebView HTML template
+│       ├── index.css         # Unified stylesheet
+│       ├── ort-entry.ts      # ONNX Runtime loader (jsep.mjs interception)
+│       ├── shared/           # Shared between main thread and Worker
+│       │   ├── types.ts      # Shared type definitions (Label, Detection, etc.)
+│       │   ├── messages.ts   # Message protocol (discriminated union)
+│       │   ├── config.ts     # Configuration constants (colors, thresholds)
+│       │   └── math.ts       # Math utilities
+│       ├── worker/           # Worker thread (Canvas rendering)
+│       │   ├── worker.ts             # Worker entry point
+│       │   ├── RenderEngine.ts       # Render engine coordinator
+│       │   ├── Renderer.ts           # Canvas drawing module
+│       │   ├── HitTestEngine.ts      # Hit testing
+│       │   ├── CoordinateTransform.ts # Coordinate transformation
+│       │   └── AnimationController.ts # Animation control
+│       ├── main/             # Main thread (input and UI)
+│       │   ├── main.ts               # Entry point
+│       │   ├── App.ts                # Application orchestrator
+│       │   ├── state/                # State management
+│       │   │   ├── Store.ts          # Proxy-based reactive state
+│       │   │   ├── HistoryManager.ts # Undo/Redo (per-image LRU stack, max 50)
+│       │   │   └── LabelOperations.ts # Pure label operations
+│       │   ├── communication/        # Communication layer
+│       │   │   ├── ExtensionBridge.ts # Extension communication wrapper
+│       │   │   └── WorkerBridge.ts   # Worker communication wrapper
+│       │   ├── input/                # Input handling
+│       │   │   ├── InputManager.ts   # Input event management
+│       │   │   └── tools/            # Annotation tools
+│       │   │       ├── Tool.ts       # Tool interface
+│       │   │       ├── BoxTool.ts    # Box drawing tool
+│       │   │       ├── SegTool.ts    # Segmentation tool
+│       │   │       ├── PoseTool.ts   # Pose tool
+│       │   │       └── ToolManager.ts # Tool registry
+│       │   └── ui/                   # DOM UI components
+│       │       ├── DOMManager.ts     # UI orchestrator
+│       │       ├── Toolbar.ts        # Toolbar
+│       │       ├── Sidebar.ts        # Sidebar
+│       │       ├── StatusBar.ts      # Status bar
+│       │       ├── ProgressBar.ts    # Thumbnail bar (lazy load, debounced)
+│       │       ├── ModelPanel.ts     # Model management panel
+│       │       ├── ThemeManager.ts   # Theme management
+│       │       └── collapsible.ts    # Collapsible section utilities
+│       └── inference/        # AI inference module
+│           └── inferenceRunner.ts    # ONNX model inference (YOLOv8/v11, det+seg)
+├── test/                     # Test data and inference tests
+│   ├── data/                 # Test datasets (coco8, etc.)
+│   ├── setup.ts              # Test setup
+│   ├── test-inference-all.ts  # All inference tests
+│   ├── test-inference-sam.ts  # SAM encoder/decoder tests
+│   └── test-inference-seg.ts  # Segmentation inference tests
+├── models/                   # ONNX model storage (for testing)
+├── scripts/                  # Build scripts
+│   └── copy-templates.js     # Copy HTML/CSS templates after build
+├── dist/                     # Build output
 ├── webpack.config.js         # Triple-config build (extension/main/worker)
 ├── .gitignore                # Git ignore configuration
 ├── package.json              # Project configuration
@@ -111,7 +137,17 @@ yolo-label-vs/
 └── tsconfig.json             # TypeScript configuration
 ```
 
-### Frontend Architecture Overview
+### Extension Host Architecture (Backend)
+
+The backend (VS Code Extension Host) uses a modular service-oriented architecture:
+
+- **`extension.ts`**: Registers the `yolo-labeling-vs.openLabelingPanel` command, handles YAML file selection when triggered by keyboard shortcut
+- **`LabelingPanel.ts`**: Manages WebView panels with multi-instance support (one panel per YAML file), cached in a static Map, with error page fallback supporting reload
+- **`WebviewMessageHandler.ts`**: Central message bus receiving 11 types of commands from WebView, including ONNX file reading and passing to WebView via structured cloning
+- **Yolo Data Layer**: ConfigLoader (YAML parsing) → ImageFileScanner (directory scanning) → LabelCodec (YOLO format encoding/decoding) → YoloDataReader (session management)
+- **Utils Layer**: imageLoader (LRU cache), pathUtils, webviewHtml (template generation with resource injection)
+
+### WebView Frontend Architecture
 
 The frontend uses a **Main Thread + Worker dual-thread architecture**:
 
@@ -125,6 +161,11 @@ Key design patterns:
 - **LRU HistoryManager**: Per-image undo/redo history stack (max 50 entries)
 - **CoordinateTransform**: Unified coordinate system (normalized 0-1 ↔ image pixels ↔ canvas pixels)
 - **InferenceRunner**: ONNX Runtime integration for AI-powered object detection with NMS and mask-to-polygon conversion
+- **State Injection**: `webviewHtml.ts` injects classNames, initial image data, labels, kptShape, worker URL, and ORT WASM paths into window object
+
+### JS to TypeScript Migration
+
+The entire codebase has been migrated to TypeScript (completed). The `ort-entry.js` file has also been migrated to `ort-entry.ts` while maintaining UMD compatibility for ONNX Runtime loading.
 
 ### Webpack Build
 
@@ -133,7 +174,7 @@ The project uses webpack multi-compiler configuration, producing three separate 
 | Bundle | Target | Entry | Description |
 |--------|--------|-------|-------------|
 | extension.js | node | src/extension.ts | VS Code extension host process |
-| main.js | web | src/templates/main/main.ts | WebView main thread (includes inference) |
+| main.js | web | src/templates/ort-entry.ts + src/templates/main/main.ts | WebView main thread (includes inference, ORT WASM initialization) |
 | worker.js | webworker | src/templates/worker/worker.ts | Rendering Worker |
 
 Build commands:
@@ -286,7 +327,7 @@ Version update process:
 A: Press F5 to launch a new VSCode window that loads the extension under development.
 
 ### Q: Where should test data be placed?
-A: Place test data in the `test_label/` directory, which has been configured with example data.
+A: Place test data in the `test/data/` directory, which has been configured with example datasets. Test ONNX models go in the `models/` directory.
 
 ### Q: How to handle conflicts?
 A: 

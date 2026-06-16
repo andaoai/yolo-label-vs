@@ -1,19 +1,11 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import * as path from 'path';
-import { YoloDataReader, BoundingBox } from './YoloDataReader';
+import { YoloDataReader } from './yolo/YoloDataReader';
 import { ErrorHandler, ErrorType } from './ErrorHandler';
-import { CacheManager } from './model/CacheManager';
-import { 
-    WebviewMessage, 
-    WebviewToExtensionMessage, 
-    LoadImageMessage, 
-    SaveLabelsMessage,
-    UpdateImageMessage 
-} from './model/types';
-import { ImageService } from './services/ImageService';
-import { UiService } from './services/UiService';
+import { WebviewMessage } from './model/types';
 import { WebviewMessageHandler } from './services/WebviewMessageHandler';
+import { getErrorHtml, generateWebviewHtml } from './utils/webviewHtml';
+import { loadImageAsDataUrl } from './utils/imageLoader';
 
 export class LabelingPanel {
     // Store multiple panel instances in a Map with the YAML path as key
@@ -24,29 +16,31 @@ export class LabelingPanel {
     private readonly _yamlUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
     private _yoloReader?: YoloDataReader;
-    private _imageCache: CacheManager<string>;
     private _hasError: boolean = false;
-    private _imageService: ImageService;
-    private _uiService: UiService;
     private _messageHandler!: WebviewMessageHandler;
 
-    public static createOrShow(extensionUri: vscode.Uri, yamlUri: vscode.Uri) {
+    public static createOrShow(extensionUri: vscode.Uri, yamlUri: vscode.Uri, imagePath?: string) {
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
 
         // Get the YAML file name for the panel title
         const yamlFileName = path.basename(yamlUri.fsPath);
-        
+
         // Check if a panel for this YAML file already exists
         const existingPanel = LabelingPanel.activePanels.get(yamlUri.fsPath);
-        
+
         if (existingPanel) {
             if (existingPanel._hasError) {
                 existingPanel.dispose();
                 LabelingPanel.activePanels.delete(yamlUri.fsPath);
             } else {
                 existingPanel._panel.reveal(column);
+                // 如果指定了图片路径，跳转到该图片
+                if (imagePath) {
+                    console.log('[LabelingPanel] Jumping to image:', imagePath);
+                    existingPanel._jumpToImage(imagePath);
+                }
                 return;
             }
         }
@@ -68,31 +62,25 @@ export class LabelingPanel {
         // 设置自定义SVG图标
         panel.iconPath = iconPath;
 
-        const newPanel = new LabelingPanel(panel, extensionUri, yamlUri);
+        const newPanel = new LabelingPanel(panel, extensionUri, yamlUri, imagePath);
         LabelingPanel.activePanels.set(yamlUri.fsPath, newPanel);
     }
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, yamlUri: vscode.Uri) {
+    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, yamlUri: vscode.Uri, initialImagePath?: string) {
         this._panel = panel;
         this._extensionUri = extensionUri;
         this._yamlUri = yamlUri;
-        
-        // 创建缓存管理器，使用更具描述性的配置参数
-        const CACHE_CONFIG = {
-            maxItems: 20,             // 最大缓存项数
-            maxSize: 20 * 1024,       // 最大缓存大小（KB）
-            ttl: 10 * 60 * 1000       // 缓存生存时间（毫秒）
-        };
-        
-        this._imageCache = new CacheManager<string>(CACHE_CONFIG);
-        
-        // 初始化服务类
-        this._imageService = new ImageService(this._imageCache);
-        this._uiService = new UiService(this._extensionUri);
-        
+
         try {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             this._yoloReader = new YoloDataReader(yamlUri.fsPath, workspaceFolder);
+
+            // 如果指定了初始图片路径，跳转到该图片
+            if (initialImagePath && this._yoloReader) {
+                const success = this._yoloReader.setCurrentImageByPath(initialImagePath);
+                console.log('[LabelingPanel] Initial image jump:', success ? 'success' : 'failed', initialImagePath);
+            }
+
             this._validateYoloReader();
         } catch (error: any) {
             this._handleInitializationError(error, yamlUri);
@@ -100,19 +88,14 @@ export class LabelingPanel {
         }
 
         this._messageHandler = new WebviewMessageHandler(
-            this._panel.webview, 
-            this._yoloReader,
-            this._imageService
+            this._panel.webview,
+            this._yoloReader
         );
         
         this._update();
         this._setupMessageListener();
 
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-        
-        if (this._hasError) {
-            this._addReloadButton();
-        }
     }
 
     /**
@@ -121,7 +104,24 @@ export class LabelingPanel {
     private _validateYoloReader(): void {
         if (!this._yoloReader?.getClassNames().length || !this._yoloReader?.getCurrentImage()) {
             this._hasError = true;
-            this._panel.webview.html = this._uiService.getErrorHtml('No images or classes found in dataset');
+            this._panel.webview.html = getErrorHtml('No images or classes found in dataset');
+        }
+    }
+
+    /**
+     * 跳转到指定图片
+     */
+    private _jumpToImage(imagePath: string): void {
+        if (!this._yoloReader || this._hasError) {
+            console.warn('[LabelingPanel] 无法跳转：yoloReader 未初始化或有错误');
+            return;
+        }
+
+        const success = this._yoloReader.setCurrentImageByPath(imagePath);
+        console.log('[LabelingPanel] setCurrentImageByPath 结果:', success, '当前图片:', this._yoloReader.getCurrentImage());
+        if (success) {
+            // 通知前端更新图片
+            this._messageHandler.refreshImage();
         }
     }
 
@@ -142,11 +142,7 @@ export class LabelingPanel {
             }
         );
         
-        this._panel.webview.html = this._uiService.getErrorHtml(`Failed to load dataset configuration: ${error.message}`);
-    }
-
-    private _addReloadButton() {
-        this._panel.webview.html = this._uiService.addReloadButtonToHtml(this._panel.webview.html);
+        this._panel.webview.html = getErrorHtml(`Failed to load dataset configuration: ${error.message}`);
     }
 
     private async _update() {
@@ -156,7 +152,7 @@ export class LabelingPanel {
 
     private async _getHtmlForWebview(webview: vscode.Webview) {
         if (!this._yoloReader) {
-            return this._uiService.getErrorHtml('YoloDataReader is not initialized');
+            return getErrorHtml('YoloDataReader is not initialized');
         }
         
         const classNames = this._yoloReader.getClassNames();
@@ -168,27 +164,28 @@ export class LabelingPanel {
             initialImageData = currentImage ? await this._loadImage(currentImage) : null;
         } catch (error: any) {
             this._hasError = true;
-            return this._uiService.getErrorHtml(`Failed to load image: ${error.message}`);
+            return getErrorHtml(`Failed to load image: ${error.message}`);
         }
 
-        // 获取图像计数信息
+        // 获取图像计数信息，与 WebviewMessageHandler.getImageInfoText 保持格式一致
         const totalImages = this._yoloReader.getTotalImages();
         const currentIndex = this._yoloReader.getCurrentImageIndex();
-        const imageInfoText = `Image: ${currentIndex + 1} of ${totalImages}`;
+        const filename = this._yoloReader.getCurrentImage()
+            ? path.basename(this._yoloReader.getCurrentImage()!)
+            : '';
+        const imageInfoText = `图片 ${currentIndex + 1}/${totalImages} - ${filename}`;
 
         // 获取关键点配置
         const kptShape = this._yoloReader.getKptShape();
-        const flipIdx = this._yoloReader.getFlipIdx();
 
-        return this._uiService.generateWebviewHtml({
+        return generateWebviewHtml(this._extensionUri, {
             classNames,
             initialImageData,
             initialLabels: labels,
             imageInfoText,
             webview,
             currentPath: currentImage || undefined,
-            kptShape,
-            flipIdx
+            kptShape
         });
     }
 
@@ -220,7 +217,7 @@ export class LabelingPanel {
     }
 
     private async _loadImage(imagePath: string): Promise<string> {
-        return this._imageService.loadImage(imagePath);
+        return loadImageAsDataUrl(imagePath);
     }
 
     public dispose() {

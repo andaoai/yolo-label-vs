@@ -5,7 +5,7 @@
  * 支持 ImageBitmap 零拷贝传输
  */
 import type { MainToWorkerMessage, WorkerToMainMessage, RenderConfig } from '../../shared/messages';
-import type { Label, ToolType, DrawPreview, PointRef, HitTestResult } from '../../shared/types';
+import type { Label, DrawPreview, HitTestResult } from '../../shared/types';
 
 type MessageHandler = (msg: WorkerToMainMessage) => void;
 
@@ -113,19 +113,9 @@ export class WorkerBridge {
     this.send({ type: 'setHoveredLabel', index });
   }
 
-  /** 设置当前工具 */
-  setTool(tool: ToolType): void {
-    this.send({ type: 'setTool', tool });
-  }
-
   /** 设置绘制预览 */
   setPreview(preview: DrawPreview | null): void {
     this.send({ type: 'setPreview', preview });
-  }
-
-  /** 设置选中的点 */
-  setSelectedPoint(point: PointRef | null): void {
-    this.send({ type: 'setSelectedPoint', point });
   }
 
   /** 设置标签可见性 */

@@ -4,6 +4,7 @@
 import type { Store } from '../state/Store';
 import type { ToolType } from '../../shared/types';
 import { DEBOUNCE_DELAY, MAX_SEARCH_RESULTS } from '../../shared/config';
+import { basename } from '../../../utils/pathUtils';
 
 export class Toolbar {
   private searchInput: HTMLInputElement | null = null;
@@ -98,7 +99,7 @@ export class Toolbar {
     const lowerQuery = query.toLowerCase();
     const matches = paths
       .filter(p => {
-        const filename = p.split(/[/\\]/).pop() || '';
+        const filename = basename(p);
         return p.toLowerCase().includes(lowerQuery) || filename.toLowerCase().includes(lowerQuery);
       })
       .slice(0, MAX_SEARCH_RESULTS);
@@ -112,7 +113,7 @@ export class Toolbar {
     this.selectedSearchIndex = -1;
 
     matches.forEach((path, index) => {
-      const filename = path.split(/[/\\]/).pop() || path;
+      const filename = basename(path);
       const item = document.createElement('div');
       item.className = 'search-result-item';
       item.innerHTML = `<span class="filename">${this.escapeHtml(filename)}</span><span class="filepath">${this.escapeHtml(path)}</span>`;
@@ -174,7 +175,7 @@ export class Toolbar {
   private updateSearchInput(): void {
     if (this.searchInput) {
       const path = this.store.get('currentPath');
-      this.searchInput.value = path ? (path.split(/[/\\]/).pop() || path) : '';
+      this.searchInput.value = path ? basename(path) : '';
     }
   }
 

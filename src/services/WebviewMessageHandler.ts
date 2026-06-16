@@ -1,44 +1,58 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { YoloDataReader } from '../YoloDataReader';
+import { YoloDataReader } from '../yolo/YoloDataReader';
 import {
     WebviewMessage,
-    WebviewToExtensionMessage,
     LoadImageMessage,
-    SaveLabelsMessage,
-    UpdateImageMessage,
-    OpenImageInNewTabMessage,
-    OpenTxtInNewTabMessage
+    SaveMessage,
+    BoundingBox
 } from '../model/types';
 import { ErrorHandler, ErrorType } from '../ErrorHandler';
-import { ImageService } from './ImageService';
+import { basename, truncate } from '../utils/pathUtils';
+import { loadImageAsDataUrl, generateThumbnail } from '../utils/imageLoader';
 
 /**
  * Webview消息处理器
  * 负责处理从Webview到扩展的所有消息
  */
 export class WebviewMessageHandler {
-    
+
     /**
      * 构造函数
      * @param _webview Webview实例
      * @param _yoloReader YOLO数据读取器实例
-     * @param _imageService 图像服务实例
      */
     constructor(
         private readonly _webview: vscode.Webview,
-        private readonly _yoloReader: YoloDataReader,
-        private readonly _imageService: ImageService
+        private readonly _yoloReader: YoloDataReader
     ) {}
     
+    /**
+     * 刷新当前图片（用于从 TreeView 跳转后更新）
+     */
+    public async refreshImage(): Promise<void> {
+        const currentImage = this._yoloReader.getCurrentImage();
+        if (currentImage) {
+            const labels = this._yoloReader.readLabels(currentImage);
+            const imageData = await loadImageAsDataUrl(currentImage);
+            const imageInfoText = this.getImageInfoText();
+
+            this._webview.postMessage({
+                command: 'updateImage',
+                imageData,
+                labels,
+                currentPath: currentImage,
+                imageInfo: imageInfoText
+            });
+        }
+    }
+
     /**
      * 处理从Webview收到的消息
      * @param message Webview消息对象
      */
     public async handleMessage(message: WebviewMessage): Promise<void> {
-        const extMessage = message as WebviewToExtensionMessage;
-        
-        switch (extMessage.command) {
+        switch (message.command) {
             case 'reload':
                 await this.handleReloadCommand();
                 break;
@@ -53,30 +67,21 @@ export class WebviewMessageHandler {
                 break;
                 
             case 'save':
-                const saveMessage = message as SaveLabelsMessage;
+                const saveMessage = message as SaveMessage;
                 await this.handleSaveCommand(saveMessage);
                 break;
                 
             case 'next':
-                await this.handleNextImageCommand();
+                await this.navigate(1);
                 break;
-                
+
             case 'previous':
-                await this.handlePreviousImageCommand();
+                await this.navigate(-1);
                 break;
                 
             case 'openImageInNewTab':
-                const openImageMessage = message as OpenImageInNewTabMessage;
-                await this.handleOpenImageInNewTabCommand(openImageMessage);
-                break;
-                
             case 'openTxtInNewTab':
-                const openTxtMessage = message as OpenTxtInNewTabMessage;
-                await this.handleOpenTxtInNewTabCommand(openTxtMessage);
-                break;
-                
-            case 'getImagePreviews':
-                await this.handleGetImagePreviewsCommand(message);
+                await this.handleOpenInNewTab((message as any).path, message.command);
                 break;
 
             case 'getImagePreviewRange':
@@ -92,7 +97,7 @@ export class WebviewMessageHandler {
                 break;
 
             default:
-                console.warn(`Unknown command: ${extMessage.command}`);
+                console.warn(`Unknown command: ${message.command}`);
         }
     }
     
@@ -122,45 +127,16 @@ export class WebviewMessageHandler {
         if (!message.path) {
             return;
         }
-        
-        try {
-            const imagePath = message.path;
-            // 加载图像数据
-            const imageData = await this._imageService.loadImage(imagePath);
-            // 读取图像标签
-            const labels = this._yoloReader.readLabels(imagePath);
-            // 更新当前图像
-            this._yoloReader.setCurrentImageByPath(imagePath);
-            
-            // 构建图像信息文本
-            const imageInfoText = this.getImageInfoText();
-            
-            // 发送更新消息到Webview
-            this._webview.postMessage({
-                command: 'updateImage',
-                imageData: imageData,
-                labels: labels,
-                currentPath: imagePath,
-                imageInfo: imageInfoText
-            } as UpdateImageMessage);
-        } catch (error: any) {
-            ErrorHandler.handleError(
-                error,
-                'Image loading failed',
-                {
-                    filePath: message.path,
-                    webview: this._webview,
-                    type: ErrorType.IMAGE_LOAD_ERROR
-                }
-            );
-        }
+
+        this._yoloReader.setCurrentImageByPath(message.path);
+        await this.sendImageUpdate(message.path, 'Image loading failed');
     }
     
     /**
      * 处理保存标签命令
      * @param message 保存标签消息
      */
-    private async handleSaveCommand(message: SaveLabelsMessage): Promise<void> {
+    private async handleSaveCommand(message: SaveMessage): Promise<void> {
         const currentImage = this._yoloReader.getCurrentImage();
         if (!currentImage) {
             return;
@@ -184,85 +160,47 @@ export class WebviewMessageHandler {
     }
     
     /**
-     * 处理下一张图像命令
+     * 导航到下一张或上一张图像
+     * @param direction 方向：1=下一张, -1=上一张
      */
-    private async handleNextImageCommand(): Promise<void> {
-        const nextImage = this._yoloReader.getNextImage();
-        if (!nextImage) {
+    private async navigate(direction: 1 | -1): Promise<void> {
+        const image = direction === 1
+            ? this._yoloReader.getNextImage()
+            : this._yoloReader.getPreviousImage();
+
+        if (!image) {
             return;
         }
-        
-        try {
-            // 加载图像数据
-            const imageData = await this._imageService.loadImage(nextImage);
-            // 读取图像标签
-            const labels = this._yoloReader.readLabels(nextImage);
-            
-            // 构建图像信息文本
-            const imageInfoText = this.getImageInfoText();
-            
-            // 发送更新消息到Webview
-            this._webview.postMessage({
-                command: 'updateImage',
-                imageData: imageData,
-                labels: labels,
-                currentPath: nextImage,
-                imageInfo: imageInfoText
-            } as UpdateImageMessage);
-        } catch (error: any) {
-            ErrorHandler.handleError(
-                error,
-                'Failed to load next image',
-                {
-                    filePath: nextImage,
-                    webview: this._webview,
-                    type: ErrorType.IMAGE_LOAD_ERROR,
-                    recoverable: true
-                }
-            );
-        }
+
+        const context = direction === 1 ? 'Failed to load next image' : 'Failed to load previous image';
+        await this.sendImageUpdate(image, context);
     }
-    
+
     /**
-     * 处理上一张图像命令
+     * 加载图片数据、读取标签，并发送到 Webview。
      */
-    private async handlePreviousImageCommand(): Promise<void> {
-        const prevImage = this._yoloReader.getPreviousImage();
-        if (!prevImage) {
-            return;
-        }
-        
+    private async sendImageUpdate(imagePath: string, errorContext: string): Promise<void> {
         try {
-            // 加载图像数据
-            const imageData = await this._imageService.loadImage(prevImage);
-            // 读取图像标签
-            const labels = this._yoloReader.readLabels(prevImage);
-            
-            // 构建图像信息文本
+            const imageData = await loadImageAsDataUrl(imagePath);
+            const labels = this._yoloReader.readLabels(imagePath);
             const imageInfoText = this.getImageInfoText();
-            
-            // 发送更新消息到Webview
+
             this._webview.postMessage({
                 command: 'updateImage',
-                imageData: imageData,
-                labels: labels,
-                currentPath: prevImage,
+                imageData,
+                labels,
+                currentPath: imagePath,
                 imageInfo: imageInfoText
-            } as UpdateImageMessage);
+            });
         } catch (error: any) {
-            ErrorHandler.handleError(
-                error,
-                'Failed to load previous image',
-                {
-                    filePath: prevImage,
-                    webview: this._webview,
-                    type: ErrorType.IMAGE_LOAD_ERROR,
-                    recoverable: true
-                }
-            );
+            ErrorHandler.handleError(error, errorContext, {
+                filePath: imagePath,
+                webview: this._webview,
+                type: ErrorType.IMAGE_LOAD_ERROR
+            });
         }
     }
-    
+
     /**
      * 获取图像信息文本
      * @returns 格式化的图像信息文本
@@ -271,96 +209,40 @@ export class WebviewMessageHandler {
         const currentIndex = this._yoloReader.getCurrentImageIndex();
         const totalImages = this._yoloReader.getTotalImages();
         
-        // 获取当前图片文件名（仅显示文件名，不包含路径）
         const currentImage = this._yoloReader.getCurrentImage();
-        let filename = '';
-        
-        if (currentImage) {
-            const pathParts = currentImage.split(/[\\\/]/); // 处理不同操作系统的路径分隔符
-            filename = pathParts[pathParts.length - 1];
-            
-            if (filename.length > 20) {
-                // 如果文件名太长，则截断显示
-                filename = filename.substr(0, 17) + '...';
-            }
-        }
-        
+        const filename = currentImage ? truncate(basename(currentImage), 20) : '';
+
         return `图片 ${currentIndex + 1}/${totalImages} - ${filename}`;
     }
     
     /**
-     * 处理在新标签中打开图片命令
-     * @param message 打开图片消息
+     * 在新标签中打开文件
+     * @param filePath 文件路径
+     * @param command 命令类型（用于错误上下文）
      */
-    private async handleOpenImageInNewTabCommand(message: OpenImageInNewTabMessage): Promise<void> {
-        if (!message.path) {
+    private async handleOpenInNewTab(filePath: string, command: string): Promise<void> {
+        if (!filePath) {
             return;
         }
-        
-        try {
-            // 创建Uri并打开图片
-            const uri = vscode.Uri.file(message.path);
-            await vscode.commands.executeCommand('vscode.open', uri, {
-                viewColumn: vscode.ViewColumn.Beside  // 在新标签中打开
-            });
-        } catch (error: any) {
-            ErrorHandler.handleError(
-                error,
-                'Failed to open image in new tab',
-                {
-                    filePath: message.path,
-                    webview: this._webview,
-                    type: ErrorType.UNKNOWN_ERROR
-                }
-            );
-        }
-    }
-    
-    /**
-     * 处理在新标签中打开文本文件命令
-     * @param message 打开文本文件消息
-     */
-    private async handleOpenTxtInNewTabCommand(message: OpenTxtInNewTabMessage): Promise<void> {
-        if (!message.path) {
-            return;
-        }
-        
-        try {
-            // 创建Uri并打开文本文件
-            const uri = vscode.Uri.file(message.path);
-            await vscode.commands.executeCommand('vscode.open', uri, {
-                viewColumn: vscode.ViewColumn.Beside  // 在新标签中打开
-            });
-        } catch (error: any) {
-            ErrorHandler.handleError(
-                error,
-                'Failed to open text file in new tab',
-                {
-                    filePath: message.path,
-                    webview: this._webview,
-                    type: ErrorType.UNKNOWN_ERROR
-                }
-            );
-        }
-    }
-    
-    /**
-     * 处理批量获取图片缩略图命令（保留兼容）
-     */
-    private async handleGetImagePreviewsCommand(message: any): Promise<void> {
-        const paths: string[] = message.paths || [];
-        const previews: string[] = [];
-        for (const p of paths) {
-            try {
-                const thumb = await this._imageService.generateThumbnail(p, 120, 80);
-                previews.push(thumb);
-            } catch {
-                previews.push('');
-            }
-        }
-        this._webview.postMessage({ command: 'imagePreviews', previews });
-    }
 
+        try {
+            const uri = vscode.Uri.file(filePath);
+            await vscode.commands.executeCommand('vscode.open', uri, {
+                viewColumn: vscode.ViewColumn.Beside
+            });
+        } catch (error: any) {
+            const context = command === 'openImageInNewTab'
+                ? 'Failed to open image in new tab'
+                : 'Failed to open text file in new tab';
+
+            ErrorHandler.handleError(error, context, {
+                filePath,
+                webview: this._webview,
+                type: ErrorType.UNKNOWN_ERROR
+            });
+        }
+    }
+    
     /**
      * 处理范围获取缩略图命令 — 按需懒加载
      * 并发生成缩略图，避免逐个串行等待
@@ -378,7 +260,7 @@ export class WebviewMessageHandler {
             const batchResults = await Promise.all(
                 batch.map(async (p, j) => {
                     try {
-                        const thumb = await this._imageService.generateThumbnail(p, 120, 80);
+                        const thumb = await generateThumbnail(p);
                         return { index: i + j, data: thumb };
                     } catch {
                         return { index: i + j, data: '' };
@@ -461,7 +343,7 @@ export class WebviewMessageHandler {
             );
 
             // 获取文件名
-            const fileName = filePath.split(/[\\/]/).pop() || filePath;
+            const fileName = basename(filePath);
 
             // 发送回 webview（VS Code postMessage 不支持 transferable，使用结构化克隆）
             this._webview.postMessage({
@@ -470,15 +352,7 @@ export class WebviewMessageHandler {
                 fileName,
             });
         } catch (error: any) {
-            ErrorHandler.handleError(
-                error,
-                'Failed to load model file',
-                {
-                    filePath: message.filePath,
-                    webview: this._webview,
-                    type: ErrorType.UNKNOWN_ERROR,
-                }
-            );
+            // 注意：不使用 ErrorHandler，因为它发送通用 'error' 事件，而前端需要 'modelFileError'
             this._webview.postMessage({
                 command: 'modelFileError',
                 error: `Failed to load model: ${error.message}`,

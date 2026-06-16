@@ -5,7 +5,7 @@
  */
 import type { AppState, Label, ToolType, PointRef, NormalizedPoint } from '../../shared/types';
 import type { RenderConfig } from '../../shared/messages';
-import { DEFAULT_CLASS_NAMES, COLORS } from '../../shared/config';
+import { DEFAULT_CLASS_NAMES, DEFAULT_RENDER_CONFIG } from '../../shared/config';
 
 /** 状态变更监听器 */
 type Listener<T> = (value: T, oldValue: T) => void;
@@ -61,10 +61,6 @@ export class Store {
   }
 
   // ─── 读取 ─────────────────────────────────────────────
-
-  get state(): Readonly<AppState> {
-    return this._state;
-  }
 
   get<K extends keyof AppState>(key: K): AppState[K] {
     return this._state[key];
@@ -152,19 +148,7 @@ export class Store {
 
   toRenderConfig(devicePixelRatio: number): RenderConfig {
     return {
-      colors: COLORS,
-      crosshairColor: 'rgba(76, 217, 100, 0.8)',
-      backgroundColor: '#1e1e1e',
-      lineWidth: 2,
-      pointRadius: 5,
-      highlightRadius: 8,
-      closeHighlightRadius: 12,
-      labelHeight: 20,
-      labelFontSize: 14,
-      labelPadding: 5,
-      closePointThreshold: 0.02,
-      hoverProximityThreshold: 0.05,
-      minBoxSize: 0.01,
+      ...DEFAULT_RENDER_CONFIG,
       classNames: this._state.classNames,
       kptShape: this._state.kptShape,
       devicePixelRatio,

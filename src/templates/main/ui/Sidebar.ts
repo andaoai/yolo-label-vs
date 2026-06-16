@@ -4,6 +4,7 @@
 import type { Store } from '../state/Store';
 import type { Label } from '../../shared/types';
 import { COLORS } from '../../shared/config';
+import { toggleCollapsibleSection } from './collapsible';
 
 export class Sidebar {
   // Class 区域
@@ -97,13 +98,11 @@ export class Sidebar {
   // ─── Class 区域 ───────────────────────────────────────
 
   private toggleClassSection(): void {
-    this.classCollapsed = !this.classCollapsed;
-    if (this.classBodyEl) {
-      this.classBodyEl.style.display = this.classCollapsed ? 'none' : '';
-    }
-    if (this.classToggleEl) {
-      this.classToggleEl.textContent = this.classCollapsed ? '▶' : '▼';
-    }
+    this.classCollapsed = toggleCollapsibleSection(
+      this.classCollapsed,
+      this.classBodyEl,
+      this.classToggleEl,
+    );
   }
 
   private renderClassStatus(): void {
@@ -149,13 +148,11 @@ export class Sidebar {
   // ─── Labels 区域 ──────────────────────────────────────
 
   private toggleLabelSection(): void {
-    this.labelCollapsed = !this.labelCollapsed;
-    if (this.labelBodyEl) {
-      this.labelBodyEl.style.display = this.labelCollapsed ? 'none' : '';
-    }
-    if (this.labelToggleEl) {
-      this.labelToggleEl.textContent = this.labelCollapsed ? '▶' : '▼';
-    }
+    this.labelCollapsed = toggleCollapsibleSection(
+      this.labelCollapsed,
+      this.labelBodyEl,
+      this.labelToggleEl,
+    );
   }
 
   private updateLabelCount(): void {
