@@ -1,5 +1,21 @@
 # JS 到 TS 迁移计划 (保留 WebView + CSS)
 
+> **⚠️ 迁移状态：已完成 ✅**
+> 
+> 本文件为历史迁移计划文档。整个代码库已完成 JavaScript 到 TypeScript 的迁移。
+> 
+> **迁移完成时间：** 2025年
+> 
+> **迁移范围：**
+> - ✅ 所有旧的 JS 文件已删除或迁移到 TS
+> - ✅ `ort-entry.js` → `ort-entry.ts`（保持 UMD 兼容性）
+> - ✅ 所有 UI 组件重构为 TypeScript
+> - ✅ 构建配置优化完成
+> 
+> 请参阅 [DEVELOPMENT.md](./DEVELOPMENT.md) 了解当前的代码架构。
+
+---
+
 ## 迁移目标
 
 去掉 JS 代码，使用 TS 代码进行替代，保留 WebView 架构和 CSS 样式。
