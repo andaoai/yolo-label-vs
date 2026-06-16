@@ -153,7 +153,11 @@ export class RenderEngine {
 
     // 基于鼠标距离计算悬停强度（0~1），用于渐变动画
     let hoverStrength = 0;
-    if (this.cursor && this.labels.length > 0) {
+    if (this.hoveredLabelIndex !== null) {
+      // 通过侧边栏悬停设置的标签，使用最大强度
+      hoverStrength = 1;
+    } else if (this.cursor && this.labels.length > 0) {
+      // 鼠标在画布上，基于距离计算强度
       const nearest = this.hitTest.findNearest(this.labels, this.cursor, this.config);
       if (nearest) {
         const threshold = this.config.hoverProximityThreshold / this.transform.scale;
@@ -173,8 +177,8 @@ export class RenderEngine {
       this.previewDetections,
     );
 
-    // 如果有动画（悬停强度 > 0 或工具绘制中），保持动画循环
-    const needsAnimation = hoverStrength > 0 || this.preview !== null;
+    // 如果有动画（悬停强度 > 0、侧边栏悬停标签、或工具绘制中），保持动画循环
+    const needsAnimation = hoverStrength > 0 || this.hoveredLabelIndex !== null || this.preview !== null;
     if (needsAnimation) {
       this.animation.start();
     } else {
