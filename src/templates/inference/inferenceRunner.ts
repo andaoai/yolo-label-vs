@@ -1,16 +1,14 @@
 /**
  * 推理运行器 — 在主线程中执行 ONNX 推理
  *
- * onnxruntime-web UMD 模块（ort.min.js）通过 webpack 入口文件打包进 main.js，
- * 在 main.ts 之前执行，设置 window.ort 全局对象。
+ * onnxruntime-web 通过 ort-entry.ts 加载并导出到 window.ort。
+ * 使用 TypeScript 类型定义提供类型安全的 API。
  */
+import * as ort from 'onnxruntime-web';
 import type { Detection } from '../shared/types';
 
-/** onnxruntime-web 全局对象 */
-declare const ort: any;
-
 export class InferenceRunner {
-  private session: any = null;
+  private session: ort.InferenceSession | null = null;
   private modelInputSize = 640;
   private modelClassNames: string[] = [];
   private ortReady = false;
@@ -31,10 +29,7 @@ export class InferenceRunner {
 
   private async doInit(wasmDirSrc: string): Promise<void> {
     try {
-      const ort = (window as any).ort;
-      if (!ort) {
-        throw new Error('ort global not found — ort-entry.js may not have loaded');
-      }
+      // 直接使用 ort 模块（通过 import 导入）
       ort.env.wasm.numThreads = 1;
       ort.env.wasm.wasmPaths = wasmDirSrc;
       this.ortReady = true;
@@ -62,6 +57,7 @@ export class InferenceRunner {
 
   private detectInputSize(): number {
     try {
+      if (!this.session) return 640;
       const inputName = this.session.inputNames[0];
       const inputMeta = this.session.inputNames;
       return 640;
@@ -130,7 +126,7 @@ export class InferenceRunner {
 
   // ─── 内部方法 ────────────────────────────────────────
 
-  private preprocessImage(image: ImageBitmap, targetSize: number): any {
+  private preprocessImage(image: ImageBitmap, targetSize: number): ort.Tensor {
     const canvas = this.preprocessCanvas!;
     canvas.width = targetSize;
     canvas.height = targetSize;

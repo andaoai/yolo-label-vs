@@ -68,7 +68,7 @@ module.exports = (env, argv) => {
         mode: isProduction ? 'production' : 'development',
         devtool: isProduction ? false : 'source-map',
         entry: {
-            'templates/main': ['./src/templates/ort-entry.js', './src/templates/main/main.ts'],
+            'templates/main': ['./src/templates/ort-entry.ts', './src/templates/main/main.ts'],
         },
         output: {
             path: path.resolve(__dirname, 'dist'),
