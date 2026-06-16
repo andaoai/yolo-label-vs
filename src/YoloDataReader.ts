@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as yaml from 'js-yaml';
 import { BoundingBox } from './model/types';
 import { ErrorHandler, ErrorType } from './ErrorHandler';
+import { imagePathToLabelPath } from './utils/pathUtils';
 
 export { BoundingBox } from './model/types';
 
@@ -14,7 +15,6 @@ export interface YoloConfig {
     test: string | string[];      // 测试图片目录（相对于path）
     names: string[];   // 标签类别名称列表，始终保存为数组形式
     kpt_shape?: number[];  // 关键点形状，如 [17, 3] 表示17个关键点，每个有3个值（x,y,visible）
-    flip_idx?: number[];  // 关键点翻转索引，用于水平翻转时映射关键点
 }
 
 export class YoloDataReader {
@@ -121,8 +121,7 @@ export class YoloDataReader {
                 val: rawConfig.val || '',
                 test: rawConfig.test || '',
                 names: rawConfig.names,
-                kpt_shape: rawConfig.kpt_shape,
-                flip_idx: rawConfig.flip_idx
+                kpt_shape: rawConfig.kpt_shape
             };
 
             this.loadImageFiles();
@@ -243,8 +242,7 @@ export class YoloDataReader {
     }
 
     public getLabelFile(imagePath: string): string {
-        const labelPath = imagePath.replace(/images/g, 'labels');
-        return labelPath.replace(/\.(jpg|jpeg|png)$/i, '.txt');
+        return imagePathToLabelPath(imagePath);
     }
 
     public readLabels(imagePath: string): BoundingBox[] {
@@ -413,8 +411,4 @@ export class YoloDataReader {
     public getKptShape(): number[] | undefined {
         return this.config.kpt_shape;
     }
-
-    public getFlipIdx(): number[] | undefined {
-        return this.config.flip_idx;
-    }
-} 
+}

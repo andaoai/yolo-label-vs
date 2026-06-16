@@ -108,24 +108,10 @@ export class CacheManager<T extends CacheableData> {
   }
 
   /**
-   * 检查缓存项是否存在
-   * @param key 缓存键
-   * @returns 是否存在且未过期
+   * 检查缓存项是否过期
    */
-  public has(key: string): boolean {
-    const item = this.cache.get(key);
-    
-    if (!item) {
-      return false;
-    }
-
-    // 检查是否过期
-    if (this.isExpired(item)) {
-      this.delete(key);
-      return false;
-    }
-
-    return true;
+  private isExpired(item: CacheItem<T>): boolean {
+    return (Date.now() - item.timestamp) > this.config.ttl;
   }
 
   /**
@@ -134,35 +120,13 @@ export class CacheManager<T extends CacheableData> {
    */
   public delete(key: string): boolean {
     const item = this.cache.get(key);
-    
+
     if (item) {
       this.totalSize -= item.size;
       return this.cache.delete(key);
     }
-    
+
     return false;
-  }
-
-  /**
-   * 清空缓存
-   */
-  public clear(): void {
-    this.cache.clear();
-    this.totalSize = 0;
-  }
-
-  /**
-   * 获取缓存大小(KB)
-   */
-  public getSize(): number {
-    return this.totalSize;
-  }
-
-  /**
-   * 获取缓存项数量
-   */
-  public getCount(): number {
-    return this.cache.size;
   }
 
   /**
@@ -174,13 +138,6 @@ export class CacheManager<T extends CacheableData> {
 
     // 如果仍然超过限制，按LRU删除
     this.enforceSizeLimits();
-  }
-
-  /**
-   * 检查缓存项是否过期
-   */
-  private isExpired(item: CacheItem<T>): boolean {
-    return (Date.now() - item.timestamp) > this.config.ttl;
   }
 
   /**

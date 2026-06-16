@@ -94,23 +94,6 @@ export class InferenceRunner {
     }
   }
 
-  async unloadModel(): Promise<void> {
-    if (this.session) {
-      await this.session.release();
-      this.session = null;
-    }
-    this.modelClassNames = [];
-    this.modelInputSize = 640;
-  }
-
-  async dispose(): Promise<void> {
-    await this.unloadModel();
-    this.preprocessCanvas = null;
-    this.ortReady = false;
-    this.initPromise = null;
-  }
-
-  get isReady(): boolean { return this.ortReady; }
   get isModelLoaded(): boolean { return this.session !== null; }
 
   // ─── 内部方法 ────────────────────────────────────────
@@ -630,7 +613,37 @@ export class InferenceRunner {
     candidates: Array<{ x1: number; y1: number; x2: number; y2: number; score: number; classId: number }>,
     iouThreshold: number,
   ): number[] {
-    const sorted = candidates.map((_, i) => i).sort((a, b) => candidates[b].score - candidates[a].score);
+    return this.nmsBy(
+      candidates,
+      item => item,
+      item => item.score,
+      item => item.classId,
+      iouThreshold,
+    );
+  }
+
+  private nms(
+    boxes: Array<{ x1: number; y1: number; x2: number; y2: number }>,
+    scores: number[], classIds: number[], iouThreshold: number,
+  ): number[] {
+    const items = boxes.map((box, index) => ({ box, score: scores[index], classId: classIds[index] }));
+    return this.nmsBy(
+      items,
+      item => item.box,
+      item => item.score,
+      item => item.classId,
+      iouThreshold,
+    );
+  }
+
+  private nmsBy<T>(
+    items: T[],
+    getBox: (item: T) => { x1: number; y1: number; x2: number; y2: number },
+    getScore: (item: T) => number,
+    getClassId: (item: T) => number,
+    iouThreshold: number,
+  ): number[] {
+    const sorted = items.map((_, i) => i).sort((a, b) => getScore(items[b]) - getScore(items[a]));
     const selected: number[] = [];
     const suppressed = new Set<number>();
 
@@ -638,40 +651,16 @@ export class InferenceRunner {
       const idx = sorted[i];
       if (suppressed.has(idx)) continue;
       selected.push(idx);
-      const a = candidates[idx];
+
       for (let j = i + 1; j < sorted.length; j++) {
         const jdx = sorted[j];
-        if (suppressed.has(jdx)) continue;
-        const b = candidates[jdx];
-        if (a.classId !== b.classId) continue;
-        const ix1 = Math.max(a.x1, b.x1), iy1 = Math.max(a.y1, b.y1);
-        const ix2 = Math.min(a.x2, b.x2), iy2 = Math.min(a.y2, b.y2);
-        const inter = Math.max(0, ix2 - ix1) * Math.max(0, iy2 - iy1);
-        const union = (a.x2 - a.x1) * (a.y2 - a.y1) + (b.x2 - b.x1) * (b.y2 - b.y1) - inter;
-        if (inter / (union + 1e-6) > iouThreshold) suppressed.add(jdx);
+        if (suppressed.has(jdx) || getClassId(items[idx]) !== getClassId(items[jdx])) continue;
+        if (this.calculateIoU(getBox(items[idx]), getBox(items[jdx])) > iouThreshold) {
+          suppressed.add(jdx);
+        }
       }
     }
-    return selected;
-  }
 
-  private nms(
-    boxes: Array<{ x1: number; y1: number; x2: number; y2: number }>,
-    scores: number[], classIds: number[], iouThreshold: number,
-  ): number[] {
-    const indices = scores.map((_, i) => i).sort((a, b) => scores[b] - scores[a]);
-    const selected: number[] = [];
-    const suppressed = new Set<number>();
-
-    for (let i = 0; i < indices.length; i++) {
-      const idx = indices[i];
-      if (suppressed.has(idx)) continue;
-      selected.push(idx);
-      for (let j = i + 1; j < indices.length; j++) {
-        const jdx = indices[j];
-        if (suppressed.has(jdx) || classIds[idx] !== classIds[jdx]) continue;
-        if (this.calculateIoU(boxes[idx], boxes[jdx]) > iouThreshold) suppressed.add(jdx);
-      }
-    }
     return selected;
   }
 

@@ -1,19 +1,15 @@
 /**
  * WebView消息类型定义
  */
+import type { Label } from '../templates/shared/types';
 
 // 基础消息接口
 export interface WebviewMessage {
   command: string;
 }
 
-// 从扩展到Webview的消息
-export interface ExtensionToWebviewMessage extends WebviewMessage {
-  command: 'updateImage' | 'imageList' | 'error';
-}
-
 // 图片更新消息
-export interface UpdateImageMessage extends ExtensionToWebviewMessage {
+export interface UpdateImageMessage extends WebviewMessage {
   command: 'updateImage';
   imageData: string;
   labels: BoundingBox[];
@@ -21,28 +17,9 @@ export interface UpdateImageMessage extends ExtensionToWebviewMessage {
   imageInfo: string;
 }
 
-// 图片列表消息
-export interface ImageListMessage extends ExtensionToWebviewMessage {
-  command: 'imageList';
-  paths: string[];
-}
-
-// 错误消息
-export interface ErrorMessage extends ExtensionToWebviewMessage {
-  command: 'error';
-  error: string;
-  type?: string;
-  recoverable?: boolean;
-}
-
 // 从Webview到扩展的消息
 export interface WebviewToExtensionMessage extends WebviewMessage {
   command: 'save' | 'next' | 'previous' | 'loadImage' | 'getImageList' | 'reload' | 'openImageInNewTab' | 'openTxtInNewTab' | 'getImagePreviewRange' | 'openModelFile' | 'loadModelFile';
-}
-
-// 打开模型文件消息
-export interface OpenModelFileMessage extends WebviewToExtensionMessage {
-  command: 'openModelFile';
 }
 
 // 加载模型文件消息
@@ -75,20 +52,8 @@ export interface OpenTxtInNewTabMessage extends WebviewToExtensionMessage {
   path: string;
 }
 
-// 标签框接口
-export interface BoundingBox {
-  class: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  isSegmentation?: boolean;
-  isPose?: boolean;
-  points?: number[];
-  keypoints?: number[];
-  keypointShape?: number[];
-  visible?: boolean;
-}
+// 扩展端标签类型，与 Webview 共享同一个结构
+export type BoundingBox = Label;
 
 // 图片缓存项
 export interface CacheItem<T> {

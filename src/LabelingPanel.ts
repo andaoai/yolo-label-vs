@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import * as path from 'path';
 import { YoloDataReader } from './YoloDataReader';
 import { ErrorHandler, ErrorType } from './ErrorHandler';
@@ -103,10 +102,6 @@ export class LabelingPanel {
         this._setupMessageListener();
 
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-        
-        if (this._hasError) {
-            this._addReloadButton();
-        }
     }
 
     /**
@@ -139,10 +134,6 @@ export class LabelingPanel {
         this._panel.webview.html = this._uiService.getErrorHtml(`Failed to load dataset configuration: ${error.message}`);
     }
 
-    private _addReloadButton() {
-        this._panel.webview.html = this._uiService.addReloadButtonToHtml(this._panel.webview.html);
-    }
-
     private async _update() {
         const webview = this._panel.webview;
         this._panel.webview.html = await this._getHtmlForWebview(webview);
@@ -172,7 +163,6 @@ export class LabelingPanel {
 
         // 获取关键点配置
         const kptShape = this._yoloReader.getKptShape();
-        const flipIdx = this._yoloReader.getFlipIdx();
 
         return this._uiService.generateWebviewHtml({
             classNames,
@@ -181,8 +171,7 @@ export class LabelingPanel {
             imageInfoText,
             webview,
             currentPath: currentImage || undefined,
-            kptShape,
-            flipIdx
+            kptShape
         });
     }
 

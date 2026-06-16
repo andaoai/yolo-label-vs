@@ -5,10 +5,7 @@
  * 返回新数组，不修改原数组
  */
 import type { Label } from '../../shared/types';
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
+import { clamp, clamp01 } from '../../shared/math';
 
 /**
  * 创建框选标签
@@ -19,10 +16,10 @@ export function createBoxLabel(
   classIndex: number,
 ): Label | null {
   // 约束坐标到图片范围内 [0, 1]
-  const sx = clamp(startX, 0, 1);
-  const sy = clamp(startY, 0, 1);
-  const ex = clamp(endX, 0, 1);
-  const ey = clamp(endY, 0, 1);
+  const sx = clamp01(startX);
+  const sy = clamp01(startY);
+  const ex = clamp01(endX);
+  const ey = clamp01(endY);
 
   const x = (sx + ex) / 2;
   const y = (sy + ey) / 2;
@@ -51,8 +48,8 @@ export function createSegLabel(
   // 约束所有点到图片范围内（不修改原数组）
   const clamped = [...points];
   for (let i = 0; i < clamped.length; i += 2) {
-    clamped[i] = clamp(clamped[i], 0, 1);
-    clamped[i + 1] = clamp(clamped[i + 1], 0, 1);
+    clamped[i] = clamp01(clamped[i]);
+    clamped[i + 1] = clamp01(clamped[i + 1]);
   }
 
   // 从多边形点计算边界框
@@ -85,7 +82,7 @@ export function moveLabel(label: Label, dx: number, dy: number): Label {
 
   if (label.isSegmentation && label.points) {
     // 分割标签：先移动点并 clamp，再从点重新计算边界框
-    const points = label.points.map((v, i) => clamp(v + (i % 2 === 0 ? dx : dy), 0, 1));
+    const points = label.points.map((v, i) => clamp01(v + (i % 2 === 0 ? dx : dy)));
     let minX = 1, minY = 1, maxX = 0, maxY = 0;
     for (let i = 0; i < points.length; i += 2) {
       minX = Math.min(minX, points[i]);
@@ -116,8 +113,8 @@ export function moveLabel(label: Label, dx: number, dy: number): Label {
     const [, vpp] = label.keypointShape;
     updated.keypoints = label.keypoints.map((v, i) => {
       const posInPoint = i % vpp;
-      if (posInPoint === 0) return clamp(v + actualDx, 0, 1);
-      if (posInPoint === 1) return clamp(v + actualDy, 0, 1);
+      if (posInPoint === 0) return clamp01(v + actualDx);
+      if (posInPoint === 1) return clamp01(v + actualDy);
       return v;
     });
   }
@@ -133,8 +130,8 @@ export function moveBoxCorner(
   label: Label, cornerIndex: number, newX: number, newY: number,
 ): Label {
   // 拖拽的角点约束到图片范围内
-  const cx = clamp(newX, 0, 1);
-  const cy = clamp(newY, 0, 1);
+  const cx = clamp01(newX);
+  const cy = clamp01(newY);
 
   // 对角点也约束到图片范围内（防止旧数据越界）
   const oppositeX = clamp(

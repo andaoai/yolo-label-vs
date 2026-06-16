@@ -1,7 +1,7 @@
 /**
  * 工具管理器 — 工具注册、切换、事件路由
  */
-import type { ToolType, NormalizedPoint, DrawPreview, Modifiers } from '../../../shared/types';
+import type { ToolType, NormalizedPoint, Modifiers } from '../../../shared/types';
 import type { Store } from '../../state/Store';
 import type { WorkerBridge } from '../../communication/WorkerBridge';
 import type { Tool, ToolResult } from './Tool';
@@ -35,18 +35,7 @@ export class ToolManager {
     }
     this.activeTool = this.tools.get(type) || null;
     this.store.set('activeTool', type);
-    this.worker.setTool(type);
     this.worker.setPreview(null);
-  }
-
-  /** 获取活动工具 */
-  getActive(): Tool | null {
-    return this.activeTool;
-  }
-
-  /** 获取所有已注册工具类型 */
-  getTypes(): string[] {
-    return Array.from(this.tools.keys());
   }
 
   // ─── 事件路由 ─────────────────────────────────────────

@@ -70,26 +70,6 @@ export class UiService {
     }
     
     /**
-     * 向HTML添加重载按钮
-     * @param html 原始HTML
-     * @returns 添加了重载按钮的HTML
-     */
-    public addReloadButtonToHtml(html: string): string {
-        return html.replace('</body>',
-            `<button id="reloadButton" style="margin-top: 20px; padding: 8px 16px; background-color: #0098ff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                Reload Panel
-            </button>
-            <script>
-                document.getElementById('reloadButton').addEventListener('click', () => {
-                    const vscode = acquireVsCodeApi();
-                    vscode.postMessage({ command: 'reload' });
-                });
-            </script>
-            </body>`
-        );
-    }
-    
-    /**
      * 生成WebView HTML
      * @param options 生成HTML所需的参数
      * @returns Promise<string> 生成的HTML字符串
@@ -102,9 +82,8 @@ export class UiService {
         webview: vscode.Webview;
         currentPath?: string;
         kptShape?: number[];
-        flipIdx?: number[];
     }): Promise<string> {
-        const { classNames, initialImageData, initialLabels, webview, currentPath, kptShape, flipIdx } = options;
+        const { classNames, initialImageData, initialLabels, webview, currentPath, kptShape } = options;
 
         // 获取资源文件的路径
         const cssPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'templates', 'labeling-panel.css');
@@ -138,7 +117,6 @@ export class UiService {
                 window.classNames = ${JSON.stringify(classNames)};
                 window.currentPath = ${JSON.stringify(currentPath || '')};
                 window.kptShape = ${JSON.stringify(kptShape || null)};
-                window.flipIdx = ${JSON.stringify(flipIdx || null)};
                 // Worker 脚本 URL（App.ts 会使用这个）
                 window.__workerUrl = ${JSON.stringify(workerJsSrc.toString())};
                 // ONNX Runtime WASM 文件路径（使用对象格式避免 locateFile 路径拼接问题）

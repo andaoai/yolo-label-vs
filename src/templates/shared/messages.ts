@@ -1,7 +1,7 @@
 /**
  * 消息协议 — 主线程 ↔ Worker 类型安全通信
  */
-import type { Label, ToolType, DrawPreview, PointRef, HitTestResult, NormalizedPoint, Detection } from './types';
+import type { Label, DrawPreview, HitTestResult, NormalizedPoint, Detection } from './types';
 
 // ─── 渲染配置（初始化时一次性传入） ──────────────────────
 
@@ -39,12 +39,8 @@ export type MainToWorkerMessage =
   | { type: 'setCursor'; x: number; y: number }
   /** 设置悬停的标签索引 */
   | { type: 'setHoveredLabel'; index: number | null }
-  /** 设置当前工具 */
-  | { type: 'setTool'; tool: ToolType }
   /** 设置绘制预览 */
   | { type: 'setPreview'; preview: DrawPreview | null }
-  /** 设置选中的点（拖拽中） */
-  | { type: 'setSelectedPoint'; point: PointRef | null }
   /** 请求命中检测 */
   | { type: 'requestHitTest'; x: number; y: number; requestId: number }
   /** 设置标签可见性 */
@@ -58,9 +54,7 @@ export type MainToWorkerMessage =
   /** 设置是否显示标签文字 */
   | { type: 'setShowLabels'; show: boolean }
   /** 设置推理预览检测结果（虚线框显示） */
-  | { type: 'setPreviewDetections'; detections: Detection[] }
-  /** 设置是否显示推理预览 */
-  | { type: 'setShowPreviewDetections'; show: boolean };
+  | { type: 'setPreviewDetections'; detections: Detection[] };
 
 // ─── Worker → 主线程 ────────────────────────────────────
 
@@ -71,31 +65,3 @@ export type WorkerToMainMessage =
   | { type: 'hitTestResult'; requestId: number; result: HitTestResult }
   /** 计算出的初始变换（fitToCanvas 响应） */
   | { type: 'transformComputed'; scale: number; translateX: number; translateY: number };
-
-// ─── 主线程 → 推理 Worker ────────────────────────────────
-
-export type MainToInferenceMessage =
-  /** 初始化：配置 WASM blob URL 和 ort JS blob URL */
-  | { type: 'init'; wasmPaths: string; ortBlobUrl: string }
-  /** 加载 ONNX 模型（ArrayBuffer 通过 transferable 零拷贝传输） */
-  | { type: 'loadModel'; modelData: ArrayBuffer; classNames: string[] }
-  /** 运行推理 */
-  | { type: 'runInference'; image: ImageBitmap; imageWidth: number; imageHeight: number; confThreshold: number; iouThreshold: number; requestId: number }
-  /** 卸载模型 */
-  | { type: 'unloadModel' };
-
-// ─── 推理 Worker → 主线程 ────────────────────────────────
-
-export type InferenceToMainMessage =
-  /** Worker 就绪 */
-  | { type: 'ready' }
-  /** 模型加载成功 */
-  | { type: 'modelLoaded'; inputSize: number }
-  /** 模型加载失败 */
-  | { type: 'modelLoadError'; error: string }
-  /** 推理结果 */
-  | { type: 'inferenceResult'; detections: Detection[]; requestId: number }
-  /** 推理失败 */
-  | { type: 'inferenceError'; error: string; requestId: number }
-  /** 推理进度 */
-  | { type: 'inferenceProgress'; stage: string };

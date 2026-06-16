@@ -25,14 +25,14 @@ export class BoxTool implements Tool {
     this.startY = pos.y;
     this.currentX = pos.x;
     this.currentY = pos.y;
-    return { handled: true };
+    return {};
   }
 
   onMouseMove(pos: NormalizedPoint, modifiers: Modifiers): ToolResult | null {
     if (!this.drawing) return null;
     this.currentX = pos.x;
     this.currentY = pos.y;
-    return { handled: true };
+    return {};
   }
 
   onMouseUp(pos: NormalizedPoint, button: number, modifiers: Modifiers): ToolResult | null {
@@ -47,14 +47,13 @@ export class BoxTool implements Tool {
 
     if (label) {
       return {
-        handled: true,
         pushHistory: true,
         addedLabels: [label],
         updateLabelList: true,
       };
     }
 
-    return { handled: true };
+    return {};
   }
 
   onKeyDown(key: string, modifiers: Modifiers): ToolResult | null {
@@ -67,7 +66,7 @@ export class BoxTool implements Tool {
   onCancel(): ToolResult | null {
     if (!this.drawing) return null;
     this.drawing = false;
-    return { handled: true };
+    return {};
   }
 
   getPreview(): DrawPreview | null {

@@ -25,6 +25,7 @@ import { InputManager } from './input/InputManager';
 import { DOMManager, type DOMCallbacks } from './ui/DOMManager';
 import { ThemeManager } from './ui/ThemeManager';
 import { COLORS } from '../shared/config';
+import { imagePathToLabelPath } from '../../utils/pathUtils';
 
 export class App {
   readonly store: Store;
@@ -132,9 +133,6 @@ export class App {
     if (!this.canvas) return;
 
     this.inputManager = new InputManager(this.canvas, this.store, this.worker, this.toolManager, {
-      onLabelAdded: () => {},
-      onLabelUpdated: () => {},
-      onLabelRemoved: () => {},
       onPushHistory: () => this.pushHistory(),
       onUpdateLabelList: () => this.dom.updateLabelList(),
       onNavigateNext: () => this.navigateNext(),
@@ -615,7 +613,6 @@ export class App {
       });
 
       this.worker.send({ type: 'setPreviewDetections', detections });
-      this.worker.send({ type: 'setShowPreviewDetections', show: detections.length > 0 });
       this.dom.modelPanel.setStatus(detections.length > 0 ? `${detections.length} objects detected` : 'No objects detected');
     } catch (err: any) {
       this.store.set('inferenceRunning', false);
@@ -672,7 +669,6 @@ export class App {
       showPreview: false,
     });
     this.worker.send({ type: 'setPreviewDetections', detections: [] });
-    this.worker.send({ type: 'setShowPreviewDetections', show: false });
   }
 
   // ─── DOM 回调 ─────────────────────────────────────────
@@ -684,8 +680,7 @@ export class App {
       onOpenImageTab: () => this.extension.openImageInNewTab(this.store.get('currentPath')),
       onOpenTxtTab: () => {
         const path = this.store.get('currentPath');
-        const txtPath = this.convertToTxtPath(path);
-        this.extension.openTxtInNewTab(txtPath);
+        this.extension.openTxtInNewTab(imagePathToLabelPath(path));
       },
       onToolChange: (tool) => this.toolManager.setActive(tool),
       onToggleLabels: () => {
@@ -714,13 +709,6 @@ export class App {
   }
 
   // ─── 辅助 ─────────────────────────────────────────────
-
-  private convertToTxtPath(imagePath: string): string {
-    // /images/ → /labels/, .jpg → .txt
-    return imagePath
-      .replace(/\/images\//gi, '/labels/')
-      .replace(/\.[^.\\/]+$/, '.txt');
-  }
 
   private showError(message: string): void {
     const existing = document.getElementById('errorOverlay');

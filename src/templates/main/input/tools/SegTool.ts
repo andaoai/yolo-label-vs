@@ -41,14 +41,14 @@ export class SegTool implements Tool {
     this.points.push(pos.x, pos.y);
     this.mouseX = pos.x;
     this.mouseY = pos.y;
-    return { handled: true };
+    return {};
   }
 
   onMouseMove(pos: NormalizedPoint, modifiers: Modifiers): ToolResult | null {
     if (!this.drawing) return null;
     this.mouseX = pos.x;
     this.mouseY = pos.y;
-    return { handled: true };
+    return {};
   }
 
   onMouseUp(_pos: NormalizedPoint, _button: number, _modifiers: Modifiers): ToolResult | null {
@@ -67,7 +67,7 @@ export class SegTool implements Tool {
     if (!this.drawing) return null;
     this.drawing = false;
     this.points = [];
-    return { handled: true };
+    return {};
   }
 
   getPreview(): DrawPreview | null {
@@ -111,13 +111,12 @@ export class SegTool implements Tool {
 
     if (label) {
       return {
-        handled: true,
         pushHistory: true,
         addedLabels: [label],
         updateLabelList: true,
       };
     }
 
-    return { handled: true };
+    return {};
   }
 }

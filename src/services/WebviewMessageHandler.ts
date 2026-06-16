@@ -11,6 +11,7 @@ import {
     OpenTxtInNewTabMessage
 } from '../model/types';
 import { ErrorHandler, ErrorType } from '../ErrorHandler';
+import { basename, truncate } from '../utils/pathUtils';
 import { ImageService } from './ImageService';
 
 /**
@@ -118,38 +119,9 @@ export class WebviewMessageHandler {
         if (!message.path) {
             return;
         }
-        
-        try {
-            const imagePath = message.path;
-            // 加载图像数据
-            const imageData = await this._imageService.loadImage(imagePath);
-            // 读取图像标签
-            const labels = this._yoloReader.readLabels(imagePath);
-            // 更新当前图像
-            this._yoloReader.setCurrentImageByPath(imagePath);
-            
-            // 构建图像信息文本
-            const imageInfoText = this.getImageInfoText();
-            
-            // 发送更新消息到Webview
-            this._webview.postMessage({
-                command: 'updateImage',
-                imageData: imageData,
-                labels: labels,
-                currentPath: imagePath,
-                imageInfo: imageInfoText
-            } as UpdateImageMessage);
-        } catch (error: any) {
-            ErrorHandler.handleError(
-                error,
-                'Image loading failed',
-                {
-                    filePath: message.path,
-                    webview: this._webview,
-                    type: ErrorType.IMAGE_LOAD_ERROR
-                }
-            );
-        }
+
+        this._yoloReader.setCurrentImageByPath(message.path);
+        await this.sendImageUpdate(message.path, 'Image loading failed');
     }
     
     /**
@@ -187,36 +159,8 @@ export class WebviewMessageHandler {
         if (!nextImage) {
             return;
         }
-        
-        try {
-            // 加载图像数据
-            const imageData = await this._imageService.loadImage(nextImage);
-            // 读取图像标签
-            const labels = this._yoloReader.readLabels(nextImage);
-            
-            // 构建图像信息文本
-            const imageInfoText = this.getImageInfoText();
-            
-            // 发送更新消息到Webview
-            this._webview.postMessage({
-                command: 'updateImage',
-                imageData: imageData,
-                labels: labels,
-                currentPath: nextImage,
-                imageInfo: imageInfoText
-            } as UpdateImageMessage);
-        } catch (error: any) {
-            ErrorHandler.handleError(
-                error,
-                'Failed to load next image',
-                {
-                    filePath: nextImage,
-                    webview: this._webview,
-                    type: ErrorType.IMAGE_LOAD_ERROR,
-                    recoverable: true
-                }
-            );
-        }
+
+        await this.sendImageUpdate(nextImage, 'Failed to load next image', true);
     }
     
     /**
@@ -227,38 +171,40 @@ export class WebviewMessageHandler {
         if (!prevImage) {
             return;
         }
-        
+
+        await this.sendImageUpdate(prevImage, 'Failed to load previous image', true);
+    }
+
+    /**
+     * 加载图片数据、读取标签，并发送到 Webview。
+     */
+    private async sendImageUpdate(imagePath: string, errorContext: string, recoverable?: boolean): Promise<void> {
         try {
-            // 加载图像数据
-            const imageData = await this._imageService.loadImage(prevImage);
-            // 读取图像标签
-            const labels = this._yoloReader.readLabels(prevImage);
-            
-            // 构建图像信息文本
+            const imageData = await this._imageService.loadImage(imagePath);
+            const labels = this._yoloReader.readLabels(imagePath);
             const imageInfoText = this.getImageInfoText();
-            
-            // 发送更新消息到Webview
+
             this._webview.postMessage({
                 command: 'updateImage',
-                imageData: imageData,
-                labels: labels,
-                currentPath: prevImage,
+                imageData,
+                labels,
+                currentPath: imagePath,
                 imageInfo: imageInfoText
             } as UpdateImageMessage);
         } catch (error: any) {
             ErrorHandler.handleError(
                 error,
-                'Failed to load previous image',
+                errorContext,
                 {
-                    filePath: prevImage,
+                    filePath: imagePath,
                     webview: this._webview,
                     type: ErrorType.IMAGE_LOAD_ERROR,
-                    recoverable: true
+                    recoverable
                 }
             );
         }
     }
-    
+
     /**
      * 获取图像信息文本
      * @returns 格式化的图像信息文本
@@ -267,20 +213,9 @@ export class WebviewMessageHandler {
         const currentIndex = this._yoloReader.getCurrentImageIndex();
         const totalImages = this._yoloReader.getTotalImages();
         
-        // 获取当前图片文件名（仅显示文件名，不包含路径）
         const currentImage = this._yoloReader.getCurrentImage();
-        let filename = '';
-        
-        if (currentImage) {
-            const pathParts = currentImage.split(/[\\\/]/); // 处理不同操作系统的路径分隔符
-            filename = pathParts[pathParts.length - 1];
-            
-            if (filename.length > 20) {
-                // 如果文件名太长，则截断显示
-                filename = filename.substr(0, 17) + '...';
-            }
-        }
-        
+        const filename = currentImage ? truncate(basename(currentImage), 20) : '';
+
         return `图片 ${currentIndex + 1}/${totalImages} - ${filename}`;
     }
     
@@ -440,7 +375,7 @@ export class WebviewMessageHandler {
             );
 
             // 获取文件名
-            const fileName = filePath.split(/[\\/]/).pop() || filePath;
+            const fileName = basename(filePath);
 
             // 发送回 webview（VS Code postMessage 不支持 transferable，使用结构化克隆）
             this._webview.postMessage({

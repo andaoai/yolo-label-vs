@@ -4,7 +4,7 @@
  * 协调 Renderer、HitTestEngine、AnimationController
  * 接收主线程消息，驱动渲染循环
  */
-import type { Label, DrawPreview, PointRef, HitTestResult, Detection } from '../shared/types';
+import type { Label, DrawPreview, HitTestResult, Detection } from '../shared/types';
 import type { RenderConfig, MainToWorkerMessage, WorkerToMainMessage } from '../shared/messages';
 import { CoordinateTransform } from './CoordinateTransform';
 import { HitTestEngine } from './HitTestEngine';
@@ -22,11 +22,9 @@ export class RenderEngine {
   private labels: Label[] = [];
   private cursor: { x: number; y: number } | null = null;
   private hoveredLabelIndex: number | null = null;
-  private selectedPoint: PointRef | null = null;
   private preview: DrawPreview | null = null;
   private showLabels = true;
   private previewDetections: Detection[] = [];
-  private showPreviewDetections = false;
   private dirty = true;
 
   constructor(config: RenderConfig) {
@@ -90,18 +88,8 @@ export class RenderEngine {
         this.renderIfNeeded();
         return null;
 
-      case 'setTool':
-        // 工具切换不影响渲染，但可能影响动画
-        return null;
-
       case 'setPreview':
         this.preview = msg.preview;
-        this.dirty = true;
-        this.renderIfNeeded();
-        return null;
-
-      case 'setSelectedPoint':
-        this.selectedPoint = msg.point;
         this.dirty = true;
         this.renderIfNeeded();
         return null;
@@ -155,12 +143,6 @@ export class RenderEngine {
         this.dirty = true;
         this.renderIfNeeded();
         return null;
-
-      case 'setShowPreviewDetections':
-        this.showPreviewDetections = msg.show;
-        this.dirty = true;
-        this.renderIfNeeded();
-        return null;
     }
   }
 
@@ -185,11 +167,10 @@ export class RenderEngine {
       this.config,
       this.cursor,
       this.hoveredLabelIndex,
-      this.selectedPoint,
       this.preview,
       this.showLabels,
       hoverStrength,
-      this.showPreviewDetections ? this.previewDetections : null,
+      this.previewDetections,
     );
 
     // 如果有动画（悬停强度 > 0 或工具绘制中），保持动画循环
