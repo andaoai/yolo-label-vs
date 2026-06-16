@@ -1,0 +1,1177 @@
+/* =================== 主题色与全局变量 =================== */
+:root {
+    --primary-color: var(--vscode-button-background);
+    --secondary-color: var(--vscode-statusBarItem-prominentBackground);
+    --danger-color: var(--vscode-errorForeground);
+    --background-color: var(--vscode-editor-background);
+    --surface-color: var(--vscode-sideBar-background);
+    --surface-color-hover: var(--vscode-list-hoverBackground);
+    --border-color: var(--vscode-panel-border);
+    --text-color: var(--vscode-editor-foreground);
+    --text-color-secondary: var(--vscode-descriptionForeground);
+    /* RGB values for animations */
+    --button-background-rgb: 0, 122, 204; /* Default VS Code blue */
+    --save-button-highlight-color: rgba(75, 210, 143, 0.5); /* Green highlight for save button */
+}
+
+/* =================== 全局基础样式 =================== */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--vscode-font-family);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* =================== 顶部工具栏 =================== */
+.toolbar {
+    display: flex;
+    align-items: center;
+    background-color: var(--vscode-editor-background);
+    padding: 6px 12px;
+    border-radius: 3px;
+    border: 1px solid var(--vscode-panel-border);
+    margin-bottom: 10px;
+    flex-shrink: 0;
+    gap: 16px;
+}
+
+/* 导航按钮组 */
+.nav-buttons {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    justify-content: center;
+}
+
+/* 文件操作按钮 */
+.file-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    justify-content: center;
+}
+
+.nav-buttons button,
+.file-actions button,
+.search-action-button,
+.toolbar .right-controls button {
+    background-color: var(--vscode-button-background);
+    border: 1px solid var(--vscode-button-border);
+    color: var(--vscode-button-foreground);
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    min-width: 32px;
+    height: 28px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.nav-buttons button svg,
+.file-actions button svg {
+    color: var(--vscode-button-foreground);
+}
+
+.nav-buttons button:hover,
+.file-actions button:hover,
+.search-action-button:hover,
+.toolbar .right-controls button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.right-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    justify-content: flex-end;
+    min-width: 150px;
+}
+
+.toggle-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 8px;
+    background-color: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+    transition: all 0.2s ease;
+    opacity: 0.65;
+}
+.toggle-button.active {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-color: var(--vscode-button-background);
+    opacity: 1;
+    box-shadow: inset 0 0 0 1px var(--vscode-focusBorder, var(--primary-color));
+}
+.toggle-button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
+    opacity: 0.8;
+}
+.toggle-button svg {
+    width: 16px;
+    height: 16px;
+    color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+    opacity: 0.65;
+}
+.toggle-button.active svg {
+    color: var(--vscode-button-foreground);
+    opacity: 1;
+}
+
+/* =================== 主体内容区 =================== */
+.main-content {
+    flex: 1;
+    display: flex;
+    gap: 10px;
+    min-height: 0;
+}
+
+/* =================== 画布区 =================== */
+.canvas-container {
+    flex: 1;
+    background-color: var(--vscode-editor-background);
+    border-radius: 4px;
+    border: 1px solid var(--vscode-panel-border);
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+}
+#imageCanvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    background-color: var(--vscode-editor-background);
+    object-fit: contain;
+    cursor: crosshair;
+    box-sizing: border-box;
+    display: block;
+}
+#imageCanvas.grabbing {
+    cursor: grabbing !important;
+}
+#imageCanvas.grabable {
+    cursor: grab;
+}
+
+/* =================== 侧边栏 =================== */
+.sidebar {
+    width: 280px;
+    background-color: var(--vscode-sideBar-background);
+    border-radius: 4px;
+    border: 1px solid var(--vscode-panel-border);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+.sidebar-section.collapsible {
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* ─── 可折叠区域：标题栏 ─── */
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    user-select: none;
+    background-color: var(--vscode-editor-background);
+    transition: background-color 0.15s;
+}
+.section-header:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+.section-toggle {
+    font-size: 10px;
+    width: 14px;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    flex-shrink: 0;
+}
+.section-title {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--vscode-editor-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.section-title strong {
+    color: var(--vscode-textLink-foreground);
+}
+.section-badge {
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    flex-shrink: 0;
+}
+
+/* ─── 可折叠区域：内容区 ─── */
+.section-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ─── Class 选择器 ─── */
+.class-search-input {
+    width: 100%;
+    padding: 4px 8px;
+    border: none;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    font-size: 12px;
+    outline: none;
+    box-sizing: border-box;
+}
+.class-search-input:focus {
+    border-bottom-color: var(--vscode-focusBorder);
+}
+.class-search-input::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+.class-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+}
+.class-grid::-webkit-scrollbar {
+    width: 4px;
+}
+.class-grid::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background);
+    border-radius: 2px;
+}
+.class-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    color: var(--vscode-editor-foreground);
+    transition: all 0.15s;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.class-chip:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    border-color: var(--vscode-focusBorder);
+}
+.class-chip.active {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+    border-color: var(--vscode-focusBorder);
+    border-left: 3px solid var(--vscode-focusBorder);
+}
+.class-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.class-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* =================== 标签列表 =================== */
+.label-list {
+    margin-top: 0;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    /* Hide scrollbar while maintaining scroll functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+/* Hide scrollbar for Chrome, Safari and Opera */
+.label-list::-webkit-scrollbar {
+    display: none;
+}
+.label-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 2px;
+    margin-bottom: 8px;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+.label-item select {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+}
+.label-item .class-select {
+    flex: 1;
+    min-width: 0;
+}
+.label-item .mode-select {
+    width: 80px;
+    min-width: 80px;
+}
+.label-item button {
+    padding: 2px 4px;
+    background: transparent;
+    border: none;
+    color: var(--vscode-button-secondaryForeground);
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.label-item button:hover {
+    color: var(--vscode-button-secondaryForeground);
+    opacity: 1;
+    background-color: transparent;
+}
+.label-item .delete-button:hover {
+    color: var(--vscode-errorForeground);
+}
+.label-item .visibility-button {
+    color: var(--vscode-button-secondaryForeground);
+    padding: 2px;
+    border: none;
+    background: transparent;
+}
+.label-item .visibility-button:hover {
+    color: var(--vscode-button-secondaryForeground);
+    background-color: transparent;
+}
+.label-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+.label-type {
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-descriptionForeground);
+    font-weight: 500;
+}
+
+.label-item.highlighted {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+    border-color: var(--vscode-focusBorder);
+    box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+    animation: highlight-pulse 1s infinite;
+    transform-origin: center;
+}
+
+@keyframes highlight-pulse {
+    0% {
+        box-shadow: 0 0 0 0 var(--vscode-focusBorder);
+        border-color: var(--vscode-focusBorder);
+        opacity: 1;
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(0, 120, 212, 0.3);
+        border-color: var(--vscode-focusBorder);
+        opacity: 0.7;
+    }
+    100% {
+        box-shadow: 0 0 0 0 var(--vscode-focusBorder);
+        border-color: var(--vscode-focusBorder);
+        opacity: 1;
+    }
+}
+
+/* =================== 按钮和选择器 =================== */
+button {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: 1px solid var(--vscode-button-border);
+    padding: 4px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s;
+}
+button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+button:active {
+    background-color: var(--vscode-button-background);
+}
+button.secondary {
+    background-color: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+    color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+    border-color: var(--vscode-button-border);
+}
+button.secondary:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
+}
+select {
+    padding: 6px 8px;
+    border-radius: 2px;
+    border: 1px solid var(--vscode-dropdown-border);
+    font-size: 13px;
+    background-color: var(--vscode-dropdown-background);
+    color: var(--vscode-dropdown-foreground);
+    margin: 0 12px;
+    min-width: 150px;
+}
+select:focus {
+    outline: 1px solid var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* =================== 模式选择器 =================== */
+.mode-selector {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* 分段控制按钮 */
+.segmented-control {
+    display: flex;
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.segmented-button {
+    padding: 5px 8px;
+    background-color: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+    color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+    border: none;
+    border-right: 1px solid var(--vscode-button-border);
+    margin: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.65;
+}
+
+.segmented-button svg {
+    color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+    opacity: 0.65;
+}
+
+.segmented-button:last-child {
+    border-right: none;
+}
+
+.segmented-button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
+    opacity: 0.8;
+}
+
+.segmented-button.active {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    opacity: 1;
+    box-shadow: inset 0 0 0 1px var(--vscode-focusBorder, var(--primary-color));
+}
+
+.segmented-button.active svg {
+    color: var(--vscode-button-foreground);
+    opacity: 1;
+}
+
+/* =================== 搜索框 =================== */
+.search-container {
+    flex: 1;
+    min-width: 0;
+    margin: 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: calc(100% - 400px);
+}
+
+.search-box {
+    position: relative;
+    width: 100%;
+    padding-right: 8px; /* Add padding to prevent text from touching the edge */
+}
+
+.search-box input {
+    width: 100%;
+    padding: 6px 12px;
+    border-radius: 3px;
+    border: 1px solid var(--vscode-input-border);
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    outline: none;
+    font-size: 13px;
+    text-overflow: ellipsis; /* Add ellipsis for long text */
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.search-box input:focus {
+    border-color: var(--vscode-focusBorder);
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-dropdown-border);
+    border-top: none;
+    z-index: 100;
+    display: none;
+    border-radius: 0 0 4px 4px;
+}
+
+.search-result-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--vscode-dropdown-border);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item .filename {
+    color: var(--vscode-dropdown-foreground);
+}
+
+.search-result-item .filepath {
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+}
+
+.search-result-item:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.search-result-item.selected {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+/* =================== 状态栏 =================== */
+.status-bar {
+    display: flex;
+    align-items: center;
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+    padding: 4px 12px;
+    font-size: 12px;
+    border-top: 1px solid var(--vscode-panel-border);
+    margin-top: 10px;
+    flex-shrink: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.status-bar span {
+    opacity: 0.85;
+    margin-right: 5px;
+}
+
+.status-bar .divider {
+    margin: 0 8px;
+    opacity: 0.5;
+    color: var(--vscode-panelTitle-inactiveForeground);
+}
+
+.status-bar #imageInfo {
+    font-weight: 500;
+    color: var(--vscode-statusBarItem-prominentForeground);
+}
+
+.status-bar #image-dimension,
+.status-bar #labels-count,
+.status-bar #zoom-info,
+.status-bar #coordinates {
+    min-width: 80px;
+}
+
+.shortcuts-info {
+    opacity: 0.7;
+    font-size: 11px;
+}
+
+/* Support links section */
+.support-links {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    gap: 8px;
+}
+
+.sponsor-link, .star-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.sponsor-link {
+    color: var(--vscode-textLink-foreground);
+}
+
+.star-link {
+    color: #f1c40f; /* GitHub star yellow */
+    animation: star-pulse 3s infinite;
+}
+
+@keyframes star-pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.sponsor-link:hover, .star-link:hover {
+    background-color: var(--vscode-textLink-activeForeground);
+    color: var(--vscode-button-foreground);
+}
+
+.sponsor-link svg {
+    color: #ff6b6b;
+}
+
+.star-link svg {
+    color: #f1c40f; /* GitHub star yellow */
+}
+
+/* Tooltip styles */
+.tooltip {
+    position: absolute;
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    padding: 4px 8px;
+    border-radius: 2px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    border: 1px solid var(--border-color);
+}
+
+/* =================== SVG 图标 =================== */
+svg {
+    color: currentColor;
+}
+
+/* 保存按钮样式 */
+.toolbar button#saveLabels {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: 1px solid var(--vscode-button-border);
+    padding: 5px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.toolbar button#saveLabels svg {
+    color: var(--vscode-button-foreground);
+}
+
+.toolbar button#saveLabels:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+/* Save button pulse animation when enabled */
+@keyframes pulse-save-button {
+    0% {
+        box-shadow: 0 0 0 0 var(--save-button-highlight-color);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(75, 210, 143, 0);
+        transform: scale(1.03);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(75, 210, 143, 0);
+        transform: scale(1);
+    }
+}
+
+/* Save button state animation and tooltip */
+.toolbar button#saveLabels:not(:disabled):not(.disabled) {
+    animation: pulse-save-button 2s infinite;
+    position: relative;
+    overflow: visible;
+}
+
+/* Extra status indicator that appears when enabled */
+.toolbar button#saveLabels:not(:disabled):not(.disabled)::before {
+    content: 'Changes need saving';
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+    color: var(--vscode-editorWidget-foreground, var(--vscode-editor-foreground));
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 3px;
+    padding: 3px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.toolbar button#saveLabels:not(:disabled):not(.disabled):hover::before {
+    opacity: 1;
+}
+
+/* Extra highlight element for save button */
+.toolbar button#saveLabels:not(:disabled):not(.disabled)::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    border-radius: 5px;
+    z-index: -1;
+    background: transparent;
+    border: 2px solid transparent;
+    animation: save-button-border-pulse 2s infinite;
+}
+
+@keyframes save-button-border-pulse {
+    0% {
+        border-color: rgba(75, 210, 143, 0);
+    }
+    50% {
+        border-color: rgba(75, 210, 143, 0.6);
+    }
+    100% {
+        border-color: rgba(75, 210, 143, 0);
+    }
+}
+
+/* Save button disabled state */
+.toolbar button#saveLabels:disabled,
+.toolbar button#saveLabels.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--vscode-disabledForeground, var(--vscode-button-secondaryBackground, #3a3a3a));
+    border-color: var(--vscode-panel-border);
+    color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+    animation: none;
+}
+
+.toolbar button#saveLabels:disabled svg,
+.toolbar button#saveLabels.disabled svg {
+    opacity: 0.5;
+    color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+}
+
+/* 右侧工具栏按钮 */
+.toolbar .right-controls button svg {
+    color: var(--vscode-button-foreground);
+}
+
+/* 搜索框旁边的操作按钮 */
+.search-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+    margin-left: 0;
+}
+
+.file-actions button svg,
+.search-action-button svg {
+    color: var(--vscode-button-foreground);
+    width: 16px;
+    height: 16px;
+}
+
+.file-actions button:disabled,
+.file-actions button.disabled,
+.search-action-button:disabled,
+.search-action-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--vscode-disabledForeground, var(--vscode-button-secondaryBackground, #3a3a3a));
+    border-color: var(--vscode-panel-border);
+}
+
+.file-actions button:disabled svg,
+.file-actions button.disabled svg,
+.search-action-button:disabled svg,
+.search-action-button.disabled svg {
+    opacity: 0.5;
+    color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+}
+
+/* Make toolbar more responsive */
+@media (max-width: 900px) {
+    .toolbar {
+        gap: 12px;
+        padding: 6px 8px;
+    }
+    
+    .nav-buttons, 
+    .file-actions {
+        gap: 6px;
+    }
+    
+    .search-container {
+        gap: 8px;
+        margin: 0 6px;
+        max-width: calc(100% - 350px);
+    }
+}
+
+/* For very narrow screens */
+@media (max-width: 700px) {
+    .toolbar {
+        flex-wrap: wrap;
+    }
+    
+    .search-container {
+        order: 3;
+        width: 100%;
+        max-width: 100%;
+        margin: 8px 0 0 0;
+    }
+    
+    .right-controls {
+        min-width: auto;
+    }
+
+    .status-bar {
+        flex-wrap: wrap;
+    }
+
+    .support-links {
+        width: 100%;
+        margin-top: 4px;
+        justify-content: center;
+        margin-left: 0;
+    }
+
+    .shortcuts-info {
+        display: none; /* Hide shortcuts info on very small screens */
+    }
+}
+
+/* File info area styles */
+/* File info area styles - removing this section
+.file-info {
+    display: flex;
+    align-items: center;
+    margin: 0 10px;
+    max-width: 200px;
+    overflow: hidden;
+}
+
+#yaml-file-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #e0e0e0;
+    background-color: rgba(70, 70, 70, 0.5);
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+*/ 
+
+/* =================== 进度条 =================== */
+.progress-container {
+    width: 100%;
+    height: 4px;
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 2px;
+    margin-bottom: 10px;
+    position: relative;
+    cursor: pointer;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--vscode-progressBar-background);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.2s ease;
+    position: relative;
+}
+
+.progress-preview {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    transform: translateX(-50%);
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    padding: 4px;
+    display: none;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.progress-preview img {
+    width: 120px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 2px;
+}
+
+.progress-preview .preview-info {
+    font-size: 12px;
+    color: var(--vscode-editor-foreground);
+    margin-top: 4px;
+    text-align: center;
+}
+
+.progress-container:hover .progress-preview {
+    display: block;
+}
+
+.progress-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background-color: var(--vscode-progressBar-background);
+    border: 2px solid var(--vscode-editor-background);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.progress-marker:hover {
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* ─── Model 推理面板 ─── */
+.model-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+}
+
+.model-info {
+    flex: 1;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.model-btn {
+    flex-shrink: 0;
+    padding: 3px 8px;
+    font-size: 12px;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.model-btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.model-params {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+    border-top: 1px solid var(--vscode-panel-border);
+}
+
+.model-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.model-slider-row label {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    min-width: 36px;
+    flex-shrink: 0;
+}
+
+.model-slider {
+    flex: 1;
+    height: 3px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--vscode-scrollbarSlider-background);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+.model-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    background: var(--vscode-button-background);
+    border-radius: 50%;
+    cursor: pointer;
+}
+.model-slider::-webkit-slider-thumb:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.model-slider-value {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    min-width: 28px;
+    text-align: right;
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.model-run-btn {
+    width: calc(100% - 12px);
+    margin: 0 6px 6px;
+    padding: 3px 8px;
+    font-size: 12px;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.model-run-btn:hover:not(:disabled) {
+    background-color: var(--vscode-button-hoverBackground);
+}
+.model-run-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.model-status {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    min-height: 16px;
+    padding: 4px 6px;
+    text-align: center;
+    background-color: var(--vscode-editor-background);
+    border-radius: 3px;
+    margin: 0 6px 6px;
+}
+
+.model-preview-actions {
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    margin-bottom: 6px;
+    border-top: 1px solid var(--vscode-panel-border);
+}
+
+.model-accept-btn {
+    flex: 1;
+    padding: 3px 8px;
+    font-size: 12px;
+    background-color: var(--vscode-testing-iconPassed);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.model-accept-btn:hover {
+    opacity: 0.9;
+}
+
+.model-reject-btn {
+    flex: 1;
+    padding: 3px 8px;
+    font-size: 12px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.model-reject-btn:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}

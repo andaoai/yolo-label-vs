@@ -78,7 +78,7 @@ export async function generateWebviewHtml(
     const { classNames, initialImageData, initialLabels, webview, currentPath, kptShape } = options;
 
     // 获取资源文件的路径
-    const cssPath = vscode.Uri.joinPath(extensionUri, 'dist', 'templates', 'labeling-panel.css');
+    const cssPath = vscode.Uri.joinPath(extensionUri, 'dist', 'templates', 'index.css');
     const mainJsPath = vscode.Uri.joinPath(extensionUri, 'dist', 'templates', 'main.js');
     const workerJsPath = vscode.Uri.joinPath(extensionUri, 'dist', 'templates', 'worker.js');
     const ortWasmDirPath = vscode.Uri.joinPath(extensionUri, 'dist', 'templates', 'ort');
@@ -118,7 +118,7 @@ export async function generateWebviewHtml(
     `;
 
     // 替换资源路径
-    html = html.replace('href="labeling-panel.css"', `href="${cssSrc.toString()}"`);
+    html = html.replace('href="index.css"', `href="${cssSrc.toString()}"`);
     html = html.replace('src="main.js"', `src="${mainJsSrc.toString()}"`);
 
     // 在</head>标签前插入数据脚本
