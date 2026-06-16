@@ -25,14 +25,14 @@
 
 <table>
   <tr>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183912332.jpg" width="100%" alt="默认浅色主题"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183969990.jpg" width="100%" alt="默认深色主题"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183996831.jpg" width="100%" alt="高对比度主题"></td>
+    <td width="33%"><img src="images/themes/white.png" width="100%" alt="白色主题"></td>
+    <td width="33%"><img src="images/themes/black.png" width="100%" alt="黑色主题"></td>
+    <td width="33%"><img src="images/themes/blue.png" width="100%" alt="蓝色主题"></td>
   </tr>
   <tr>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184077610.jpg" width="100%" alt="Monokai主题"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184138365.jpg" width="100%" alt="GitHub浅色主题"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184166688.jpg" width="100%" alt="Night Owl主题"></td>
+    <td width="33%"><img src="images/themes/green.png" width="100%" alt="绿色主题"></td>
+    <td width="33%"><img src="images/themes/red.png" width="100%" alt="红色主题"></td>
+    <td width="33%"><img src="images/themes/brown.png" width="100%" alt="褐色主题"></td>
   </tr>
 </table>
 

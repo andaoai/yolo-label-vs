@@ -25,14 +25,14 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
 
 <table>
   <tr>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183912332.jpg" width="100%" alt="Default Light Theme"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183969990.jpg" width="100%" alt="Default Dark Theme"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183996831.jpg" width="100%" alt="High Contrast Theme"></td>
+    <td width="33%"><img src="docs/images/themes/white.png" width="100%" alt="White Theme"></td>
+    <td width="33%"><img src="docs/images/themes/black.png" width="100%" alt="Black Theme"></td>
+    <td width="33%"><img src="docs/images/themes/blue.png" width="100%" alt="Blue Theme"></td>
   </tr>
   <tr>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184077610.jpg" width="100%" alt="Monokai Theme"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184138365.jpg" width="100%" alt="GitHub Light Theme"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184166688.jpg" width="100%" alt="Night Owl Theme"></td>
+    <td width="33%"><img src="docs/images/themes/green.png" width="100%" alt="Green Theme"></td>
+    <td width="33%"><img src="docs/images/themes/red.png" width="100%" alt="Red Theme"></td>
+    <td width="33%"><img src="docs/images/themes/brown.png" width="100%" alt="Brown Theme"></td>
   </tr>
 </table>
 
