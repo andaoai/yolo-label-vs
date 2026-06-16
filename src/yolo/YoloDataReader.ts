@@ -104,7 +104,7 @@ export class YoloDataReader {
             }
         }
 
-        console.warn('[YoloDataReader] 未找到图片:', targetPath, '总图片数:', this.imageFiles.length);
+        console.warn('[YoloDataReader] Image not found:', targetPath, 'Total images:', this.imageFiles.length);
         return false;
     }
 

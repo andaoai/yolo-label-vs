@@ -6,7 +6,7 @@ import { readLabels } from '../yolo/LabelCodec';
 import { loadConfig } from '../yolo/ConfigLoader';
 
 /**
- * 树节点类型
+ * Tree node types
  */
 type TreeNode =
     | DatasetTreeNode
@@ -15,7 +15,7 @@ type TreeNode =
     | InfoTreeNode;
 
 /**
- * 数据集根节点
+ * Dataset root node
  */
 class DatasetTreeNode extends vscode.TreeItem {
     constructor(
@@ -23,12 +23,12 @@ class DatasetTreeNode extends vscode.TreeItem {
         public readonly collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(path.basename(stats.yamlPath), collapsibleState);
-        this.description = `${stats.trainCount + stats.valCount + stats.testCount} 张`;
-        this.tooltip = `${stats.yamlPath}\n数据集路径: ${stats.datasetRoot}\n\n💡 点击打开标注面板`;
+        this.description = `${stats.trainCount + stats.valCount + stats.testCount} images`;
+        this.tooltip = `${stats.yamlPath}\nDataset root: ${stats.datasetRoot}\n\n💡 Click to open labeling panel`;
         this.iconPath = vscode.ThemeIcon.File;
         this.contextValue = 'dataset-item';
         this.command = {
-            title: '打开标注面板',
+            title: 'Open labeling panel',
             command: 'yolo-labeling-vs.openLabelingPanel',
             arguments: [{ yamlPath: stats.yamlPath }]
         };
@@ -36,7 +36,7 @@ class DatasetTreeNode extends vscode.TreeItem {
 }
 
 /**
- * 子集节点 (train/val/test)
+ * Subset node (train/val/test)
  */
 class SubsetTreeNode extends vscode.TreeItem {
     constructor(
@@ -45,17 +45,16 @@ class SubsetTreeNode extends vscode.TreeItem {
         public readonly imageFiles: string[],
         public readonly collapsibleState: vscode.TreeItemCollapsibleState
     ) {
-        const displayName = subsetName === 'train' ? '训练集' : subsetName === 'val' ? '验证集' : '测试集';
-        super(`${displayName} (${subsetName})`, collapsibleState);
-        this.description = `${imageFiles.length} 张`;
-        this.tooltip = `${displayName} - ${imageFiles.length} 张图片\n💡 点击打开并跳转到该子集第一张`;
+        super(subsetName, collapsibleState);
+        this.description = `${imageFiles.length} images`;
+        this.tooltip = `${subsetName} - ${imageFiles.length} images\n💡 Click to open first image in this subset`;
         this.iconPath = new vscode.ThemeIcon('file-media');
         this.contextValue = 'subset-item';
 
-        // 如果有图片，点击跳转到第一张
+        // If there are images, click jumps to first image
         if (imageFiles.length > 0) {
             this.command = {
-                title: '打开标注面板',
+                title: 'Open labeling panel',
                 command: 'yolo-labeling-vs.openLabelingPanel',
                 arguments: [{ yamlPath: stats.yamlPath, imagePath: imageFiles[0] }]
             };
@@ -64,7 +63,7 @@ class SubsetTreeNode extends vscode.TreeItem {
 }
 
 /**
- * 图片文件节点
+ * Image file node
  */
 class ImageTreeNode extends vscode.TreeItem {
     constructor(
@@ -76,17 +75,17 @@ class ImageTreeNode extends vscode.TreeItem {
         super(path.basename(imagePath), vscode.TreeItemCollapsibleState.None);
 
         if (hasLabels) {
-            this.description = `✓ ${labelCount} 个标签`;
+            this.description = `✓ ${labelCount} labels`;
             this.iconPath = new vscode.ThemeIcon('check');
         } else {
-            this.description = '未标注';
+            this.description = 'Unlabeled';
             this.iconPath = new vscode.ThemeIcon('circle-outline');
         }
 
-        this.tooltip = `${imagePath}\n${hasLabels ? `已标注: ${labelCount} 个标签` : '未标注'}\n\n💡 点击打开并跳转到这张图片`;
+        this.tooltip = `${imagePath}\n${hasLabels ? `Labeled: ${labelCount} labels` : 'Unlabeled'}\n\n💡 Click to open and jump to this image`;
         this.contextValue = 'image-item';
         this.command = {
-            title: '打开并跳转',
+            title: 'Open and jump',
             command: 'yolo-labeling-vs.openLabelingPanel',
             arguments: [{ yamlPath: stats.yamlPath, imagePath }]
         };
@@ -94,7 +93,7 @@ class ImageTreeNode extends vscode.TreeItem {
 }
 
 /**
- * 信息/操作节点
+ * Info/action node
  */
 class InfoTreeNode extends vscode.TreeItem {
     constructor(
@@ -111,7 +110,7 @@ class InfoTreeNode extends vscode.TreeItem {
 }
 
 /**
- * 数据集 TreeView Provider
+ * Dataset TreeView Provider
  */
 export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode> {
     private _onDidChangeTreeData: vscode.EventEmitter<TreeNode | undefined | null> = new vscode.EventEmitter();
@@ -120,7 +119,7 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
     private scanner: DatasetScanner = new DatasetScanner();
     private datasets: DatasetStats[] = [];
 
-    // 缓存每个数据集的图片文件
+    // Cache image files for each dataset
     private datasetImagesCache: Map<string, {
         train: string[],
         val: string[],
@@ -128,7 +127,7 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
     }> = new Map();
 
     constructor(private context: vscode.ExtensionContext) {
-        // 监听文件变化
+        // Watch for file changes
         const watcher = vscode.workspace.createFileSystemWatcher('**/*.{yaml,yml}');
         watcher.onDidChange(() => this.refresh());
         watcher.onDidCreate(() => this.refresh());
@@ -137,7 +136,7 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
     }
 
     /**
-     * 刷新树视图
+     * Refresh tree view
      */
     refresh(): void {
         this.scanner.clearCache();
@@ -151,14 +150,14 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
 
     async getChildren(element?: TreeNode): Promise<TreeNode[]> {
         if (!element) {
-            // 根节点：显示所有数据集
+            // Root node: show all datasets
             this.datasets = await this.scanner.scanWorkspace();
 
             if (this.datasets.length === 0) {
                 return [
                     new InfoTreeNode(
-                        '未找到数据集',
-                        '点击打开 YAML 文件',
+                        'No datasets found',
+                        'Click to open YAML file',
                         'folder'
                     )
                 ];
@@ -181,12 +180,12 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
     }
 
     /**
-     * 获取数据集的子节点
+     * Get dataset child nodes
      */
     private async getDatasetChildren(stats: DatasetStats): Promise<TreeNode[]> {
         const children: TreeNode[] = [];
 
-        // 加载并缓存该数据集的所有图片文件
+        // Load and cache all image files for this dataset
         if (!this.datasetImagesCache.has(stats.yamlPath)) {
             const config = loadConfig(stats.yamlPath, true);
             const trainFiles = scanImageFiles(stats.datasetRoot, { train: config.train });
@@ -202,7 +201,7 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
 
         const images = this.datasetImagesCache.get(stats.yamlPath)!;
 
-        // 子集节点 (train/val/test)
+        // Subset nodes (train/val/test)
         if (images.train.length > 0) {
             children.push(new SubsetTreeNode(
                 stats, 'train', images.train,
@@ -224,13 +223,13 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
             ));
         }
 
-        // 快捷操作
+        // Quick actions
         children.push(new InfoTreeNode(
-            '打开 YAML 配置',
+            'Open YAML Config',
             '',
             'go-to-file',
             {
-                title: '打开 YAML 配置',
+                title: 'Open YAML configuration',
                 command: 'vscode.open',
                 arguments: [vscode.Uri.file(stats.yamlPath)]
             }
@@ -240,7 +239,7 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
     }
 
     /**
-     * 获取子集的子节点（图片列表）
+     * Get subset child nodes (image list)
      */
     private getSubsetChildren(stats: DatasetStats, _subsetName: string, imageFiles: string[]): TreeNode[] {
         return imageFiles.map(imagePath => {

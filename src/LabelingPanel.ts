@@ -38,7 +38,7 @@ export class LabelingPanel {
                 existingPanel._panel.reveal(column);
                 // 如果指定了图片路径，跳转到该图片
                 if (imagePath) {
-                    console.log('[LabelingPanel] 跳转到图片:', imagePath);
+                    console.log('[LabelingPanel] Jumping to image:', imagePath);
                     existingPanel._jumpToImage(imagePath);
                 }
                 return;
@@ -78,7 +78,7 @@ export class LabelingPanel {
             // 如果指定了初始图片路径，跳转到该图片
             if (initialImagePath && this._yoloReader) {
                 const success = this._yoloReader.setCurrentImageByPath(initialImagePath);
-                console.log('[LabelingPanel] 初始图片跳转:', success ? '成功' : '失败', initialImagePath);
+                console.log('[LabelingPanel] Initial image jump:', success ? 'success' : 'failed', initialImagePath);
             }
 
             this._validateYoloReader();

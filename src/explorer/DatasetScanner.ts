@@ -5,7 +5,7 @@ import { tryLoadConfig, YoloConfig, resolveDatasetPath } from '../yolo/ConfigLoa
 import { scanImageFiles } from '../yolo/ImageFileScanner';
 
 /**
- * 数据集统计信息
+ * Dataset statistics information
  */
 export interface DatasetStats {
     yamlPath: string;
@@ -20,15 +20,15 @@ export interface DatasetStats {
 }
 
 /**
- * 数据集扫描器 - 扫描工作区中所有有效的 YOLO 数据集配置
+ * Dataset scanner - scans all valid YOLO dataset configurations in workspace
  */
 export class DatasetScanner {
-    private static readonly CACHE_DURATION = 5000; // 5秒缓存
+    private static readonly CACHE_DURATION = 5000; // 5 second cache
     private cache: Map<string, DatasetStats> = new Map();
     private lastScanTime: number = 0;
 
     /**
-     * 扫描工作区中所有的 YAML 文件，识别有效的 YOLO 数据集
+     * Scan all YAML files in workspace to identify valid YOLO datasets
      */
     async scanWorkspace(): Promise<DatasetStats[]> {
         const now = Date.now();
@@ -38,7 +38,7 @@ export class DatasetScanner {
 
         const results: DatasetStats[] = [];
 
-        // 查找所有 YAML 文件
+        // Find all YAML files
         const yamlFiles = await vscode.workspace.findFiles('**/*.{yaml,yml}', '**/node_modules/**');
 
         for (const uri of yamlFiles) {
@@ -55,35 +55,35 @@ export class DatasetScanner {
     }
 
     /**
-     * 尝试加载单个 YAML 文件作为 YOLO 数据集配置
+     * Try to load a single YAML file as YOLO dataset configuration
      */
     tryLoadDataset(yamlPath: string): DatasetStats | null {
-        // 1. 快速预检查：文件内容是否包含必要字段
+        // 1. Quick pre-check: file contains required fields
         const content = fs.readFileSync(yamlPath, 'utf8');
         if (!content.includes('path:') || !content.includes('names:')) {
             return null;
         }
 
-        // 2. 尝试加载配置（静默模式）
+        // 2. Try to load configuration (silent mode)
         const config = tryLoadConfig(yamlPath);
         if (!config) {
             return null;
         }
 
-        // 3. 解析数据集根目录路径
+        // 3. Resolve dataset root path
         const basePath = path.dirname(yamlPath);
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
         const datasetRoot = resolveDatasetPath(config, basePath, workspaceRoot);
 
-        // 4. 验证数据集目录是否存在
+        // 4. Verify dataset directory exists
         if (!fs.existsSync(datasetRoot)) {
-            console.log(`[DatasetScanner] 数据集路径不存在，跳过: ${yamlPath}`);
-            console.log(`  配置的 path: ${config.path}`);
-            console.log(`  解析的绝对路径: ${datasetRoot}`);
+            console.log(`[DatasetScanner] Dataset path not found, skipping: ${yamlPath}`);
+            console.log(`  Config path: ${config.path}`);
+            console.log(`  Resolved absolute path: ${datasetRoot}`);
             return null;
         }
 
-        // 5. 统计各子集数量（静默处理错误）
+        // 5. Count images per subset (silent error handling)
         let trainFiles: string[] = [];
         let valFiles: string[] = [];
         let testFiles: string[] = [];
@@ -94,9 +94,9 @@ export class DatasetScanner {
 
         const totalCount = trainFiles.length + valFiles.length + testFiles.length;
 
-        // 6. 验证是否有图片
+        // 6. Verify there are images
         if (totalCount === 0) {
-            console.log(`[DatasetScanner] 数据集无图片，跳过: ${yamlPath}`);
+            console.log(`[DatasetScanner] No images found in dataset, skipping: ${yamlPath}`);
             return null;
         }
 
@@ -114,7 +114,7 @@ export class DatasetScanner {
     }
 
     /**
-     * 清除缓存
+     * Clear cache
      */
     clearCache(): void {
         this.cache.clear();
@@ -122,7 +122,7 @@ export class DatasetScanner {
     }
 
     /**
-     * 获取缓存的数据集信息
+     * Get cached dataset information
      */
     getCachedDataset(yamlPath: string): DatasetStats | undefined {
         return this.cache.get(yamlPath);
