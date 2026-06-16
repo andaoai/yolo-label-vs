@@ -75,7 +75,7 @@ class ImageTreeNode extends vscode.TreeItem {
         super(path.basename(imagePath), vscode.TreeItemCollapsibleState.None);
 
         if (hasLabels) {
-            this.description = `✓ ${labelCount} labels`;
+            this.description = ` ${labelCount} labels`;
             this.iconPath = new vscode.ThemeIcon('check');
         } else {
             this.description = 'Unlabeled';
