@@ -62,6 +62,19 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
 - **Batch Processing**: Browse and edit multiple images in sequence
 - **Copy/Paste Labels**: Quickly duplicate labels with Ctrl+C/Ctrl+V shortcuts
 
+## Supported YOLO Models
+
+Currently supported YOLO inference models:
+
+| Model | Task | Status |
+|-------|------|--------|
+| YOLOv8 | Detection (det) | ✅ Supported |
+| YOLOv8 | Segmentation (seg) | ✅ Supported |
+| YOLOv11 | Detection (det) | ✅ Supported |
+| YOLOv11 | Segmentation (seg) | ✅ Supported |
+
+> **Note**: Only ONNX format models are supported. Export your PyTorch models to ONNX using Ultralytics before loading.
+
 ## Supported Data Formats
 
 <table>
