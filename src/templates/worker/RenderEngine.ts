@@ -4,7 +4,7 @@
  * 协调 Renderer、HitTestEngine、AnimationController
  * 接收主线程消息，驱动渲染循环
  */
-import type { Label, DrawPreview, PointRef, HitTestResult, Detection } from '../shared/types';
+import type { Label, DrawPreview, HitTestResult, Detection } from '../shared/types';
 import type { RenderConfig, MainToWorkerMessage, WorkerToMainMessage } from '../shared/messages';
 import { CoordinateTransform } from './CoordinateTransform';
 import { HitTestEngine } from './HitTestEngine';
@@ -22,11 +22,9 @@ export class RenderEngine {
   private labels: Label[] = [];
   private cursor: { x: number; y: number } | null = null;
   private hoveredLabelIndex: number | null = null;
-  private selectedPoint: PointRef | null = null;
   private preview: DrawPreview | null = null;
   private showLabels = true;
   private previewDetections: Detection[] = [];
-  private showPreviewDetections = false;
   private dirty = true;
 
   constructor(config: RenderConfig) {
@@ -90,18 +88,8 @@ export class RenderEngine {
         this.renderIfNeeded();
         return null;
 
-      case 'setTool':
-        // 工具切换不影响渲染，但可能影响动画
-        return null;
-
       case 'setPreview':
         this.preview = msg.preview;
-        this.dirty = true;
-        this.renderIfNeeded();
-        return null;
-
-      case 'setSelectedPoint':
-        this.selectedPoint = msg.point;
         this.dirty = true;
         this.renderIfNeeded();
         return null;
@@ -155,12 +143,6 @@ export class RenderEngine {
         this.dirty = true;
         this.renderIfNeeded();
         return null;
-
-      case 'setShowPreviewDetections':
-        this.showPreviewDetections = msg.show;
-        this.dirty = true;
-        this.renderIfNeeded();
-        return null;
     }
   }
 
@@ -171,7 +153,11 @@ export class RenderEngine {
 
     // 基于鼠标距离计算悬停强度（0~1），用于渐变动画
     let hoverStrength = 0;
-    if (this.cursor && this.labels.length > 0) {
+    if (this.hoveredLabelIndex !== null) {
+      // 通过侧边栏悬停设置的标签，使用最大强度
+      hoverStrength = 1;
+    } else if (this.cursor && this.labels.length > 0) {
+      // 鼠标在画布上，基于距离计算强度
       const nearest = this.hitTest.findNearest(this.labels, this.cursor, this.config);
       if (nearest) {
         const threshold = this.config.hoverProximityThreshold / this.transform.scale;
@@ -185,15 +171,14 @@ export class RenderEngine {
       this.config,
       this.cursor,
       this.hoveredLabelIndex,
-      this.selectedPoint,
       this.preview,
       this.showLabels,
       hoverStrength,
-      this.showPreviewDetections ? this.previewDetections : null,
+      this.previewDetections,
     );
 
-    // 如果有动画（悬停强度 > 0 或工具绘制中），保持动画循环
-    const needsAnimation = hoverStrength > 0 || this.preview !== null;
+    // 如果有动画（悬停强度 > 0、侧边栏悬停标签、或工具绘制中），保持动画循环
+    const needsAnimation = hoverStrength > 0 || this.hoveredLabelIndex !== null || this.preview !== null;
     if (needsAnimation) {
       this.animation.start();
     } else {

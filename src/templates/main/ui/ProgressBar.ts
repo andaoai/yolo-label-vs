@@ -4,6 +4,7 @@
  * 缩略图按需懒加载：悬停时请求 ±PRELOAD_RADIUS 张窗口
  */
 import type { Store } from '../state/Store';
+import { clamp } from '../../shared/math';
 
 /** 预加载半径：悬停位置前后各加载多少张 */
 const PRELOAD_RADIUS = 10;
@@ -58,8 +59,7 @@ export class ProgressBar {
     if (paths.length === 0 || !this.container) return;
 
     const rect = this.container.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const index = Math.min(Math.floor(ratio * paths.length), paths.length - 1);
+    const index = this.getIndexFromEvent(e, paths.length);
 
     if (this.bar) {
       this.bar.style.width = `${((index + 1) / paths.length) * 100}%`;
@@ -111,11 +111,14 @@ export class ProgressBar {
     const paths = this.store.get('allPaths');
     if (paths.length === 0 || !this.container) return;
 
-    const rect = this.container.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const index = Math.min(Math.floor(ratio * paths.length), paths.length - 1);
-
+    const index = this.getIndexFromEvent(e, paths.length);
     this.callbacks.onLoadImage(paths[index]);
+  }
+
+  private getIndexFromEvent(e: MouseEvent, pathCount: number): number {
+    const rect = this.container!.getBoundingClientRect();
+    const ratio = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+    return Math.min(Math.floor(ratio * pathCount), pathCount - 1);
   }
 
   private showPreview(): void {

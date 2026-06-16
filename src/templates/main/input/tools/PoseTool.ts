@@ -52,9 +52,9 @@ export class PoseTool implements Tool {
     if (this.step === 'box') {
       this.boxEndX = pos.x;
       this.boxEndY = pos.y;
-      return { handled: true };
+      return {};
     }
-    return this.step === 'keypoints' ? { handled: true } : null;
+    return this.step === 'keypoints' ? {} : null;
   }
 
   onMouseUp(_pos: NormalizedPoint, _button: number, _modifiers: Modifiers): ToolResult | null {
@@ -73,7 +73,7 @@ export class PoseTool implements Tool {
     if (this.step === 'idle') return null;
     this.step = 'idle';
     this.currentLabel = null;
-    return { handled: true };
+    return {};
   }
 
   getPreview(): DrawPreview | null {
@@ -120,7 +120,7 @@ export class PoseTool implements Tool {
     this.boxStartY = pos.y;
     this.boxEndX = pos.x;
     this.boxEndY = pos.y;
-    return { handled: true };
+    return {};
   }
 
   private completeBox(pos: NormalizedPoint): ToolResult | null {
@@ -131,7 +131,7 @@ export class PoseTool implements Tool {
 
     if (w < 0.01 || h < 0.01) {
       this.step = 'idle';
-      return { handled: true };
+      return {};
     }
 
     // 读取关键点配置
@@ -152,7 +152,7 @@ export class PoseTool implements Tool {
 
     this.step = 'keypoints';
     this.keypointIndex = 0;
-    return { handled: true };
+    return {};
   }
 
   private addKeypoint(pos: NormalizedPoint, visibility: number): ToolResult | null {
@@ -173,13 +173,12 @@ export class PoseTool implements Tool {
       this.currentLabel = null;
 
       return {
-        handled: true,
         pushHistory: true,
         addedLabels: [label],
         updateLabelList: true,
       };
     }
 
-    return { handled: true };
+    return {};
   }
 }

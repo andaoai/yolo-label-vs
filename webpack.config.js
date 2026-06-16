@@ -56,6 +56,10 @@ module.exports = (env, argv) => {
                         globOptions: {
                             ignore: ['**/*.ts', '**/*.js'] // TS/JS 由 entry 处理
                         }
+                    },
+                    {
+                        from: 'media',
+                        to: 'media'
                     }
                 ],
             }),
@@ -68,7 +72,7 @@ module.exports = (env, argv) => {
         mode: isProduction ? 'production' : 'development',
         devtool: isProduction ? false : 'source-map',
         entry: {
-            'templates/main': ['./src/templates/ort-entry.js', './src/templates/main/main.ts'],
+            'templates/main': ['./src/templates/ort-entry.ts', './src/templates/main/main.ts'],
         },
         output: {
             path: path.resolve(__dirname, 'dist'),

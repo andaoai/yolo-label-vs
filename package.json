@@ -2,7 +2,7 @@
   "name": "yolo-labeling-vs",
   "displayName": "YOLO Labeling",
   "description": "A VS Code extension for YOLO dataset labeling",
-  "version": "0.0.84",
+  "version": "0.0.85",
   "publisher": "andaoai",
   "license": "MIT",
   "icon": "docs/images/icon.png",
@@ -58,6 +58,29 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "yolo-datasets",
+          "title": "YOLO Datasets",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "yolo-datasets": [
+        {
+          "id": "yolo-datasets.tree",
+          "name": "Datasets"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "yolo-datasets.tree",
+        "contents": "Click refresh to scan YOLO datasets in your workspace\n[Refresh](command:yolo-labeling-vs.refreshDatasets)\n\nOr manually open a YAML configuration file\n[Open Config](command:yolo-labeling-vs.openLabelingPanel)"
+      }
+    ],
     "commands": [
       {
         "command": "yolo-labeling-vs.openLabelingPanel",
@@ -66,9 +89,28 @@
       {
         "command": "yolo-labeling-vs.openLabelingPanelKeyboard",
         "title": "Open YOLO Labeling Panel (Keyboard Shortcut)"
+      },
+      {
+        "command": "yolo-labeling-vs.refreshDatasets",
+        "title": "Refresh Dataset List",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
+      "view/title": [
+        {
+          "command": "yolo-labeling-vs.refreshDatasets",
+          "when": "view == yolo-datasets.tree",
+          "group": "navigation@1"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "yolo-labeling-vs.openLabelingPanel",
+          "when": "viewItem == dataset-item",
+          "group": "inline"
+        }
+      ],
       "explorer/context": [
         {
           "when": "resourceExtname == .yaml || resourceExtname == .yml",

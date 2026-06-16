@@ -27,7 +27,7 @@
    - TypeScript files (`.ts`) are compiled by ts-loader, not copied
 
    > **Note:**
-   > Frontend source code lives in `src/templates/`, split into `shared/`, `main/`, and `worker/` subdirectories. TypeScript files are compiled by webpack's ts-loader; HTML/CSS files are copied by CopyPlugin. `.ts` and legacy `.js` files are excluded by the CopyPlugin ignore rules.
+   > Frontend source code lives in `src/templates/`, split into `shared/`, `main/`, `inference/` and `worker/` subdirectories. The entire codebase is TypeScript. `.ts` files are compiled by webpack's ts-loader; HTML (`index.html`) and CSS (`index.css`) files are copied by CopyPlugin to `dist/templates/`.
 
 3. Package the extension
    ```bash

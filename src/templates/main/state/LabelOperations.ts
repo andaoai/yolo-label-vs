@@ -4,11 +4,8 @@
  * 所有标签的增删改查逻辑集中在此
  * 返回新数组，不修改原数组
  */
-import type { Label, NormalizedPoint } from '../../shared/types';
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
+import type { Label } from '../../shared/types';
+import { clamp, clamp01 } from '../../shared/math';
 
 /**
  * 创建框选标签
@@ -19,10 +16,10 @@ export function createBoxLabel(
   classIndex: number,
 ): Label | null {
   // 约束坐标到图片范围内 [0, 1]
-  const sx = clamp(startX, 0, 1);
-  const sy = clamp(startY, 0, 1);
-  const ex = clamp(endX, 0, 1);
-  const ey = clamp(endY, 0, 1);
+  const sx = clamp01(startX);
+  const sy = clamp01(startY);
+  const ex = clamp01(endX);
+  const ey = clamp01(endY);
 
   const x = (sx + ex) / 2;
   const y = (sy + ey) / 2;
@@ -51,8 +48,8 @@ export function createSegLabel(
   // 约束所有点到图片范围内（不修改原数组）
   const clamped = [...points];
   for (let i = 0; i < clamped.length; i += 2) {
-    clamped[i] = clamp(clamped[i], 0, 1);
-    clamped[i + 1] = clamp(clamped[i + 1], 0, 1);
+    clamped[i] = clamp01(clamped[i]);
+    clamped[i + 1] = clamp01(clamped[i + 1]);
   }
 
   // 从多边形点计算边界框
@@ -78,42 +75,6 @@ export function createSegLabel(
 }
 
 /**
- * 创建姿态标签
- */
-export function createPoseLabel(
-  boxX: number, boxY: number, boxW: number, boxH: number,
-  keypoints: number[],
-  keypointShape: number[],
-  classIndex: number,
-): Label | null {
-  // 约束框坐标到图片范围内
-  const halfW = boxW / 2;
-  const halfH = boxH / 2;
-  const cx = clamp(boxX, halfW, 1 - halfW);
-  const cy = clamp(boxY, halfH, 1 - halfH);
-
-  if (boxW < 0.01 || boxH < 0.01) return null;
-
-  // 约束关键点
-  const clampedKeypoints = keypoints.map((v, i) => {
-    const posInPoint = i % (keypointShape[1] || 3);
-    if (posInPoint === 0) return clamp(v, 0, 1);
-    if (posInPoint === 1) return clamp(v, 0, 1);
-    return v;
-  });
-
-  return {
-    class: classIndex,
-    x: cx, y: cy,
-    width: boxW, height: boxH,
-    isPose: true,
-    keypoints: clampedKeypoints,
-    keypointShape,
-    visible: true,
-  };
-}
-
-/**
  * 移动标签整体
  */
 export function moveLabel(label: Label, dx: number, dy: number): Label {
@@ -121,7 +82,7 @@ export function moveLabel(label: Label, dx: number, dy: number): Label {
 
   if (label.isSegmentation && label.points) {
     // 分割标签：先移动点并 clamp，再从点重新计算边界框
-    const points = label.points.map((v, i) => clamp(v + (i % 2 === 0 ? dx : dy), 0, 1));
+    const points = label.points.map((v, i) => clamp01(v + (i % 2 === 0 ? dx : dy)));
     let minX = 1, minY = 1, maxX = 0, maxY = 0;
     for (let i = 0; i < points.length; i += 2) {
       minX = Math.min(minX, points[i]);
@@ -152,8 +113,8 @@ export function moveLabel(label: Label, dx: number, dy: number): Label {
     const [, vpp] = label.keypointShape;
     updated.keypoints = label.keypoints.map((v, i) => {
       const posInPoint = i % vpp;
-      if (posInPoint === 0) return clamp(v + actualDx, 0, 1);
-      if (posInPoint === 1) return clamp(v + actualDy, 0, 1);
+      if (posInPoint === 0) return clamp01(v + actualDx);
+      if (posInPoint === 1) return clamp01(v + actualDy);
       return v;
     });
   }
@@ -169,8 +130,8 @@ export function moveBoxCorner(
   label: Label, cornerIndex: number, newX: number, newY: number,
 ): Label {
   // 拖拽的角点约束到图片范围内
-  const cx = clamp(newX, 0, 1);
-  const cy = clamp(newY, 0, 1);
+  const cx = clamp01(newX);
+  const cy = clamp01(newY);
 
   // 对角点也约束到图片范围内（防止旧数据越界）
   const oppositeX = clamp(
@@ -198,51 +159,6 @@ export function moveBoxCorner(
     width: maxX - minX,
     height: maxY - minY,
   };
-}
-
-/**
- * 移动多边形顶点
- */
-export function movePolygonPoint(
-  label: Label, pointIndex: number, newX: number, newY: number,
-): Label {
-  if (!label.points) return label;
-  const points = [...label.points];
-  points[pointIndex * 2] = clamp(newX, 0, 1);
-  points[pointIndex * 2 + 1] = clamp(newY, 0, 1);
-
-  // 重新计算边界框
-  let minX = Infinity, minY = Infinity;
-  let maxX = -Infinity, maxY = -Infinity;
-  for (let i = 0; i < points.length; i += 2) {
-    minX = Math.min(minX, points[i]);
-    minY = Math.min(minY, points[i + 1]);
-    maxX = Math.max(maxX, points[i]);
-    maxY = Math.max(maxY, points[i + 1]);
-  }
-
-  return {
-    ...label,
-    x: (minX + maxX) / 2,
-    y: (minY + maxY) / 2,
-    width: maxX - minX,
-    height: maxY - minY,
-    points,
-  };
-}
-
-/**
- * 移动关键点
- */
-export function moveKeypoint(
-  label: Label, keypointIndex: number, newX: number, newY: number,
-): Label {
-  if (!label.keypoints || !label.keypointShape) return label;
-  const [, vpp] = label.keypointShape;
-  const keypoints = [...label.keypoints];
-  keypoints[keypointIndex * vpp] = clamp(newX, 0, 1);
-  keypoints[keypointIndex * vpp + 1] = clamp(newY, 0, 1);
-  return { ...label, keypoints };
 }
 
 /**

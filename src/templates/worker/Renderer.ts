@@ -10,7 +10,7 @@
  * 6. 恢复变换
  * 7. 绘制十字准线（屏幕坐标）
  */
-import type { Label, DrawPreview, PointRef, Detection } from '../shared/types';
+import type { Label, DrawPreview, Detection } from '../shared/types';
 import type { RenderConfig } from '../shared/messages';
 import { CoordinateTransform } from './CoordinateTransform';
 import { AnimationController } from './AnimationController';
@@ -53,7 +53,6 @@ export class Renderer {
     config: RenderConfig,
     cursor: { x: number; y: number } | null,
     hoveredLabelIndex: number | null,
-    selectedPoint: PointRef | null,
     preview: DrawPreview | null,
     showLabels: boolean,
     hoverStrength: number = 0,
@@ -81,7 +80,7 @@ export class Renderer {
     ctx.drawImage(image, 0, 0);
 
     // 4. 绘制标签
-    this.drawLabels(ctx, labels, hoveredLabelIndex, selectedPoint, config, showLabels, hoverStrength, cursor);
+    this.drawLabels(ctx, labels, hoveredLabelIndex, config, showLabels, hoverStrength, cursor);
 
     // 5. 绘制工具预览
     if (preview) {
@@ -108,7 +107,6 @@ export class Renderer {
     ctx: RenderContext,
     labels: Label[],
     hoveredIndex: number | null,
-    selectedPoint: PointRef | null,
     config: RenderConfig,
     showLabels: boolean,
     hoverStrength: number,
@@ -133,6 +131,17 @@ export class Renderer {
     }
   }
 
+  private setupHighlightStroke(ctx: RenderContext, strength: number, baseLineWidth: number): void {
+    const s = this.transform.scale;
+    ctx.lineWidth = (baseLineWidth + strength * 1.5) / s;
+    if (strength > 0) {
+      ctx.setLineDash(HIGHLIGHT_DASH_PATTERN.map(d => d / s));
+      ctx.lineDashOffset = this.animation.getDashOffset() / s;
+    } else {
+      ctx.setLineDash([]);
+    }
+  }
+
   // ─── 框选标签 ─────────────────────────────────────────
 
   private drawBox(
@@ -151,14 +160,7 @@ export class Renderer {
     const ih = h / this.transform.scale;
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = (config.lineWidth + strength * 1.5) / this.transform.scale;
-
-    if (strength > 0) {
-      ctx.setLineDash(HIGHLIGHT_DASH_PATTERN.map(d => d / this.transform.scale));
-      ctx.lineDashOffset = this.animation.getDashOffset() / this.transform.scale;
-    } else {
-      ctx.setLineDash([]);
-    }
+    this.setupHighlightStroke(ctx, strength, config.lineWidth);
 
     ctx.strokeRect(ix, iy, iw, ih);
     ctx.setLineDash([]);
@@ -200,13 +202,7 @@ export class Renderer {
 
     // 边框
     ctx.strokeStyle = color;
-    ctx.lineWidth = (config.lineWidth + strength * 1.5) / s;
-    if (strength > 0) {
-      ctx.setLineDash(HIGHLIGHT_DASH_PATTERN.map(d => d / s));
-      ctx.lineDashOffset = this.animation.getDashOffset() / s;
-    } else {
-      ctx.setLineDash([]);
-    }
+    this.setupHighlightStroke(ctx, strength, config.lineWidth);
     ctx.stroke();
     ctx.setLineDash([]);
 
@@ -243,13 +239,7 @@ export class Renderer {
     const ih = label.height * this.transform.imageHeight;
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = (config.lineWidth + strength * 1.5) / s;
-    if (strength > 0) {
-      ctx.setLineDash(HIGHLIGHT_DASH_PATTERN.map(d => d / s));
-      ctx.lineDashOffset = this.animation.getDashOffset() / s;
-    } else {
-      ctx.setLineDash([]);
-    }
+    this.setupHighlightStroke(ctx, strength, config.lineWidth);
     ctx.strokeRect(ix, iy, iw, ih);
     ctx.setLineDash([]);
 
@@ -389,6 +379,27 @@ export class Renderer {
 
   // ─── 预览绘制 ─────────────────────────────────────────
 
+  private drawDashedRect(
+    ctx: RenderContext,
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    color: string,
+    lineWidth: number,
+  ): void {
+    const s = this.transform.scale;
+    const x = Math.min(startX, endX);
+    const y = Math.min(startY, endY);
+    const w = Math.abs(endX - startX);
+    const h = Math.abs(endY - startY);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth / s;
+    ctx.setLineDash([6 / s, 4 / s]);
+    ctx.strokeRect(x, y, w, h);
+    ctx.setLineDash([]);
+  }
+
   private drawPreview(ctx: RenderContext, preview: DrawPreview, config: RenderConfig): void {
     const color = config.colors[0]; // 使用当前类颜色
     const s = this.transform.scale;
@@ -397,15 +408,15 @@ export class Renderer {
 
     switch (preview.tool) {
       case 'box': {
-        const x = Math.min(preview.startX, preview.endX) * iw;
-        const y = Math.min(preview.startY, preview.endY) * ih;
-        const w = Math.abs(preview.endX - preview.startX) * iw;
-        const h = Math.abs(preview.endY - preview.startY) * ih;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = config.lineWidth / s;
-        ctx.setLineDash([6 / s, 4 / s]);
-        ctx.strokeRect(x, y, w, h);
-        ctx.setLineDash([]);
+        this.drawDashedRect(
+          ctx,
+          preview.startX * iw,
+          preview.startY * ih,
+          preview.endX * iw,
+          preview.endY * ih,
+          color,
+          config.lineWidth,
+        );
         break;
       }
       case 'seg': {
@@ -433,15 +444,15 @@ export class Renderer {
       }
       case 'pose': {
         if (preview.step === 'box') {
-          const x = Math.min(preview.startX, preview.endX) * iw;
-          const y = Math.min(preview.startY, preview.endY) * ih;
-          const w = Math.abs(preview.endX - preview.startX) * iw;
-          const h = Math.abs(preview.endY - preview.startY) * ih;
-          ctx.strokeStyle = color;
-          ctx.lineWidth = config.lineWidth / s;
-          ctx.setLineDash([6 / s, 4 / s]);
-          ctx.strokeRect(x, y, w, h);
-          ctx.setLineDash([]);
+          this.drawDashedRect(
+            ctx,
+            preview.startX * iw,
+            preview.startY * ih,
+            preview.endX * iw,
+            preview.endY * ih,
+            color,
+            config.lineWidth,
+          );
         } else {
           // 关键点阶段：绘制已有框
           const label = preview.label;

@@ -27,7 +27,7 @@
    - TypeScript 文件（`.ts`）不会被复制，只通过 ts-loader 编译输出
 
    > **注意：**
-   > 前端源码位于 `src/templates/` 目录，分为 `shared/`、`main/`、`worker/` 三个子目录。TypeScript 文件由 webpack 的 ts-loader 编译，HTML/CSS 文件由 CopyPlugin 复制。`.ts` 和旧的 `.js` 文件会被 CopyPlugin 排除（ignore 规则）。
+   > 前端源码位于 `src/templates/` 目录，分为 `shared/`、`main/`、`inference/`、`worker/` 四个子目录。整个代码库已完全迁移到 TypeScript。`.ts` 文件由 webpack 的 ts-loader 编译，HTML（`index.html`）和 CSS（`index.css`）文件由 CopyPlugin 复制到 `dist/templates/`。
 
 3. 打包插件
    ```bash

@@ -85,45 +85,6 @@ export class HistoryManager {
   }
 
   /**
-   * 是否可以撤销
-   */
-  canUndo(path: string): boolean {
-    const history = this.histories.get(path);
-    return !!history && history.index > 0;
-  }
-
-  /**
-   * 是否可以重做
-   */
-  canRedo(path: string): boolean {
-    const history = this.histories.get(path);
-    return !!history && history.index < history.states.length - 1;
-  }
-
-  /**
-   * 获取当前状态
-   */
-  getCurrent(path: string): Label[] | null {
-    const history = this.histories.get(path);
-    if (!history || history.index < 0) return null;
-    return this.cloneLabels(history.states[history.index]);
-  }
-
-  /**
-   * 清除指定图片的历史
-   */
-  clearImage(path: string): void {
-    this.histories.delete(path);
-  }
-
-  /**
-   * 清除所有历史
-   */
-  clearAll(): void {
-    this.histories.clear();
-  }
-
-  /**
    * 深拷贝标签数组
    */
   private cloneLabels(labels: Label[]): Label[] {

@@ -1,9 +1,7 @@
 /**
  * 工具接口 — 所有标注工具必须实现此接口
  */
-import type { Label, NormalizedPoint, DrawPreview, Modifiers, PointRef } from '../../../shared/types';
-import type { Store } from '../../state/Store';
-import type { WorkerBridge } from '../../communication/WorkerBridge';
+import type { Label, NormalizedPoint, DrawPreview, Modifiers } from '../../../shared/types';
 
 /** 工具事件结果 */
 export interface ToolResult {
@@ -17,8 +15,6 @@ export interface ToolResult {
   removedIndices?: number[];
   /** 是否需要更新标签列表 UI */
   updateLabelList?: boolean;
-  /** 是否已处理此事件（阻止后续处理） */
-  handled?: boolean;
 }
 
 export interface Tool {

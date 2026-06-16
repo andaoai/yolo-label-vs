@@ -4,6 +4,8 @@
  * 风格与 Class、Labels 区域保持一致
  */
 import type { Store } from '../state/Store';
+import { basename, truncate } from '../../../utils/pathUtils';
+import { toggleCollapsibleSection } from './collapsible';
 
 export class ModelPanel {
   private sectionEl: HTMLElement | null = null;
@@ -167,9 +169,11 @@ export class ModelPanel {
   // ─── 状态更新 ────────────────────────────────────────
 
   private toggleSection(): void {
-    this.collapsed = !this.collapsed;
-    if (this.bodyEl) this.bodyEl.style.display = this.collapsed ? 'none' : '';
-    if (this.toggleEl) this.toggleEl.textContent = this.collapsed ? '▶' : '▼';
+    this.collapsed = toggleCollapsibleSection(
+      this.collapsed,
+      this.bodyEl,
+      this.toggleEl,
+    );
   }
 
   private updateModelStatus(): void {
@@ -178,8 +182,8 @@ export class ModelPanel {
 
     if (this.modelInfoEl) {
       if (loaded && modelPath) {
-        const name = modelPath.split(/[\\/]/).pop() || modelPath;
-        this.modelInfoEl.textContent = name.length > 18 ? name.substring(0, 15) + '...' : name;
+        const name = basename(modelPath);
+        this.modelInfoEl.textContent = truncate(name, 18);
         this.modelInfoEl.title = modelPath;
       } else {
         this.modelInfoEl.textContent = 'No model loaded';
