@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { LabelingPanel } from './LabelingPanel';
+import { DatasetTreeViewProvider } from './explorer/DatasetTreeViewProvider';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -11,10 +12,35 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "yolo-labeling-vs" is now active!');
 
+	// 注册数据集 TreeView
+	const treeViewProvider = new DatasetTreeViewProvider(context);
+	const treeView = vscode.window.createTreeView('yolo-datasets.tree', {
+		treeDataProvider: treeViewProvider,
+		showCollapseAll: true
+	});
+
+	// 注册刷新命令
+	const refreshCommand = vscode.commands.registerCommand('yolo-labeling-vs.refreshDatasets', () => {
+		treeViewProvider.refresh();
+	});
+
+	context.subscriptions.push(treeView);
+	context.subscriptions.push(refreshCommand);
+
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('yolo-labeling-vs.openLabelingPanel', async (uri?: vscode.Uri, fromContextMenu?: boolean) => {
+	let disposable = vscode.commands.registerCommand('yolo-labeling-vs.openLabelingPanel', async (arg?: any, fromContextMenu?: boolean) => {
+		// 处理不同类型的参数（可能是 Uri 或 { yamlPath: string, imagePath?: string }）
+		let uri: vscode.Uri | undefined;
+		let imagePath: string | undefined;
+		if (arg instanceof vscode.Uri) {
+			uri = arg;
+		} else if (arg && typeof arg.yamlPath === 'string') {
+			uri = vscode.Uri.file(arg.yamlPath);
+			imagePath = arg.imagePath;
+		}
+
 		// If no URI is provided and it's likely called from keyboard shortcut (not from context menu)
 		if (!uri && fromContextMenu !== true) {
 			// Determine if the command was called from a keyboard shortcut
@@ -56,7 +82,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		
 		// Always create a new panel instead of reusing the existing one
-		LabelingPanel.createOrShow(context.extensionUri, uri);
+		LabelingPanel.createOrShow(context.extensionUri, uri, imagePath);
 	});
 
 	// Register a separate command for keyboard shortcut specifically

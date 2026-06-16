@@ -56,6 +56,10 @@ module.exports = (env, argv) => {
                         globOptions: {
                             ignore: ['**/*.ts', '**/*.js'] // TS/JS 由 entry 处理
                         }
+                    },
+                    {
+                        from: 'media',
+                        to: 'media'
                     }
                 ],
             }),

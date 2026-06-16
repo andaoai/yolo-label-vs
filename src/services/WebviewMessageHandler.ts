@@ -28,6 +28,26 @@ export class WebviewMessageHandler {
     ) {}
     
     /**
+     * 刷新当前图片（用于从 TreeView 跳转后更新）
+     */
+    public async refreshImage(): Promise<void> {
+        const currentImage = this._yoloReader.getCurrentImage();
+        if (currentImage) {
+            const labels = this._yoloReader.readLabels(currentImage);
+            const imageData = await loadImageAsDataUrl(currentImage);
+            const imageInfoText = this.getImageInfoText();
+
+            this._webview.postMessage({
+                command: 'updateImage',
+                imageData,
+                labels,
+                currentPath: currentImage,
+                imageInfo: imageInfoText
+            });
+        }
+    }
+
+    /**
      * 处理从Webview收到的消息
      * @param message Webview消息对象
      */

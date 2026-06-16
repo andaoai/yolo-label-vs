@@ -10,7 +10,8 @@ const SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
  * @param label 路径类型标签（用于日志）
  * @returns 找到的图片文件路径数组
  */
-function loadImagesFromPath(basePath: string, pathConfig: string | string[], label: string): string[] {
+function loadImagesFromPath(basePath: string, pathConfig: string | string[] | undefined, label: string): string[] {
+    if (!pathConfig) return [];
     const paths = Array.isArray(pathConfig) ? pathConfig : [pathConfig];
     const imageFiles: string[] = [];
 
@@ -46,9 +47,9 @@ function loadImagesFromPath(basePath: string, pathConfig: string | string[], lab
  * @returns 去重并排序后的图片文件路径数组
  */
 export function scanImageFiles(datasetRoot: string, config: {
-    train: string | string[];
-    val: string | string[];
-    test: string | string[];
+    train?: string | string[];
+    val?: string | string[];
+    test?: string | string[];
 }): string[] {
     // 验证数据集路径是否存在
     if (!fs.existsSync(datasetRoot)) {

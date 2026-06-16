@@ -58,6 +58,29 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "yolo-datasets",
+          "title": "YOLO 数据集",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "yolo-datasets": [
+        {
+          "id": "yolo-datasets.tree",
+          "name": "数据集列表"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "yolo-datasets.tree",
+        "contents": "点击刷新按钮扫描工作区中的 YOLO 数据集\n[刷新](command:yolo-labeling-vs.refreshDatasets)\n\n或者手动打开 YAML 配置文件\n[打开配置](command:yolo-labeling-vs.openLabelingPanel)"
+      }
+    ],
     "commands": [
       {
         "command": "yolo-labeling-vs.openLabelingPanel",
@@ -66,9 +89,28 @@
       {
         "command": "yolo-labeling-vs.openLabelingPanelKeyboard",
         "title": "Open YOLO Labeling Panel (Keyboard Shortcut)"
+      },
+      {
+        "command": "yolo-labeling-vs.refreshDatasets",
+        "title": "Refresh Dataset List",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
+      "view/title": [
+        {
+          "command": "yolo-labeling-vs.refreshDatasets",
+          "when": "view == yolo-datasets.tree",
+          "group": "navigation@1"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "yolo-labeling-vs.openLabelingPanel",
+          "when": "viewItem == dataset-item",
+          "group": "inline"
+        }
+      ],
       "explorer/context": [
         {
           "when": "resourceExtname == .yaml || resourceExtname == .yml",

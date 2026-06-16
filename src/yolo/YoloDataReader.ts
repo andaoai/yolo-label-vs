@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { BoundingBox } from '../model/types';
-import { YoloConfig, loadConfig } from './ConfigLoader';
+import { YoloConfig, loadConfig, resolveDatasetPath } from './ConfigLoader';
 import { scanImageFiles } from './ImageFileScanner';
 import { readLabels, saveLabels } from './LabelCodec';
 
@@ -13,16 +13,13 @@ export class YoloDataReader {
     private config!: YoloConfig;
     private currentImageIndex: number = 0;
     private imageFiles: string[] = [];
-    private basePath: string;
 
     constructor(private yamlPath: string, workspaceRoot?: string) {
-        this.basePath = workspaceRoot || path.dirname(yamlPath);
         this.config = loadConfig(yamlPath);
 
-        // 计算数据集根目录
-        const datasetRoot = path.isAbsolute(this.config.path)
-            ? this.config.path
-            : path.resolve(this.basePath, this.config.path);
+        // 计算数据集根目录（与 DatasetScanner 使用相同的路径解析逻辑）
+        const yamlDir = path.dirname(yamlPath);
+        const datasetRoot = resolveDatasetPath(this.config, yamlDir, workspaceRoot);
 
         this.imageFiles = scanImageFiles(datasetRoot, {
             train: this.config.train,
@@ -78,12 +75,36 @@ export class YoloDataReader {
         return [...this.imageFiles]; // Return a copy of the array
     }
 
-    public setCurrentImageByPath(path: string): boolean {
-        const index = this.imageFiles.indexOf(path);
+    public setCurrentImageByPath(targetPath: string): boolean {
+        // 1. 精确匹配
+        let index = this.imageFiles.indexOf(targetPath);
         if (index !== -1) {
             this.currentImageIndex = index;
             return true;
         }
+
+        // 2. 规范化路径后匹配（处理斜杠差异）
+        const normalizedTarget = targetPath.replace(/\\/g, '/').toLowerCase();
+        index = this.imageFiles.findIndex(f => f.replace(/\\/g, '/').toLowerCase() === normalizedTarget);
+        if (index !== -1) {
+            this.currentImageIndex = index;
+            return true;
+        }
+
+        // 3. 仅匹配文件名（容错）
+        const targetFilename = targetPath.split(/[\\/]/).pop()?.toLowerCase();
+        if (targetFilename) {
+            index = this.imageFiles.findIndex(f => {
+                const filename = f.split(/[\\/]/).pop()?.toLowerCase();
+                return filename === targetFilename;
+            });
+            if (index !== -1) {
+                this.currentImageIndex = index;
+                return true;
+            }
+        }
+
+        console.warn('[YoloDataReader] 未找到图片:', targetPath, '总图片数:', this.imageFiles.length);
         return false;
     }
 
