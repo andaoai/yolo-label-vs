@@ -2,7 +2,7 @@
   "name": "yolo-labeling-vs",
   "displayName": "YOLO Labeling",
   "description": "A VS Code extension for YOLO dataset labeling",
-  "version": "0.0.82",
+  "version": "0.0.84",
   "publisher": "andaoai",
   "license": "MIT",
   "icon": "docs/images/icon.png",
@@ -110,6 +110,7 @@
     "watch": "cross-env NODE_ENV=development webpack --watch --config webpack.config.js && npm run copy-templates",
     "copy-templates": "node scripts/copy-templates.js",
     "test:inference": "tsx test/test-inference-all.ts",
+    "test:sam": "tsx test/test-inference-sam.ts",
     "vscode:prepublish": "npm run build"
   },
   "devDependencies": {

@@ -1,14 +1,13 @@
 # <img src="docs/images/icon.png" width="32" height="32" alt="YOLO Label Tool Icon"> YOLO Labeling
 
 [![Publish to VS Code Marketplace](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml/badge.svg)](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml)
-[![VS Marketplace Version](https://img.shields.io/badge/VS_Marketplace-v0.0.75-blue)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
-[![VS Marketplace Downloads](https://img.shields.io/badge/Downloads-4.5K-brightgreen)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
-[![VS Marketplace Rating](https://img.shields.io/badge/Rating-★★★★★-yellow)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS Marketplace Version](https://img.shields.io/badge/VS_Marketplace-v0.0.84-blue?link=https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS Marketplace Installs](https://img.shields.io/badge/Installs-4.5K-brightgreen?link=https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS Marketplace Rating](https://img.shields.io/badge/Rating-5.0%2F5-yellow?link=https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Contributors](https://img.shields.io/github/contributors/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/graphs/contributors)
-[![Repo Size](https://img.shields.io/github/repo-size/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs)
-[![Last Commit](https://img.shields.io/github/last-commit/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/commits)
-[![Issues](https://img.shields.io/github/issues/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/andaoai/yolo-label-vs?style=social)](https://github.com/andaoai/yolo-label-vs/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/pulls)
 [![VS Code Engine](https://img.shields.io/badge/vscode-%5E1.85.0-blue)](https://code.visualstudio.com/)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 [![Sponsor](https://img.shields.io/badge/sponsor-donate-brightgreen)](https://github.com/andaoai/yolo-label-vs#sponsorship)
@@ -26,14 +25,14 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
 
 <table>
   <tr>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183912332.jpg" width="100%" alt="Default Light Theme"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183969990.jpg" width="100%" alt="Default Dark Theme"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183996831.jpg" width="100%" alt="High Contrast Theme"></td>
+    <td width="33%"><img src="docs/images/themes/white.png" width="100%" alt="White Theme"></td>
+    <td width="33%"><img src="docs/images/themes/black.png" width="100%" alt="Black Theme"></td>
+    <td width="33%"><img src="docs/images/themes/blue.png" width="100%" alt="Blue Theme"></td>
   </tr>
   <tr>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184077610.jpg" width="100%" alt="Monokai Theme"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184138365.jpg" width="100%" alt="GitHub Light Theme"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184166688.jpg" width="100%" alt="Night Owl Theme"></td>
+    <td width="33%"><img src="docs/images/themes/green.png" width="100%" alt="Green Theme"></td>
+    <td width="33%"><img src="docs/images/themes/red.png" width="100%" alt="Red Theme"></td>
+    <td width="33%"><img src="docs/images/themes/brown.png" width="100%" alt="Brown Theme"></td>
   </tr>
 </table>
 
@@ -62,6 +61,19 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
 - **YAML Integration**: Direct support for YAML configuration files
 - **Batch Processing**: Browse and edit multiple images in sequence
 - **Copy/Paste Labels**: Quickly duplicate labels with Ctrl+C/Ctrl+V shortcuts
+
+## Supported YOLO Models
+
+Currently supported YOLO inference models:
+
+| Model | Task | Status |
+|-------|------|--------|
+| YOLOv8 | Detection (det) | ✅ Supported |
+| YOLOv8 | Segmentation (seg) | ✅ Supported |
+| YOLOv11 | Detection (det) | ✅ Supported |
+| YOLOv11 | Segmentation (seg) | ✅ Supported |
+
+> **Note**: Only ONNX format models are supported. Export your PyTorch models to ONNX using Ultralytics before loading.
 
 ## Supported Data Formats
 

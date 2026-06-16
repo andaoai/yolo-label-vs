@@ -1,18 +1,17 @@
 # <img src="./images/icon.png" width="32" height="32" alt="YOLO标注工具图标"> YOLO 标注工具
 
 [![发布到VS Code插件市场](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml/badge.svg)](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml)
-[![VS插件市场版本](https://img.shields.io/badge/VS_Marketplace-v0.0.74-blue)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
-[![VS插件市场下载量](https://img.shields.io/badge/Downloads-4.5K-brightgreen)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
-[![VS插件市场评分](https://img.shields.io/badge/Rating-★★★★★-yellow)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS插件市场版本](https://img.shields.io/badge/VS_Marketplace-v0.0.84-blue?link=https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS插件市场安装量](https://img.shields.io/badge/安装量-4.5K-brightgreen?link=https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS插件市场评分](https://img.shields.io/badge/评分-5.0%2F5-yellow?link=https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
 [![许可证: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![贡献者数量](https://img.shields.io/github/contributors/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/graphs/contributors)
-[![仓库大小](https://img.shields.io/github/repo-size/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs)
-[![最后更新](https://img.shields.io/github/last-commit/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/commits)
-[![问题数量](https://img.shields.io/github/issues/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/andaoai/yolo-label-vs?style=social)](https://github.com/andaoai/yolo-label-vs/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/andaoai/yolo-label-vs)](https://github.com/andaoai/yolo-label-vs/pulls)
 [![VS Code引擎版本](https://img.shields.io/badge/vscode-%5E1.85.0-blue)](https://code.visualstudio.com/)
 [![Node.js版本](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 [![赞助支持](https://img.shields.io/badge/赞助-支持-brightgreen)](https://github.com/andaoai/yolo-label-vs/blob/main/docs/README_CN.md#赞助支持)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/andaoai/yolo-label-vs)
+[![Ask DeepWiki](https://img.shields.io/badge/Ask%20DeepWiki-blue)](https://deepwiki.com/andaoai/yolo-label-vs)
 
 一个专门用于快速浏览和编辑 YOLO 数据集标注的 VS Code 扩展。通过 YAML 配置文件，您可以直接在 VS Code 中高效地查看和修改 YOLO 格式的标注数据，让数据集管理变得轻松简单。
 
@@ -26,14 +25,14 @@
 
 <table>
   <tr>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183912332.jpg" width="100%" alt="默认浅色主题"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183969990.jpg" width="100%" alt="默认深色主题"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746183996831.jpg" width="100%" alt="高对比度主题"></td>
+    <td width="33%"><img src="images/themes/white.png" width="100%" alt="白色主题"></td>
+    <td width="33%"><img src="images/themes/black.png" width="100%" alt="黑色主题"></td>
+    <td width="33%"><img src="images/themes/blue.png" width="100%" alt="蓝色主题"></td>
   </tr>
   <tr>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184077610.jpg" width="100%" alt="Monokai主题"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184138365.jpg" width="100%" alt="GitHub浅色主题"></td>
-    <td width="33%"><img src="https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/themes/1746184166688.jpg" width="100%" alt="Night Owl主题"></td>
+    <td width="33%"><img src="images/themes/green.png" width="100%" alt="绿色主题"></td>
+    <td width="33%"><img src="images/themes/red.png" width="100%" alt="红色主题"></td>
+    <td width="33%"><img src="images/themes/brown.png" width="100%" alt="褐色主题"></td>
   </tr>
 </table>
 
@@ -62,6 +61,19 @@
 - **YAML 集成**：直接支持 YAML 配置文件
 - **批量处理**：连续浏览和编辑多个图像
 - **复制粘贴标签**：使用 Ctrl+C/Ctrl+V 快速复制标签
+
+## 支持的 YOLO 模型
+
+目前支持的 YOLO 推理模型：
+
+| 模型 | 任务 | 状态 |
+|------|------|------|
+| YOLOv8 | 检测 (det) | ✅ 已支持 |
+| YOLOv8 | 分割 (seg) | ✅ 已支持 |
+| YOLOv11 | 检测 (det) | ✅ 已支持 |
+| YOLOv11 | 分割 (seg) | ✅ 已支持 |
+
+> **注意**：仅支持 ONNX 格式模型。请使用 Ultralytics 将 PyTorch 模型导出为 ONNX 格式后再加载。
 
 ## 支持的数据格式
 

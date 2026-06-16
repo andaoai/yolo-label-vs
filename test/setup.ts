@@ -26,6 +26,7 @@ const DATASETS_DIR = path.join(ROOT, 'test/data/datasets');
 interface ModelEntry {
   url: string;
   task: 'det' | 'seg';
+  type?: string;  // 'sam-encoder' | 'sam-decoder' 等
 }
 
 interface DatasetConfig {
