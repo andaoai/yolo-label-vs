@@ -57,24 +57,28 @@ yolo-label-vs/
 │   └── ...                   # Other documentation files
 ├── node_modules/             # Dependencies (gitignore)
 ├── src/                      # Source code
-│   ├── extension.ts          # VS Code extension entry point
+│   ├── extension.ts          # VS Code extension entry point (registers all commands)
 │   ├── LabelingPanel.ts      # WebView panel manager (multi-instance support)
+│   ├── DatasetStatsPanel.ts  # Dataset statistics dashboard panel (Chart.js visualization)
 │   ├── ErrorHandler.ts       # Unified error classification and reporting
+│   ├── explorer/             # Dataset TreeView explorer
+│   │   ├── DatasetScanner.ts # Workspace scanner for YOLO dataset detection
+│   │   └── DatasetTreeViewProvider.ts # Tree data provider with subset/folder/image hierarchy
 │   ├── model/                # Type definitions for Extension Host
 │   │   └── types.ts          # BoundingBox = Label (type alignment with frontend)
 │   ├── services/             # Extension service layer
-│   │   └── WebviewMessageHandler.ts  # WebView message bus (11 commands)
+│   │   ├── WebviewMessageHandler.ts  # WebView message bus (11 commands)
+│   │   └── DatasetStatisticsService.ts # Dataset statistics calculation engine
 │   ├── utils/                # Utility helpers
 │   │   ├── imageLoader.ts    # Base64 LRU image cache + thumbnails
 │   │   ├── pathUtils.ts      # Basename/truncate/imagePathToLabelPath
-│   │   └── webviewHtml.ts    # Generate WebView HTML, inject resources and ORT WASM paths
+│   │   ├── webviewHtml.ts    # Generate WebView HTML for labeling panel
+│   │   └── dashboardHtml.ts  # Generate statistics dashboard HTML with Chart.js
 │   ├── yolo/                 # YOLO data layer
 │   │   ├── ConfigLoader.ts   # Parse data.yaml (path/train/val/test/names/kpt_shape)
-│   │   ├── ImageFileScanner.ts  # Scan images in train/val/test directories
+│   │   ├── ImageFileScanner.ts  # Scan images (flat + by folder for multi-folder subsets)
 │   │   ├── LabelCodec.ts     # Encode/decode YOLO txt labels (det/seg/pose)
 │   │   └── YoloDataReader.ts # Dataset session (current index, read/write labels)
-│   ├── sidebar/              # (Reserved for future)
-│   ├── types/                # (Reserved for future)
 │   └── templates/            # Frontend templates and source
 │       ├── index.html        # WebView HTML template
 │       ├── index.css         # Unified stylesheet
@@ -141,10 +145,14 @@ yolo-label-vs/
 
 The backend (VS Code Extension Host) uses a modular service-oriented architecture:
 
-- **`extension.ts`**: Registers the `yolo-labeling-vs.openLabelingPanel` command, handles YAML file selection when triggered by keyboard shortcut
-- **`LabelingPanel.ts`**: Manages WebView panels with multi-instance support (one panel per YAML file), cached in a static Map, with error page fallback supporting reload
-- **`WebviewMessageHandler.ts`**: Central message bus receiving 11 types of commands from WebView, including ONNX file reading and passing to WebView via structured cloning
-- **Yolo Data Layer**: ConfigLoader (YAML parsing) → ImageFileScanner (directory scanning) → LabelCodec (YOLO format encoding/decoding) → YoloDataReader (session management)
+- **`extension.ts`**: Extension entry point registering all commands: `openLabelingPanel`, `openDatasetStats`, `refreshDatasets`. Handles keyboard shortcuts and YAML file auto-discovery in the workspace.
+- **`LabelingPanel.ts`**: Manages WebView panels with multi-instance support (one panel per YAML file), cached in a static Map, with error page fallback supporting reload. Supports direct image navigation from TreeView clicks.
+- **`DatasetStatsPanel.ts`**: Standalone dashboard panel powered by Chart.js for dataset analytics visualization. Renders class distribution, box statistics, labels-per-image histogram, and Train/Val/Test comparison charts.
+- **`DatasetTreeViewProvider.ts`**: VS Code TreeView data provider implementing the dataset explorer hierarchy: Dataset Root → Subsets (Train/Val/Test) → Folders (for multi-folder datasets) → Images. Each node supports direct navigation to the labeling panel.
+- **`DatasetScanner.ts`**: Workspace scanner detecting all YOLO YAML configuration files and computing basic dataset statistics for TreeView display.
+- **`DatasetStatisticsService.ts`**: Comprehensive statistics engine computing: class distribution (global and per-subset), label count histogram, box dimension statistics, aspect ratios, keypoint metrics, and folder distribution.
+- **`WebviewMessageHandler.ts`**: Central message bus receiving commands from WebView, including ONNX file reading and passing to WebView via structured cloning
+- **Yolo Data Layer**: ConfigLoader (YAML parsing) → ImageFileScanner (directory scanning with multi-folder support) → LabelCodec (YOLO format encoding/decoding) → YoloDataReader (session management)
 - **Utils Layer**: imageLoader (LRU cache), pathUtils, webviewHtml (template generation with resource injection)
 
 ### WebView Frontend Architecture
