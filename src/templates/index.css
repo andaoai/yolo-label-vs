@@ -203,6 +203,19 @@ body {
     border-radius: 4px;
     overflow: hidden;
 }
+/* Class 区域：固定较小的高度，不参与 flex 分配 */
+#classSection {
+    flex-shrink: 0;
+}
+/* Labels 区域：优先占据剩余空间 */
+#labelSection {
+    flex: 1;
+    min-height: 80px;
+}
+/* Model 区域：固定较小高度，不参与 flex 分配 */
+#modelSection {
+    flex-shrink: 0;
+}
 
 /* ─── 可折叠区域：标题栏 ─── */
 .section-header {
@@ -331,13 +344,18 @@ body {
     overflow-y: auto;
     flex: 1;
     min-height: 0;
-    /* Hide scrollbar while maintaining scroll functionality */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    /* 统一滚动条样式，与 class-grid 保持一致 */
+    scrollbar-width: thin;
+    scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+    padding: 6px;
 }
-/* Hide scrollbar for Chrome, Safari and Opera */
+/* 为 Chrome, Safari 和 Opera 设置统一的滚动条样式 */
 .label-list::-webkit-scrollbar {
-    display: none;
+    width: 4px;
+}
+.label-list::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background);
+    border-radius: 2px;
 }
 .label-item {
     display: flex;
@@ -346,9 +364,13 @@ body {
     background-color: var(--vscode-editor-background);
     border: 1px solid var(--vscode-panel-border);
     border-radius: 2px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     gap: 8px;
     transition: all 0.3s ease;
+}
+/* 移除最后一个 item 的下边距 */
+.label-item:last-child {
+    margin-bottom: 0;
 }
 .label-item select {
     flex: 1;
@@ -1075,7 +1097,7 @@ svg {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px;
+    padding: 6px 8px;
 }
 
 .model-info {
@@ -1107,7 +1129,7 @@ svg {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 6px;
+    padding: 6px 8px;
     border-top: 1px solid var(--vscode-panel-border);
 }
 
@@ -1188,7 +1210,7 @@ svg {
 .model-preview-actions {
     display: flex;
     gap: 6px;
-    padding: 6px;
+    padding: 6px 8px;
     margin-bottom: 6px;
     border-top: 1px solid var(--vscode-panel-border);
 }

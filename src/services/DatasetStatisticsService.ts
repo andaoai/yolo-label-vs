@@ -49,6 +49,13 @@ export interface DatasetStatistics {
     // Class distribution (sorted)
     classDistribution: { className: string; count: number; percentage: number }[];
 
+    // Class distribution by subset (train/val/test)
+    classCountsBySubset: {
+        train: number[];
+        val: number[];
+        test: number[];
+    };
+
     // Labels per image distribution (histogram)
     labelsPerImage: { range: string; count: number }[];
 
@@ -107,6 +114,9 @@ export class DatasetStatisticsService {
         let labeledImages = 0;
         let totalLabels = 0;
         const classCounts: number[] = new Array(config.names.length).fill(0);
+        const trainClassCounts: number[] = new Array(config.names.length).fill(0);
+        const valClassCounts: number[] = new Array(config.names.length).fill(0);
+        const testClassCounts: number[] = new Array(config.names.length).fill(0);
         const labelCountHistogram: number[] = [];
         let totalKeypoints = 0;
         let labelsWithKeypoints = 0;
@@ -127,62 +137,67 @@ export class DatasetStatisticsService {
 
         // Image resolution tracking removed - keep it fast
 
-        // Process each image
-        for (const imagePath of allFiles) {
-            const labels = readLabels(imagePath, config.kpt_shape);
+        // Helper function to process image files for a specific subset
+        const processSubsetFiles = (files: string[], subsetClassCounts: number[]) => {
+            for (const imagePath of files) {
+                const labels = readLabels(imagePath, config.kpt_shape);
 
-            // Note: YOLO labels are already normalized 0-1, so box stats are relative
-            // We skip reading actual image dimensions to keep it fast
+                if (labels.length > 0) {
+                    labeledImages++;
+                    totalLabels += labels.length;
 
-            if (labels.length > 0) {
-                labeledImages++;
-                totalLabels += labels.length;
+                    // Count labels per image for histogram
+                    labelCountHistogram.push(labels.length);
 
-                // Count labels per image for histogram
-                labelCountHistogram.push(labels.length);
+                    // Count class distribution and collect box statistics
+                    for (const label of labels) {
+                        classCounts[label.class] = (classCounts[label.class] || 0) + 1;
+                        subsetClassCounts[label.class] = (subsetClassCounts[label.class] || 0) + 1;
 
-                // Count class distribution and collect box statistics
-                for (const label of labels) {
-                    classCounts[label.class] = (classCounts[label.class] || 0) + 1;
-
-                    // Detect segmentation format
-                    if ((label as any).isSegmentation) {
-                        hasSegmentation = true;
-                    }
-
-                    // YOLO format: class x_center y_center width height (normalized)
-                    const x = label.x; // already normalized by readLabels
-                    const y = label.y;
-                    const w = label.width;
-                    const h = label.height;
-
-                    // Add to chart data (already normalized 0-1)
-                    boxSizes.push({ w, h });
-                    boxAreas.push(w * h);
-                    boxCenterX.push(x);
-                    boxCenterY.push(y);
-                    aspectRatios.push(w / (h || 0.001));
-
-                    // Aggregate for averages
-                    totalBoxWidth += w;
-                    totalBoxHeight += h;
-                    totalBoxArea += w * h;
-                    totalBoxAspectRatio += w / (h || 0.001);
-
-                    // Count keypoints (flat array format: [x1,y1,v1,x2,y2,v2,...])
-                    if (label.keypoints && label.keypoints.length > 0) {
-                        let visibleCount = 0;
-                        for (let i = 2; i < label.keypoints.length; i += 3) {
-                            if (label.keypoints[i] > 0) {
-                                visibleCount++;
-                            }
+                        // Detect segmentation format
+                        if ((label as any).isSegmentation) {
+                            hasSegmentation = true;
                         }
-                        totalKeypoints += visibleCount;
-                        labelsWithKeypoints++;
+
+                        // YOLO format: class x_center y_center width height (normalized)
+                        const x = label.x; // already normalized by readLabels
+                        const y = label.y;
+                        const w = label.width;
+                        const h = label.height;
+
+                        // Add to chart data (already normalized 0-1)
+                        boxSizes.push({ w, h });
+                        boxAreas.push(w * h);
+                        boxCenterX.push(x);
+                        boxCenterY.push(y);
+                        aspectRatios.push(w / (h || 0.001));
+
+                        // Aggregate for averages
+                        totalBoxWidth += w;
+                        totalBoxHeight += h;
+                        totalBoxArea += w * h;
+                        totalBoxAspectRatio += w / (h || 0.001);
+
+                        // Count keypoints (flat array format: [x1,y1,v1,x2,y2,v2,...])
+                        if (label.keypoints && label.keypoints.length > 0) {
+                            let visibleCount = 0;
+                            for (let i = 2; i < label.keypoints.length; i += 3) {
+                                if (label.keypoints[i] > 0) {
+                                    visibleCount++;
+                                }
+                            }
+                            totalKeypoints += visibleCount;
+                            labelsWithKeypoints++;
+                        }
                     }
                 }
             }
-        }
+        };
+
+        // Process each subset separately for per-subset class distribution
+        processSubsetFiles(trainFiles, trainClassCounts);
+        processSubsetFiles(valFiles, valClassCounts);
+        processSubsetFiles(testFiles, testClassCounts);
 
         // Build class distribution (sorted by count)
         const classDistribution = config.names.map((className, index) => ({
@@ -211,7 +226,7 @@ export class DatasetStatisticsService {
 
         return {
             yamlPath,
-            datasetName: path.basename(yamlDir),
+            datasetName: path.basename(yamlPath, '.yaml'),
             datasetRoot,
             config,
 
@@ -226,6 +241,11 @@ export class DatasetStatisticsService {
             averageLabelsPerImage: labeledImages > 0 ? totalLabels / labeledImages : 0,
 
             classDistribution,
+            classCountsBySubset: {
+                train: trainClassCounts,
+                val: valClassCounts,
+                test: testClassCounts
+            },
             labelsPerImage,
 
             // Box statistics summary

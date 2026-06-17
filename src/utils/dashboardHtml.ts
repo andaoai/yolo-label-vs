@@ -590,6 +590,16 @@ export function generateDashboardHtml(
         </div>
     </div>
 
+    <!-- Charts Grid - Row 5: Class Distribution by Subset (Full Width) -->
+    <div class="charts-grid">
+        <div class="chart-card wide" style="grid-column: 1 / -1;">
+            <h3>Class Distribution by Subset (Train vs Val vs Test)</h3>
+            <div class="chart-container">
+                <canvas id="classDistributionBySubsetChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <div class="footer">
         <p>Processed in ${stats.processingTime}ms • ${new Date().toLocaleString()}</p>
     </div>
@@ -601,6 +611,7 @@ export function generateDashboardHtml(
         const valImages = ${stats.valImages};
         const testImages = ${stats.testImages};
         const folderDistribution = ${JSON.stringify(stats.folderDistribution)};
+        const classCountsBySubset = ${JSON.stringify(stats.classCountsBySubset)};
 
         // Chart configuration defaults
         const chartDefaults = {
@@ -857,6 +868,111 @@ export function generateDashboardHtml(
                     }
                 }
             });
+        })();
+
+        // ========== Chart 4.5: Class Distribution by Subset (Grouped Bar) ==========
+        (function() {
+            const ctx = document.getElementById('classDistributionBySubsetChart').getContext('2d');
+
+            // Sort classes by total count (same as Class Distribution chart)
+            const classData = chartData.classNames
+                .map((name, i) => ({
+                    name,
+                    total: chartData.classCounts[i] || 0,
+                    train: classCountsBySubset.train[i] || 0,
+                    val: classCountsBySubset.val[i] || 0,
+                    test: classCountsBySubset.test[i] || 0
+                }))
+                .filter(c => c.total > 0)
+                .sort((a, b) => b.total - a.total);
+
+            // Calculate subset totals for percentage
+            const trainTotal = classCountsBySubset.train.reduce((a, b) => a + b, 0);
+            const valTotal = classCountsBySubset.val.reduce((a, b) => a + b, 0);
+            const testTotal = classCountsBySubset.test.reduce((a, b) => a + b, 0);
+
+            // Build datasets - use percentage for comparison
+            const datasets = [];
+
+            if (trainTotal > 0) {
+                datasets.push({
+                    label: 'Train',
+                    data: classData.map(c => trainTotal > 0 ? (c.train / trainTotal * 100) : 0),
+                    backgroundColor: colors[0],
+                    borderRadius: 3
+                });
+            }
+
+            if (valTotal > 0) {
+                datasets.push({
+                    label: 'Val',
+                    data: classData.map(c => valTotal > 0 ? (c.val / valTotal * 100) : 0),
+                    backgroundColor: colors[2],
+                    borderRadius: 3
+                });
+            }
+
+            if (testTotal > 0) {
+                datasets.push({
+                    label: 'Test',
+                    data: classData.map(c => testTotal > 0 ? (c.test / testTotal * 100) : 0),
+                    backgroundColor: colors[5],
+                    borderRadius: 3
+                });
+            }
+
+            // Only show chart if there are at least 2 subsets to compare
+            if (datasets.length >= 2) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: classData.map(c => c.name),
+                        datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: { color: '${textColor}' }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const classIdx = context.dataIndex;
+                                        const subsetName = context.dataset.label;
+                                        const subsetKey = subsetName.toLowerCase();
+                                        const count = classData[classIdx][subsetKey];
+                                        const total = subsetName === 'Train' ? trainTotal :
+                                                     subsetName === 'Val' ? valTotal : testTotal;
+                                        const percentage = total > 0 ? (count / total * 100).toFixed(1) : 0;
+                                        return subsetName + ': ' + count + ' labels (' + percentage + '%)';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: '${gridColor}' },
+                                ticks: { color: '${textColor}', autoSkip: false, maxRotation: 90, minRotation: 45 },
+                                title: { display: true, text: 'Class', color: '${textColor}' }
+                            },
+                            y: {
+                                grid: { color: '${gridColor}' },
+                                ticks: { color: '${textColor}' },
+                                title: { display: true, text: 'Percentage within subset (%)', color: '${textColor}' },
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Hide chart if only one subset exists
+                const container = document.getElementById('classDistributionBySubsetChart').parentElement.parentElement;
+                container.style.display = 'none';
+            }
         })();
 
         // ========== Chart 5: Box Size Scatter Plot (Square) ==========

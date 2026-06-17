@@ -13,7 +13,7 @@ export class ModelPanel {
   private bodyEl: HTMLElement | null = null;
   private toggleEl: HTMLElement | null = null;
   private badgeEl: HTMLElement | null = null;
-  private collapsed = false;
+  private collapsed = true; // 默认关闭
 
   private modelInfoEl: HTMLElement | null = null;
   private loadBtn: HTMLButtonElement | null = null;
