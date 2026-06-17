@@ -211,7 +211,7 @@ export class DatasetStatisticsService {
 
         return {
             yamlPath,
-            datasetName: path.basename(yamlDir),
+            datasetName: path.basename(yamlPath, '.yaml'),
             datasetRoot,
             config,
 
