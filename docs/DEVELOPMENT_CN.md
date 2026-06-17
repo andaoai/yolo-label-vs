@@ -325,8 +325,10 @@ feat: 添加COCO8-seg数据格式支持
 
 **跳过条件**（满足任一条件则不执行版本递增）：
 - commit message 包含 `[skip ci]`
-- commit message 以 `docs:` 开头（纯文档更新）
+- **所有变更文件都是 `.md` 文档文件**（基于文件内容检测，不是 commit message）
 - 修改的文件只有 `package.json`
+
+> 💡 **检测机制说明**：通过 `git diff --name-only HEAD^ HEAD` 分析变更文件，如果所有文件后缀都是 `.md`，则判定为纯文档更新。这确保了从 `docs` 分支合并过来的变更（即使 merge commit message 不是以 `docs:` 开头）也能被正确识别。
 
 ### 自动发布流程（main 分支）
 
@@ -340,7 +342,9 @@ feat: 添加COCO8-seg数据格式支持
 
 **跳过条件**（满足任一条件则不执行发布）：
 - commit message 包含 `[skip ci]`
-- commit message 以 `docs:` 开头（纯文档更新）
+- **所有变更文件都是 `.md` 文档文件**（基于文件内容检测，不是 commit message）
+
+> 💡 **检测机制说明**：通过 `git diff --name-only HEAD^ HEAD` 分析变更文件，如果所有文件后缀都是 `.md`，则判定为纯文档更新。这确保了从 `docs` 分支合并过来的变更（即使 merge commit message 不是以 `docs:` 开头）也能被正确识别。
 
 ### 纯文档更新的特殊处理
 

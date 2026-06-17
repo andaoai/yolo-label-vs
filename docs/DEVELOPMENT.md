@@ -325,8 +325,10 @@ When code is pushed to the `dev` branch, the following happens automatically:
 
 **Skip conditions** (version increment is skipped if any condition is met):
 - Commit message contains `[skip ci]`
-- Commit message starts with `docs:` (documentation-only changes)
+- **All changed files are `.md` documentation files (based on file content detection, not commit message)
 - Only `package.json` was modified
+
+> 💡 **Detection mechanism**: Analyzes changed files via `git diff --name-only HEAD^ HEAD`. If all files have `.md` extension, it's considered documentation-only. This ensures changes merged from the `docs` branch are correctly identified even if the merge commit message doesn't start with `docs:`.
 
 ### Auto Publish Process (main branch)
 
@@ -340,7 +342,9 @@ When code is pushed to the `main` branch, the following happens automatically:
 
 **Skip conditions** (publish is skipped if any condition is met):
 - Commit message contains `[skip ci]`
-- Commit message starts with `docs:` (documentation-only changes)
+- **All changed files are `.md` documentation files (based on file content detection, not commit message)
+
+> 💡 **Detection mechanism**: Analyzes changed files via `git diff --name-only HEAD^ HEAD`. If all files have `.md` extension, it's considered documentation-only. This ensures changes merged from the `docs` branch are correctly identified even if the merge commit message doesn't start with `docs:`.
 
 ### Special Handling for Documentation-Only Changes
 
