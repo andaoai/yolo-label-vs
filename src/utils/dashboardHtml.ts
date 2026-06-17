@@ -600,7 +600,7 @@ export function generateDashboardHtml(
         const trainImages = ${stats.trainImages};
         const valImages = ${stats.valImages};
         const testImages = ${stats.testImages};
-        const folderDistribution = ${JSON.stringify(stats.folderDistribution.slice(0, 10))};
+        const folderDistribution = ${JSON.stringify(stats.folderDistribution)};
 
         // Chart configuration defaults
         const chartDefaults = {
@@ -701,7 +701,8 @@ export function generateDashboardHtml(
         // ========== Chart 2: Folder Distribution (Pie) ==========
         (function() {
             const ctx = document.getElementById('folderDistributionChart').getContext('2d');
-            const folders = folderDistribution.map(f => f.folder.split('/').pop() || f.folder);
+            const folderFullPaths = folderDistribution.map(f => f.folder);
+            const folders = folderFullPaths.map(f => f.split('/').pop() || f);
             const data = folderDistribution.map(f => f.count);
             const folderColors = colors.slice(0, folders.length);
 
@@ -728,7 +729,7 @@ export function generateDashboardHtml(
                                 label: function(context) {
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const percentage = ((context.raw / total) * 100).toFixed(1);
-                                    return context.label + ': ' + context.raw + ' (' + percentage + '%)';
+                                    return folderFullPaths[context.dataIndex] + ': ' + context.raw + ' (' + percentage + '%)';
                                 }
                             }
                         }
@@ -736,16 +737,12 @@ export function generateDashboardHtml(
                 }
             });
 
-            // Add legend with percentage (top 5)
-            const total = data.reduce((a, b) => a + b, 0);
+            // Show folder count
             const legend = document.getElementById('folderLegend');
-            folders.slice(0, 5).forEach((name, i) => {
-                const pct = ((data[i] / total) * 100).toFixed(1);
-                const item = document.createElement('div');
-                item.className = 'legend-item';
-                item.innerHTML = \`<div class="legend-color" style="background-color: \${folderColors[i]}"></div><span>\${name}: \${data[i]} (\${pct}%)</span>\`;
-                legend.appendChild(item);
-            });
+            const item = document.createElement('div');
+            item.className = 'legend-item';
+            item.innerHTML = \`<span>\${folders.length} folders</span>\`;
+            legend.appendChild(item);
         })();
 
         // ========== Chart 3: Labels Per Image (Full Data) ==========

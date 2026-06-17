@@ -1,9 +1,14 @@
 .vscode/**
 .vscode-test/**
+.vscode-test.mjs
 src/**
 out/**
 node_modules/**
 test_label/**
+test/**
+scripts/**
+.claude/**
+.devcontainer/**
 .gitignore
 .yarnrc
 webpack.config.js

@@ -1,7 +1,7 @@
 # <img src="./images/icon.png" width="32" height="32" alt="YOLO标注工具图标"> YOLO 标注工具
 
 [![发布到VS Code插件市场](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml/badge.svg)](https://github.com/andaoai/yolo-label-vs/actions/workflows/main-publish.yml)
-[![VS插件市场版本](https://img.shields.io/badge/VS_Marketplace-v0.0.86-blue?link=https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
+[![VS插件市场版本](https://img.shields.io/badge/VS_Marketplace-v0.0.88-blue?link=https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
 [![VS插件市场安装量](https://img.shields.io/badge/安装量-4.5K-brightgreen?link=https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
 [![VS插件市场评分](https://img.shields.io/badge/评分-5.0%2F5-yellow?link=https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)](https://marketplace.visualstudio.com/items?itemName=andaoai.yolo-labeling-vs)
 [![许可证: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
