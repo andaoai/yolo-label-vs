@@ -11,13 +11,40 @@ permissions:
   contents: write
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      has_non_docs_changes: ${{ steps.check.outputs.has_non_docs_changes }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Check for non-documentation changes
+        id: check
+        run: |
+          # 获取变更文件列表
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # 检查是否有非 .md 文件变更
+          if echo "$CHANGED_FILES" | grep -qv "\.md$"; then
+            echo "has_non_docs_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Found code/configuration changes, will proceed with version increment"
+          else
+            echo "has_non_docs_changes=false" >> $GITHUB_OUTPUT
+            echo "📝 Only documentation (.md) files changed, will skip version increment"
+          fi
+
   update-version:
+    needs: check-changes
     runs-on: ubuntu-latest
     # 版本更新条件:
     # 1. 在 dev 分支
     # 2. commit message 不含 [skip ci]
-    # 3. commit message 不以 'docs:' 开头 (纯文档更新跳过版本递增)
-    if: github.ref == 'refs/heads/dev' && !contains(github.event.head_commit.message, '[skip ci]') && !startsWith(github.event.head_commit.message, 'docs:')
+    # 3. 存在非文档变更（即不是纯文档更新）
+    if: github.ref == 'refs/heads/dev' && !contains(github.event.head_commit.message, '[skip ci]') && needs.check-changes.outputs.has_non_docs_changes == 'true'
     steps:
       - uses: actions/checkout@v5
         with:
@@ -27,11 +54,11 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: '24.x'
-      
+
       - name: Get current version
         id: current_version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-        
+
       - name: Bump patch version (third number)
         id: new_version
         run: |
@@ -42,7 +69,7 @@ jobs:
           NEWPATCH=$((PATCH + 1))
           NEWVERSION="$MAJOR.$MINOR.$NEWPATCH"
           echo "version=$NEWVERSION" >> $GITHUB_OUTPUT
-          
+
       - name: Update package.json version
         run: |
           npm version ${{ steps.new_version.outputs.version }} --no-git-tag-version
@@ -64,15 +91,15 @@ jobs:
           git commit -m "Bump patch version to ${{ steps.new_version.outputs.version }} for dev release [skip ci]"
           git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}
           git push
-      
+
       - name: Delete package-lock.json and install dependencies
         run: |
           rm -f package-lock.json
           npm install --no-package-lock --ignore-scripts
-        
+
       - name: Build extension with webpack (development)
         run: npm run build:dev
-        
+
       - name: Package extension
         run: |
           npm install -g @vscode/vsce
