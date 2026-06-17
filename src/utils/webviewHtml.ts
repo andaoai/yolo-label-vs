@@ -75,7 +75,7 @@ export async function generateWebviewHtml(
         kptShape?: number[];
     }
 ): Promise<string> {
-    const { classNames, initialImageData, initialLabels, webview, currentPath, kptShape } = options;
+    const { classNames, initialImageData, initialLabels, imageInfoText, webview, currentPath, kptShape } = options;
 
     // 获取资源文件的路径
     const cssPath = vscode.Uri.joinPath(extensionUri, 'dist', 'templates', 'index.css');
@@ -107,6 +107,7 @@ export async function generateWebviewHtml(
             window.initialLabels = ${JSON.stringify(initialLabels)};
             window.classNames = ${JSON.stringify(classNames)};
             window.currentPath = ${JSON.stringify(currentPath || '')};
+            window.imageInfoText = ${JSON.stringify(imageInfoText)};
             window.kptShape = ${JSON.stringify(kptShape || null)};
             window.__workerUrl = ${JSON.stringify(workerJsSrc.toString())};
             window.__ortWasmPaths = ${JSON.stringify({

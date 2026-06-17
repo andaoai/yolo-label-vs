@@ -544,6 +544,47 @@ select:focus {
     max-width: calc(100% - 400px);
 }
 
+/* 子集标签样式 - 用于搜索结果中显示 */
+.subset-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+.subset-tag.train,
+.subset-info.train {
+    background-color: rgba(75, 210, 143, 0.3);
+    color: #4bd28f;
+}
+
+.subset-tag.val,
+.subset-info.val {
+    background-color: rgba(0, 120, 212, 0.3);
+    color: #0078d4;
+}
+
+.subset-tag.test,
+.subset-info.test {
+    background-color: rgba(210, 173, 75, 0.3);
+    color: #d2ad4b;
+}
+
+/* 状态栏子集信息样式 */
+.subset-info {
+    padding: 1px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-right: 4px;
+    min-width: 40px;
+    text-align: center;
+}
+
 .search-box {
     position: relative;
     width: 100%;
@@ -598,11 +639,15 @@ select:focus {
 
 .search-result-item .filename {
     color: var(--vscode-dropdown-foreground);
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .search-result-item .filepath {
     color: var(--vscode-descriptionForeground);
     font-size: 12px;
+    margin-top: 2px;
 }
 
 .search-result-item:hover {
@@ -903,14 +948,14 @@ svg {
     .toolbar {
         flex-wrap: wrap;
     }
-    
+
     .search-container {
         order: 3;
         width: 100%;
         max-width: 100%;
         margin: 8px 0 0 0;
     }
-    
+
     .right-controls {
         min-width: auto;
     }

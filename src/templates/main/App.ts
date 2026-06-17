@@ -162,8 +162,8 @@ export class App {
       this.toolManager.setActive('pose');
     }
     if (w.initialImageData) {
-      // 有初始图片数据
-      const imageInfo = `图片 1/1`;
+      // 有初始图片数据（使用扩展端正确计算的 imageInfo）
+      const imageInfo = w.imageInfoText || `图片 1/1`;
       this.handleImageData(w.initialImageData, w.initialLabels || [], w.currentPath || '', imageInfo);
     }
   }
@@ -196,10 +196,17 @@ export class App {
     }
   }
 
+  /** 从路径中获取子集类型（仅用于显示） */
+  private getSubsetFromPath(path: string): 'train' | 'val' | 'test' | '' {
+    const lowerPath = path.toLowerCase();
+    if (lowerPath.includes('/train') || lowerPath.includes('\\train')) return 'train';
+    if (lowerPath.includes('/val') || lowerPath.includes('\\val')) return 'val';
+    if (lowerPath.includes('/test') || lowerPath.includes('\\test')) return 'test';
+    return '';
+  }
+
   private handleImageList(paths: string[]): void {
     this.store.set('allPaths', paths);
-    // 不再一次性请求所有缩略图，改为按需懒加载
-
     // 如果没有当前图片，加载第一张
     if (!this.store.get('currentPath') && paths.length > 0) {
       this.extension.loadImage(paths[0]);

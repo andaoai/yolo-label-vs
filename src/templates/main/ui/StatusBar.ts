@@ -13,6 +13,37 @@ export class StatusBar {
     this.store.on('imageHeight', () => this.updateDimensions());
     this.store.on('labels', () => this.updateLabelsCount());
     this.store.on('imageInfo', () => this.updateImageInfo());
+    this.store.on('currentPath', () => this.updateSubsetInfo());
+  }
+
+  /** 从路径中获取子集类型 */
+  private getSubsetFromPath(path: string): 'train' | 'val' | 'test' | '' {
+    const lowerPath = path.toLowerCase();
+    if (lowerPath.includes('/train') || lowerPath.includes('\\train')) return 'train';
+    if (lowerPath.includes('/val') || lowerPath.includes('\\val')) return 'val';
+    if (lowerPath.includes('/test') || lowerPath.includes('\\test')) return 'test';
+    return '';
+  }
+
+  /** 更新子集信息显示 */
+  private updateSubsetInfo(): void {
+    const el = document.getElementById('subsetInfo');
+    if (!el) return;
+
+    const currentPath = this.store.get('currentPath');
+    const subset = this.getSubsetFromPath(currentPath);
+
+    // 移除所有旧的子集类
+    el.classList.remove('train', 'val', 'test');
+
+    if (subset) {
+      el.textContent = subset;
+      el.classList.add(subset);
+      el.style.display = '';
+    } else {
+      el.textContent = '';
+      el.style.display = 'none';
+    }
   }
 
   private updateCoordinates(): void {
