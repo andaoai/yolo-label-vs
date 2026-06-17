@@ -8,9 +8,10 @@
 5. [提交代码](#提交代码)
 6. [Pull Request 流程](#pull-request-流程)
 7. [版本管理](#版本管理)
-8. [问题报告](#问题报告)
-9. [文档维护](#文档维护)
-10. [常见问题](#常见问题)
+8. [CI/CD 流程](#cicd-流程)
+9. [问题报告](#问题报告)
+10. [文档维护](#文档维护)
+11. [常见问题](#常见问题)
 
 ## 环境搭建
 
@@ -301,6 +302,75 @@ feat: 添加COCO8-seg数据格式支持
    git push origin v0.0.x
    ```
 
+## CI/CD 流程
+
+项目使用 GitHub Actions 实现自动化版本管理和发布流程。
+
+### Workflow 配置文件
+
+项目包含两个核心 Workflow：
+
+| 配置文件 | 触发分支 | 功能 |
+|---------|---------|------|
+| `version-updater.yml` | `dev` | 自动递增 patch 版本号 |
+| `main-publish.yml` | `main` | 构建并发布到 VS Code Marketplace |
+
+### 版本自动递增（dev 分支）
+
+当代码推送到 `dev` 分支时，会自动执行以下操作：
+
+1. **版本递增**：自动将 patch 版本号 +1（例如 `0.0.89` → `0.0.90`）
+2. **更新文档**：自动更新 README 中的版本徽章
+3. **提交变更**：自动提交版本变更并推送到远程
+
+**跳过条件**（满足任一条件则不执行版本递增）：
+- commit message 包含 `[skip ci]`
+- commit message 以 `docs:` 开头（纯文档更新）
+- 修改的文件只有 `package.json`
+
+### 自动发布流程（main 分支）
+
+当代码推送到 `main` 分支时，会自动执行以下操作：
+
+1. **依赖安装**：安装 npm 依赖
+2. **生产构建**：执行 webpack 生产构建
+3. **打包扩展**：使用 vsce 打包为 `.vsix` 文件
+4. **创建 GitHub Release**：上传 VSIX 并创建版本标签
+5. **发布到 Marketplace**：发布到 VS Code 插件市场
+
+**跳过条件**（满足任一条件则不执行发布）：
+- commit message 包含 `[skip ci]`
+- commit message 以 `docs:` 开头（纯文档更新）
+
+### 纯文档更新的特殊处理
+
+为避免频繁的版本发布，**纯文档更新（docs 分支）**有特殊的 CI/CD 行为：
+
+| 合并目标 | 行为 |
+|---------|------|
+| `dev` | ❌ 跳过版本递增 |
+| `main` | ❌ 跳过发布流程 |
+
+**实现方式**：确保 docs 分支的 commit message 以 `docs:` 开头。
+
+### 正常发布流程示例
+
+```
+feature/xxx 开发完成
+    ↓ 合并到 dev
+dev: 自动递增版本号 → 0.0.90
+    ↓ 合并到 main
+main: 构建 + 发布 0.0.90 到 Marketplace
+```
+
+### 手动跳过 CI/CD
+
+如果需要在任何分支跳过 CI/CD 流程，只需在 commit message 中添加 `[skip ci]`：
+
+```bash
+git commit -m "docs: 更新开发指南 [skip ci]"
+```
+
 ## 问题报告
 
 ### 提交问题
@@ -358,8 +428,25 @@ git pull origin dev
 git stash pop  # 可能需要解决冲突
 ```
 
-### Q: CI/CD流程是什么?
-A: 项目使用GitHub Actions进行CI/CD。每次提交到`main`分支后会自动发布到VS Code插件市场。详情请参阅`.github/workflows/`目录下的配置文件。
+### Q: 如何让纯文档更新不触发版本发布?
+A: 只要文档更新的 commit message 以 `docs:` 开头，CI/CD 会自动跳过版本递增和发布流程。
+
+### Q: 为什么我的提交没有触发版本递增?
+A: 可能是以下原因之一：
+1. commit message 包含 `[skip ci]`
+2. commit message 以 `docs:` 开头（纯文档更新）
+3. 只有 `package.json` 文件被修改了
+
+### Q: 可以手动触发版本发布吗?
+A: 可以。在 GitHub Actions 页面选择对应的 Workflow，然后点击 "Run workflow" 按钮手动触发。
+
+### Q: 版本号是如何自动管理的?
+A: 版本号遵循语义化版本规范（Semantic Versioning）：
+- `dev` 分支：每次代码提交（非文档更新）自动递增 **patch** 版本
+- `main` 分支：直接发布当前版本号到 Marketplace
+
+### Q: 如何提交破坏性变更或新功能?
+A: 对于破坏性变更或新功能，需要手动更新 major 或 minor 版本号，然后提交到 dev 分支。
 
 ---
 

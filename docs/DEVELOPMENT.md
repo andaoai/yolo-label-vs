@@ -8,9 +8,10 @@
 5. [Code Submission](#code-submission)
 6. [Pull Request Process](#pull-request-process)
 7. [Version Management](#version-management)
-8. [Issue Reporting](#issue-reporting)
-9. [Documentation Maintenance](#documentation-maintenance)
-10. [FAQ](#faq)
+8. [CI/CD Process](#cicd-process)
+9. [Issue Reporting](#issue-reporting)
+10. [Documentation Maintenance](#documentation-maintenance)
+11. [FAQ](#faq)
 
 ## Setup Environment
 
@@ -301,6 +302,75 @@ Version update process:
    git push origin v0.0.x
    ```
 
+## CI/CD Process
+
+The project uses GitHub Actions for automated version management and publishing.
+
+### Workflow Configuration Files
+
+Project includes two core workflows:
+
+| Configuration File | Trigger Branch | Function |
+|-------------------|---------------|----------|
+| `version-updater.yml` | `dev` | Auto-increment patch version |
+| `main-publish.yml` | `main` | Build and publish to VS Code Marketplace |
+
+### Auto Version Increment (dev branch)
+
+When code is pushed to the `dev` branch, the following happens automatically:
+
+1. **Version increment**: Automatically increments the patch version (e.g., `0.0.89` → `0.0.90`)
+2. **Update documentation**: Automatically updates version badges in README
+3. **Commit changes**: Automatically commits version changes and pushes to remote
+
+**Skip conditions** (version increment is skipped if any condition is met):
+- Commit message contains `[skip ci]`
+- Commit message starts with `docs:` (documentation-only changes)
+- Only `package.json` was modified
+
+### Auto Publish Process (main branch)
+
+When code is pushed to the `main` branch, the following happens automatically:
+
+1. **Install dependencies**: Install npm dependencies
+2. **Production build**: Execute webpack production build
+3. **Package extension**: Package to `.vsix` file using vsce
+4. **Create GitHub Release**: Upload VSIX and create version tag
+5. **Publish to Marketplace**: Publish to VS Code Marketplace
+
+**Skip conditions** (publish is skipped if any condition is met):
+- Commit message contains `[skip ci]`
+- Commit message starts with `docs:` (documentation-only changes)
+
+### Special Handling for Documentation-Only Changes
+
+To avoid frequent version releases, **documentation-only updates (docs branch)** have special CI/CD behavior:
+
+| Merge Target | Behavior |
+|--------------|----------|
+| `dev` | ❌ Skip version increment |
+| `main` | ❌ Skip publish process |
+
+**Implementation**: Ensure docs branch commits have messages starting with `docs:`.
+
+### Normal Publish Flow Example
+
+```
+feature/xxx development complete
+    ↓ Merge to dev
+dev: Auto increment version → 0.0.90
+    ↓ Merge to main
+main: Build + Publish 0.0.90 to Marketplace
+```
+
+### Manually Skip CI/CD
+
+To skip CI/CD on any branch, simply add `[skip ci]` to your commit message:
+
+```bash
+git commit -m "docs: update development guide [skip ci]"
+```
+
 ## Issue Reporting
 
 ### Submitting Issues
@@ -358,8 +428,25 @@ git pull origin dev
 git stash pop  # May need to resolve conflicts
 ```
 
-### Q: What is the CI/CD process?
-A: The project uses GitHub Actions for CI/CD. Each commit to the `main` branch automatically publishes to the VS Code Marketplace. See configuration files in the `.github/workflows/` directory for details.
+### Q: How to prevent documentation-only updates from triggering version publishing?
+A: Simply use a commit message starting with `docs:` for documentation changes. CI/CD will automatically skip version increment and publish processes.
+
+### Q: Why didn't my commit trigger a version increment?
+A: It could be one of the following reasons:
+1. Commit message contains `[skip ci]`
+2. Commit message starts with `docs:` (documentation-only change)
+3. Only the `package.json` file was modified
+
+### Q: Can I manually trigger version publishing?
+A: Yes. On the GitHub Actions page, select the corresponding workflow and click the "Run workflow" button to trigger it manually.
+
+### Q: How is the version number managed automatically?
+A: Version numbers follow Semantic Versioning:
+- `dev` branch: Each code submission (non-documentation) automatically increments the **patch** version
+- `main` branch: Publishes the current version number directly to the Marketplace
+
+### Q: How to submit breaking changes or new features?
+A: For breaking changes or new features, manually update the major or minor version number, then commit to the dev branch.
 
 ---
 
