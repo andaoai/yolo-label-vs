@@ -89,6 +89,15 @@ export class Toolbar {
     });
   }
 
+  /** 从路径中获取子集类型（仅用于显示标签） */
+  private getSubsetFromPath(path: string): 'train' | 'val' | 'test' | '' {
+    const lowerPath = path.toLowerCase();
+    if (lowerPath.includes('/train') || lowerPath.includes('\\train')) return 'train';
+    if (lowerPath.includes('/val') || lowerPath.includes('\\val')) return 'val';
+    if (lowerPath.includes('/test') || lowerPath.includes('\\test')) return 'test';
+    return '';
+  }
+
   private handleSearch(query: string): void {
     if (!query.trim() || !this.searchResults) {
       this.hideSearchResults();
@@ -114,9 +123,12 @@ export class Toolbar {
 
     matches.forEach((path, index) => {
       const filename = basename(path);
+      const subset = this.getSubsetFromPath(path);
+      const subsetTag = subset ? `<span class="subset-tag ${subset}">${subset}</span>` : '';
+
       const item = document.createElement('div');
       item.className = 'search-result-item';
-      item.innerHTML = `<span class="filename">${this.escapeHtml(filename)}</span><span class="filepath">${this.escapeHtml(path)}</span>`;
+      item.innerHTML = `<span class="filename">${this.escapeHtml(filename)}${subsetTag}</span><span class="filepath">${this.escapeHtml(path)}</span>`;
       item.addEventListener('click', () => {
         this.callbacks.onLoadImage(path);
         this.hideSearchResults();

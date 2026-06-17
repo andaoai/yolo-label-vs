@@ -2,7 +2,7 @@
   "name": "yolo-labeling-vs",
   "displayName": "YOLO Labeling",
   "description": "A VS Code extension for YOLO dataset labeling",
-  "version": "0.0.85",
+  "version": "0.0.86",
   "publisher": "andaoai",
   "license": "MIT",
   "icon": "docs/images/icon.png",
@@ -78,7 +78,7 @@
     "viewsWelcome": [
       {
         "view": "yolo-datasets.tree",
-        "contents": "Click refresh to scan YOLO datasets in your workspace\n[Refresh](command:yolo-labeling-vs.refreshDatasets)\n\nOr manually open a YAML configuration file\n[Open Config](command:yolo-labeling-vs.openLabelingPanel)"
+        "contents": "Click refresh to scan YOLO datasets in your workspace\n[Refresh](command:yolo-labeling-vs.refreshDatasets)"
       }
     ],
     "commands": [
@@ -94,6 +94,11 @@
         "command": "yolo-labeling-vs.refreshDatasets",
         "title": "Refresh Dataset List",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "yolo-labeling-vs.openDatasetStats",
+        "title": "View Dataset Statistics",
+        "icon": "$(graph)"
       }
     ],
     "menus": {
@@ -102,13 +107,11 @@
           "command": "yolo-labeling-vs.refreshDatasets",
           "when": "view == yolo-datasets.tree",
           "group": "navigation@1"
-        }
-      ],
-      "view/item/context": [
+        },
         {
-          "command": "yolo-labeling-vs.openLabelingPanel",
-          "when": "viewItem == dataset-item",
-          "group": "inline"
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "when": "view == yolo-datasets.tree",
+          "group": "navigation@2"
         }
       ],
       "explorer/context": [
@@ -116,6 +119,11 @@
           "when": "resourceExtname == .yaml || resourceExtname == .yml",
           "command": "yolo-labeling-vs.openLabelingPanel",
           "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "group": "navigation@2"
         }
       ],
       "editor/context": [
@@ -123,6 +131,11 @@
           "when": "resourceExtname == .yaml || resourceExtname == .yml",
           "command": "yolo-labeling-vs.openLabelingPanel",
           "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "group": "navigation@2"
         }
       ],
       "editor/title/context": [
@@ -130,6 +143,11 @@
           "when": "resourceExtname == .yaml || resourceExtname == .yml",
           "command": "yolo-labeling-vs.openLabelingPanel",
           "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "group": "navigation@2"
         }
       ]
     },

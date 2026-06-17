@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { DatasetScanner, DatasetStats } from './DatasetScanner';
-import { scanImageFiles } from '../yolo/ImageFileScanner';
+import { scanImageFiles, scanImageFilesByFolder } from '../yolo/ImageFileScanner';
 import { readLabels } from '../yolo/LabelCodec';
 import { loadConfig } from '../yolo/ConfigLoader';
 
@@ -11,6 +11,7 @@ import { loadConfig } from '../yolo/ConfigLoader';
 type TreeNode =
     | DatasetTreeNode
     | SubsetTreeNode
+    | FolderTreeNode
     | ImageTreeNode
     | InfoTreeNode;
 
@@ -50,6 +51,34 @@ class SubsetTreeNode extends vscode.TreeItem {
         this.tooltip = `${subsetName} - ${imageFiles.length} images\n💡 Click to open first image in this subset`;
         this.iconPath = new vscode.ThemeIcon('file-media');
         this.contextValue = 'subset-item';
+
+        // If there are images, click jumps to first image
+        if (imageFiles.length > 0) {
+            this.command = {
+                title: 'Open labeling panel',
+                command: 'yolo-labeling-vs.openLabelingPanel',
+                arguments: [{ yamlPath: stats.yamlPath, imagePath: imageFiles[0] }]
+            };
+        }
+    }
+}
+
+/**
+ * Folder node (for multi-folder subsets)
+ */
+class FolderTreeNode extends vscode.TreeItem {
+    constructor(
+        public readonly stats: DatasetStats,
+        public readonly subsetName: 'train' | 'val' | 'test',
+        public readonly folderPath: string,
+        public readonly imageFiles: string[],
+        public readonly collapsibleState: vscode.TreeItemCollapsibleState
+    ) {
+        super(folderPath, collapsibleState);
+        this.description = `${imageFiles.length} images`;
+        this.tooltip = `${folderPath} - ${imageFiles.length} images\n💡 Click to open first image in this folder`;
+        this.iconPath = new vscode.ThemeIcon('folder-opened');
+        this.contextValue = 'folder-item';
 
         // If there are images, click jumps to first image
         if (imageFiles.length > 0) {
@@ -119,11 +148,14 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
     private scanner: DatasetScanner = new DatasetScanner();
     private datasets: DatasetStats[] = [];
 
-    // Cache image files for each dataset
+    // Cache image files for each dataset (flat list and by folder)
     private datasetImagesCache: Map<string, {
         train: string[],
         val: string[],
-        test: string[]
+        test: string[],
+        trainByFolder: Record<string, string[]>,
+        valByFolder: Record<string, string[]>,
+        testByFolder: Record<string, string[]>
     }> = new Map();
 
     constructor(private context: vscode.ExtensionContext) {
@@ -176,6 +208,10 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
             return this.getSubsetChildren(element.stats, element.subsetName, element.imageFiles);
         }
 
+        if (element instanceof FolderTreeNode) {
+            return this.getFolderChildren(element.stats, element.imageFiles);
+        }
+
         return [];
     }
 
@@ -192,10 +228,18 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
             const valFiles = scanImageFiles(stats.datasetRoot, { val: config.val });
             const testFiles = scanImageFiles(stats.datasetRoot, { test: config.test });
 
+            // Scan by folder for multi-folder subsets
+            const trainByFolder = scanImageFilesByFolder(stats.datasetRoot, config.train, 'train');
+            const valByFolder = scanImageFilesByFolder(stats.datasetRoot, config.val, 'val');
+            const testByFolder = scanImageFilesByFolder(stats.datasetRoot, config.test, 'test');
+
             this.datasetImagesCache.set(stats.yamlPath, {
                 train: trainFiles,
                 val: valFiles,
-                test: testFiles
+                test: testFiles,
+                trainByFolder,
+                valByFolder,
+                testByFolder
             });
         }
 
@@ -235,13 +279,60 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
             }
         ));
 
+        children.push(new InfoTreeNode(
+            'View Statistics',
+            'Dataset dashboard',
+            'graph',
+            {
+                title: 'Open dataset statistics dashboard',
+                command: 'yolo-labeling-vs.openDatasetStats',
+                arguments: [{ yamlPath: stats.yamlPath }]
+            }
+        ));
+
         return children;
     }
 
     /**
-     * Get subset child nodes (image list)
+     * Get subset child nodes (folder list or image list)
      */
-    private getSubsetChildren(stats: DatasetStats, _subsetName: string, imageFiles: string[]): TreeNode[] {
+    private getSubsetChildren(stats: DatasetStats, subsetName: 'train' | 'val' | 'test', _imageFiles: string[]): TreeNode[] {
+        const images = this.datasetImagesCache.get(stats.yamlPath);
+        if (!images) return [];
+
+        const byFolder = images[`${subsetName}ByFolder` as keyof typeof images] as Record<string, string[]>;
+        const folderCount = Object.keys(byFolder).length;
+
+        // If multiple folders, show folder nodes first
+        if (folderCount > 1) {
+            return Object.entries(byFolder).map(([folderPath, files]) =>
+                new FolderTreeNode(
+                    stats,
+                    subsetName,
+                    folderPath,
+                    files,
+                    vscode.TreeItemCollapsibleState.Collapsed
+                )
+            );
+        }
+
+        // Single folder, show images directly
+        const allFiles = Object.values(byFolder).flat();
+        return allFiles.map(imagePath => {
+            const labels = readLabels(imagePath, stats.config.kpt_shape);
+            return new ImageTreeNode(
+                stats,
+                imagePath,
+                labels.length > 0,
+                labels.length
+            );
+        });
+    }
+
+    /**
+     * Get folder child nodes (image list)
+     */
+    private getFolderChildren(stats: DatasetStats, imageFiles: string[]): TreeNode[] {
         return imageFiles.map(imagePath => {
             const labels = readLabels(imagePath, stats.config.kpt_shape);
             return new ImageTreeNode(

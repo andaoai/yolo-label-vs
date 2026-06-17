@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { LabelingPanel } from './LabelingPanel';
+import { DatasetStatsPanel } from './DatasetStatsPanel';
 import { DatasetTreeViewProvider } from './explorer/DatasetTreeViewProvider';
 
 // This method is called when your extension is activated
@@ -93,6 +94,50 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(disposable);
 	context.subscriptions.push(shortcutDisposable);
+
+	// Register dataset statistics command
+	const statsCommand = vscode.commands.registerCommand('yolo-labeling-vs.openDatasetStats', async (arg?: any) => {
+		let uri: vscode.Uri | undefined;
+
+		if (arg instanceof vscode.Uri) {
+			uri = arg;
+		} else if (arg && typeof arg.yamlPath === 'string') {
+			uri = vscode.Uri.file(arg.yamlPath);
+		}
+
+		if (!uri) {
+			// Prompt user to select a dataset
+			const yamlFiles = await vscode.workspace.findFiles('**/*.{yaml,yml}');
+
+			if (yamlFiles.length === 0) {
+				vscode.window.showErrorMessage('No YAML files found in the workspace.');
+				return;
+			}
+
+			if (yamlFiles.length === 1) {
+				uri = yamlFiles[0];
+			} else {
+				const selected = await vscode.window.showQuickPick(
+					yamlFiles.map(file => ({
+						label: vscode.workspace.asRelativePath(file),
+						description: file.fsPath,
+						file
+					})),
+					{
+						placeHolder: 'Select a dataset to view statistics',
+						ignoreFocusOut: true
+					}
+				);
+
+				if (!selected) { return; }
+				uri = selected.file;
+			}
+		}
+
+		DatasetStatsPanel.createOrShow(context.extensionUri, uri);
+	});
+
+	context.subscriptions.push(statsCommand);
 }
 
 // This method is called when your extension is deactivated

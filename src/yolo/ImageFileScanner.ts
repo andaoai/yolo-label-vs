@@ -4,6 +4,25 @@ import * as path from 'path';
 const SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
 
 /**
+ * 从单个文件夹加载图片文件
+ * @param fullPath 文件夹绝对路径
+ * @returns 找到的图片文件路径数组
+ */
+function loadImagesFromFolder(fullPath: string): string[] {
+    if (!fs.existsSync(fullPath)) {
+        return [];
+    }
+
+    // 读取当前目录下的所有文件
+    return fs.readdirSync(fullPath)
+        .filter(file => {
+            const ext = path.extname(file).toLowerCase();
+            return SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
+        })
+        .map(file => path.join(fullPath, file));
+}
+
+/**
  * 从指定路径加载图片文件
  * @param basePath 数据集根目录绝对路径
  * @param pathConfig 路径配置（字符串或字符串数组）
@@ -26,15 +45,7 @@ function loadImagesFromPath(basePath: string, pathConfig: string | string[] | un
             continue;
         }
 
-        // 读取当前目录下的所有文件
-        const files = fs.readdirSync(fullPath)
-            .filter(file => {
-                const ext = path.extname(file).toLowerCase();
-                return SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
-            })
-            .map(file => path.join(fullPath, file));
-
-        imageFiles.push(...files);
+        imageFiles.push(...loadImagesFromFolder(fullPath));
     }
 
     return imageFiles;
@@ -79,4 +90,41 @@ export function scanImageFiles(datasetRoot: string, config: {
     }
 
     return imageFiles;
+}
+
+/**
+ * 按文件夹分组扫描数据集目录
+ * @param datasetRoot 数据集根目录绝对路径
+ * @param pathConfig 路径配置（字符串或字符串数组）
+ * @param label 路径类型标签（用于日志）
+ * @returns 按文件夹分组的图片文件 { [folderRelativePath: string]: string[] }
+ */
+export function scanImageFilesByFolder(
+    datasetRoot: string,
+    pathConfig: string | string[] | undefined,
+    label: string
+): Record<string, string[]> {
+    if (!pathConfig) return {};
+
+    const paths = Array.isArray(pathConfig) ? pathConfig : [pathConfig];
+    const result: Record<string, string[]> = {};
+
+    for (const subPath of paths) {
+        if (!subPath) continue;
+
+        const fullPath = path.join(datasetRoot, subPath);
+
+        if (!fs.existsSync(fullPath)) {
+            console.warn(`警告: 目录不存在: ${fullPath}`);
+            console.warn(`  请检查 YAML 中的 ${label} 路径配置是否正确`);
+            continue;
+        }
+
+        const images = loadImagesFromFolder(fullPath);
+        if (images.length > 0) {
+            result[subPath] = images;
+        }
+    }
+
+    return result;
 }

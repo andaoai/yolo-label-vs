@@ -275,6 +275,9 @@ export class InputManager {
     const modifiers = { ...this.modifiers };
     let result: ToolResult | null = null;
 
+    // 统一转为小写，支持大写字母快捷键（Caps Lock 或 Shift 时）
+    const key = e.key.toLowerCase();
+
     // 全局快捷键
     if (e.key === ' ') {
       e.preventDefault();
@@ -288,48 +291,48 @@ export class InputManager {
       return;
     }
 
-    if (e.key === 'z' && modifiers.ctrl && !modifiers.shift) {
+    if (key === 'z' && modifiers.ctrl && !modifiers.shift) {
       e.preventDefault();
       this.callbacks.onUndo();
       return;
     }
 
-    if (e.key === 'z' && modifiers.ctrl && modifiers.shift) {
+    if (key === 'z' && modifiers.ctrl && modifiers.shift) {
       e.preventDefault();
       this.callbacks.onRedo();
       return;
     }
 
-    if (e.key === 's' && modifiers.ctrl) {
+    if (key === 's' && modifiers.ctrl) {
       e.preventDefault();
       this.callbacks.onSave();
       return;
     }
 
-    if (e.key === 'c' && modifiers.ctrl) {
+    if (key === 'c' && modifiers.ctrl) {
       e.preventDefault();
       this.callbacks.onCopyLabel();
       return;
     }
 
-    if (e.key === 'v' && modifiers.ctrl) {
+    if (key === 'v' && modifiers.ctrl) {
       e.preventDefault();
       this.callbacks.onPasteLabel();
       return;
     }
 
-    if (e.key === 'a' && !modifiers.ctrl && !modifiers.alt) {
+    if (key === 'a' && !modifiers.ctrl && !modifiers.alt) {
       this.callbacks.onNavigatePrevious();
       return;
     }
 
-    if (e.key === 'd' && !modifiers.ctrl && !modifiers.alt) {
+    if (key === 'd' && !modifiers.ctrl && !modifiers.alt) {
       this.callbacks.onNavigateNext();
       return;
     }
 
-    // 工具按键
-    result = this.toolManager.onKeyDown(e.key, modifiers);
+    // 工具按键（也转为小写）
+    result = this.toolManager.onKeyDown(key, modifiers);
     this.processToolResult(result);
   };
 

@@ -86,9 +86,26 @@ const segmentationParser: LabelParser = {
         const points = parts.slice(1).map(p => parseFloat(p));
 
         if (!isNaN(classIndex) && points.every(p => !isNaN(p))) {
+            // Calculate bounding box from polygon points
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            for (let i = 0; i < points.length; i += 2) {
+                const px = points[i];
+                const py = points[i + 1];
+                minX = Math.min(minX, px);
+                maxX = Math.max(maxX, px);
+                minY = Math.min(minY, py);
+                maxY = Math.max(maxY, py);
+            }
+
+            const width = maxX - minX;
+            const height = maxY - minY;
+            const cx = minX + width / 2;
+            const cy = minY + height / 2;
+
             return {
                 class: classIndex,
-                x: 0, y: 0, width: 0, height: 0,
+                x: cx, y: cy, width, height,
                 isSegmentation: true,
                 points: points,
                 visible: true
