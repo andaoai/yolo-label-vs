@@ -5,6 +5,103 @@ All notable changes to the "yolo-labeling-vs" extension will be documented in th
 The format is based on [Keep a Changelog](http://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.0.89] - 2026-06
+
+### Added
+- Train/Val/Test category distribution comparison charts
+- CI/CD workflow for skipping releases on pure documentation updates
+
+### Changed
+- Improved sidebar layout with default collapsed state
+- Updated dataset statistics dashboard and TreeView documentation
+- Updated CI/CD process documentation
+
+### Fixed
+- Fixed datasetName retrieval method to use YAML filename
+
+## [0.0.88] - 2026-06
+
+### Changed
+- Removed limit of maximum 10 folders in Folder Distribution
+- Optimized Folder Distribution display, legend only shows folder count
+
+## [0.0.87] - 2026-06
+
+### Added
+- Dataset statistics visualization panel
+
+### Changed
+- Excluded development files from VSIX package
+
+## [0.0.86] - 2026-06
+
+### Added
+- Dataset management TreeView with subset grouping and image navigation
+- Support for multi-folder subset grouping display and subset labels
+
+### Changed
+- Unified UI text to English
+- Removed checkmark symbol from label status for simplified display
+- Renamed labeling-panel.css to index.css for consistent naming convention
+- Cleaned up CSS and removed duplicate HTML files
+- Updated development and packaging documentation
+
+### Refactored
+- Migrated JavaScript to TypeScript for VSCode frontend
+- Restructured Extension Host backend architecture
+- Extracted shared utility helpers
+- Cleaned up unused code and type definitions
+
+## [0.0.85] - 2026-05
+
+### Fixed
+- Updated README badges and auto-update workflow
+
+### Documentation
+- Added supported YOLO models section
+- Updated demo gif
+- Replaced theme screenshots with new Chinese-named images
+
+## [0.0.84] - 2025-12
+
+### Added
+- test:sam script to package.json
+
+## [0.0.83] - 2025-12
+
+### Fixed
+- Seg tool preview flashing to top-left corner on first click
+- Constrain label bounding boxes within image boundaries
+
+## [0.0.82] - 2025-12
+
+### Fixed
+- Resolved ONNX Runtime loading failures in packaged VSCode extension
+
+## [0.0.81] - 2025-12
+
+### Documentation
+- Updated VS Marketplace badges in Chinese README
+
+## [0.0.80] - 2025-11
+
+## [0.0.79] - 2025-11
+
+### Added
+- /pr skill for creating PRs with auto-generated descriptions
+
+## [0.0.78] - 2025-11
+
+### Fixed
+- Excluded src/test from tsconfig to fix webpack build error
+
+## [0.0.77] - 2025-11
+
+### Documentation
+- Updated documentation to reflect new features and v0.0.75
+
+## [0.0.76] - 2025-06
+
 ## [0.0.75] - 2025-06
 
 ### Added
