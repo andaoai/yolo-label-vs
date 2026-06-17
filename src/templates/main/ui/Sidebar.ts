@@ -15,7 +15,7 @@ export class Sidebar {
   private classBadgeEl: HTMLElement | null = null;
   private classSearchEl: HTMLInputElement | null = null;
   private classGridEl: HTMLElement | null = null;
-  private classCollapsed = false;
+  private classCollapsed = true; // 默认关闭
 
   // Labels 区域
   private labelHeaderEl: HTMLElement | null = null;

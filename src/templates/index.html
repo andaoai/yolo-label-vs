@@ -110,14 +110,23 @@
                 <!-- Class 选择器（可折叠） -->
                 <section class="sidebar-section collapsible" id="classSection">
                     <div class="section-header" id="classHeader">
-                        <span class="section-toggle">▼</span>
+                        <span class="section-toggle">▶</span>
                         <span class="section-title">Class: <strong id="className">person</strong></span>
                         <span class="section-badge" id="classBadge">1/9</span>
                     </div>
-                    <div class="section-body" id="classBody">
+                    <div class="section-body" id="classBody" style="display: none;">
                         <input type="text" id="classSearch" class="class-search-input" placeholder="Filter classes..." autocomplete="off">
                         <div class="class-grid" id="classGrid"></div>
                     </div>
+                </section>
+                <!-- Model 推理面板（可折叠） -->
+                <section class="sidebar-section collapsible" id="modelSection">
+                    <div class="section-header" id="modelHeader">
+                        <span class="section-toggle">▶</span>
+                        <span class="section-title">YOLO Inference</span>
+                        <span class="section-badge" id="modelBadge">-</span>
+                    </div>
+                    <div class="section-body" id="modelBody" style="display: none;"></div>
                 </section>
                 <!-- Labels 列表（可折叠） -->
                 <section class="sidebar-section collapsible" id="labelSection">
@@ -129,15 +138,6 @@
                     <div class="section-body" id="labelBody">
                         <div class="label-list" id="labelList"></div>
                     </div>
-                </section>
-                <!-- Model 推理面板（可折叠） -->
-                <section class="sidebar-section collapsible" id="modelSection">
-                    <div class="section-header" id="modelHeader">
-                        <span class="section-toggle">▼</span>
-                        <span class="section-title">YOLO Inference</span>
-                        <span class="section-badge" id="modelBadge">-</span>
-                    </div>
-                    <div class="section-body" id="modelBody"></div>
                 </section>
             </aside>
         </main>
