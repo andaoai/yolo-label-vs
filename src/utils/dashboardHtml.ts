@@ -600,7 +600,7 @@ export function generateDashboardHtml(
         const trainImages = ${stats.trainImages};
         const valImages = ${stats.valImages};
         const testImages = ${stats.testImages};
-        const folderDistribution = ${JSON.stringify(stats.folderDistribution.slice(0, 10))};
+        const folderDistribution = ${JSON.stringify(stats.folderDistribution)};
 
         // Chart configuration defaults
         const chartDefaults = {
