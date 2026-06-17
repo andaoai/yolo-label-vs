@@ -19,6 +19,18 @@ A VS Code extension for quickly browsing and editing YOLO dataset annotations. T
 
 ![YOLO Label VS 演示](https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/demo.gif)
 
+## Dataset Statistics Dashboard
+
+Visualize comprehensive dataset analytics with interactive charts powered by Chart.js:
+
+- **Class Distribution**: Pie chart and bar chart showing label distribution
+- **Train/Val/Test Comparison**: Side-by-side class distribution across subsets
+- **Box Statistics**: Size histogram, aspect ratio analysis, and center position heatmaps
+- **Labels Per Image**: Histogram showing label count distribution
+- **Folder Distribution**: Breakdown of images across subdirectories
+
+![Dataset Statistics Dashboard](https://raw.githubusercontent.com/andaoai/yolo-label-vs/main/docs/images/%E6%95%B0%E6%8D%AE%E5%8F%AF%E8%A7%86%E5%8C%96.png)
+
 ## Theme Support
 
 Our extension seamlessly integrates with all VS Code themes for a consistent experience:
@@ -54,13 +66,17 @@ Our extension seamlessly integrates with all VS Code themes for a consistent exp
 ## Key Features
 
 - **AI-Powered Inference**: Load ONNX models to automatically detect objects in images with configurable confidence and IoU thresholds
+- **Dataset Explorer TreeView**: Browse your datasets directly in the VS Code sidebar - organized by YAML config, train/val/test subsets, and individual images
+- **Dataset Statistics Dashboard**: Comprehensive visualization of label distribution, class counts, box statistics, and Train/Val/Test comparison charts
 - **Quick Dataset Browsing**: Instantly view YOLO-labeled images through YAML configuration files
 - **Efficient Label Management**: Easily modify existing labels without leaving VS Code
+- **Redesigned Sidebar UI**: Collapsible Class selector with search and interactive Labels list with type indicators (BOX/SEG/POSE)
 - **Intuitive Preview**: Real-time visualization of bounding boxes and labels
 - **Streamlined Navigation**: Quick movement between images using keyboard shortcuts
 - **YAML Integration**: Direct support for YAML configuration files
 - **Batch Processing**: Browse and edit multiple images in sequence
 - **Copy/Paste Labels**: Quickly duplicate labels with Ctrl+C/Ctrl+V shortcuts
+- **Multi-Folder Subset Support**: Visualize datasets with multiple folder sources organized by subdirectory
 
 ## Supported YOLO Models
 
@@ -174,6 +190,29 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 
 ## Usage
 
+### Dataset Explorer TreeView
+
+1. Open your YOLO dataset folder in VS Code
+2. The extension automatically scans for YAML configuration files
+3. Find the "YOLO Datasets" panel in the VS Code sidebar
+4. Expand datasets to browse Train/Val/Test subsets and individual images
+5. Click any dataset, subset, or image to open the labeling panel directly
+6. Use the refresh button to rescan for dataset changes
+
+### Statistics Dashboard
+
+1. Right-click a YAML file or use the dataset TreeView
+2. Select "View Statistics" to open the analytics dashboard
+3. Visualize:
+   - **Overview**: Total images, labeled/unlabeled counts, average labels per image
+   - **Class Distribution**: Pie chart and bar chart showing label distribution
+   - **Train/Val/Test Comparison**: Side-by-side class distribution across subsets
+   - **Box Statistics**: Size histogram, aspect ratio, and center position heatmaps
+   - **Labels Per Image**: Histogram showing label count distribution
+   - **Folder Distribution**: Breakdown of images across subdirectories
+
+### Labeling Panel
+
 1. Open a folder containing your YAML configuration files and corresponding images
 2. Right-click on a YAML file in the explorer
 3. Select "Open YOLO Labeling Panel"
@@ -181,6 +220,7 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 
 ### Interface Controls
 
+- **Sidebar**: Collapsible sections for Class selection (with search) and Labels list (with type indicators)
 - **Previous/Next Image**: Navigate through images in the dataset
 - **Mode Selector**: Switch between Box, Segmentation, and Pose labeling modes
 - **Show Labels**: Toggle visibility of labels on the image
@@ -238,6 +278,8 @@ Or you can install it directly from the [VS Code Marketplace](https://marketplac
 This extension contributes the following commands:
 
 * `yolo-labeling-vs.openLabelingPanel`: Open YOLO Labeling Panel
+* `yolo-labeling-vs.openDatasetStats`: Open Dataset Statistics Dashboard
+* `yolo-labeling-vs.refreshDatasets`: Refresh Dataset TreeView
 
 ## Known Issues
 

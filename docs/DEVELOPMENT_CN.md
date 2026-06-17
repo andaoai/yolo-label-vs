@@ -57,24 +57,28 @@ yolo-label-vs/
 │   └── ...                   # 其他文档文件
 ├── node_modules/             # 依赖项 (gitignore)
 ├── src/                      # 源代码
-│   ├── extension.ts          # VS Code 扩展入口文件
+│   ├── extension.ts          # VS Code 扩展入口文件（注册所有命令）
 │   ├── LabelingPanel.ts      # WebView 面板管理器（多实例支持）
+│   ├── DatasetStatsPanel.ts  # 数据集统计仪表板面板（Chart.js 可视化）
 │   ├── ErrorHandler.ts       # 统一错误分类与上报
+│   ├── explorer/             # 数据集 TreeView 资源管理器
+│   │   ├── DatasetScanner.ts # 工作区扫描器，自动检测 YOLO 数据集
+│   │   └── DatasetTreeViewProvider.ts # 树形数据提供器，支持子集/文件夹/图片层级
 │   ├── model/                # Extension Host 类型定义
 │   │   └── types.ts          # BoundingBox = Label（与前端类型对齐）
 │   ├── services/             # 扩展服务层
-│   │   └── WebviewMessageHandler.ts  # WebView 消息总线（11种命令）
+│   │   ├── WebviewMessageHandler.ts  # WebView 消息总线
+│   │   └── DatasetStatisticsService.ts # 数据集统计算法引擎
 │   ├── utils/                # 工具函数
 │   │   ├── imageLoader.ts    # Base64 LRU 图片缓存 + 缩略图
 │   │   ├── pathUtils.ts      # basename/truncate/imagePathToLabelPath
-│   │   └── webviewHtml.ts    # 生成 WebView HTML，注入资源和 ORT WASM 路径
+│   │   ├── webviewHtml.ts    # 生成标注面板 WebView HTML
+│   │   └── dashboardHtml.ts  # 生成统计仪表板 HTML（内置 Chart.js）
 │   ├── yolo/                 # YOLO 数据层
 │   │   ├── ConfigLoader.ts   # 解析 data.yaml（path/train/val/test/names/kpt_shape）
-│   │   ├── ImageFileScanner.ts  # 扫描 train/val/test 目录下的图片
+│   │   ├── ImageFileScanner.ts  # 扫描图片（支持扁平化和按文件夹分组）
 │   │   ├── LabelCodec.ts     # YOLO txt 标签编解码（det/seg/pose）
 │   │   └── YoloDataReader.ts # 数据集会话（当前索引、读写标签）
-│   ├── sidebar/              # （预留目录）
-│   ├── types/                # （预留目录）
 │   └── templates/            # 前端模板与源码
 │       ├── index.html        # WebView HTML 模板
 │       ├── index.css         # 统一样式表
@@ -141,10 +145,14 @@ yolo-label-vs/
 
 后端（VS Code Extension Host）采用模块化面向服务架构：
 
-- **`extension.ts`**：注册 `yolo-labeling-vs.openLabelingPanel` 命令，处理快捷键触发时的 YAML 文件选择逻辑
-- **`LabelingPanel.ts`**：管理 WebView 面板，支持多实例（每个 YAML 文件一个面板），缓存在静态 Map 中，错误页面降级支持 reload
-- **`WebviewMessageHandler.ts`**：中央消息总线，接收来自 WebView 的 11 种命令，包括 ONNX 文件读取并通过结构化克隆传给 WebView
-- **Yolo 数据层**：ConfigLoader（YAML 解析）→ ImageFileScanner（目录扫描）→ LabelCodec（YOLO 格式编解码）→ YoloDataReader（会话管理）
+- **`extension.ts`**：扩展入口，注册所有命令：`openLabelingPanel`、`openDatasetStats`、`refreshDatasets`。处理快捷键触发和工作区 YAML 文件自动发现。
+- **`LabelingPanel.ts`**：管理 WebView 面板，支持多实例（每个 YAML 文件一个面板），缓存在静态 Map 中，错误页面降级支持 reload。支持从 TreeView 点击直接跳转到指定图片。
+- **`DatasetStatsPanel.ts`**：独立的统计仪表板面板，使用 Chart.js 进行数据集分析可视化。渲染类别分布、边界框统计、单图标签数直方图、训练/验证/测试对比图表等。
+- **`DatasetTreeViewProvider.ts`**：VS Code TreeView 数据提供器，实现数据集资源管理器层级：数据集根节点 → 子集（训练/验证/测试）→ 文件夹（多文件夹数据集）→ 图片节点。每个节点支持直接跳转到标注面板。
+- **`DatasetScanner.ts`**：工作区扫描器，自动检测所有 YOLO YAML 配置文件并计算 TreeView 显示所需的基本数据集统计信息。
+- **`DatasetStatisticsService.ts`**：综合统计算法引擎，计算：全局和子集级别的类别分布、标签数直方图、边界框尺寸统计、宽高比统计、关键点指标、文件夹分布等。
+- **`WebviewMessageHandler.ts`**：中央消息总线，接收来自 WebView 的命令，包括 ONNX 文件读取并通过结构化克隆传给 WebView
+- **Yolo 数据层**：ConfigLoader（YAML 解析）→ ImageFileScanner（支持多文件夹的目录扫描）→ LabelCodec（YOLO 格式编解码）→ YoloDataReader（会话管理）
 - **工具层**：imageLoader（LRU 缓存）、pathUtils、webviewHtml（模板生成与资源注入）
 
 ### WebView 前端架构
