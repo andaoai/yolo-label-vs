@@ -13,7 +13,11 @@ permissions:
 jobs:
   update-version:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev' && !contains(github.event.head_commit.message, '[skip ci]')
+    # 版本更新条件:
+    # 1. 在 dev 分支
+    # 2. commit message 不含 [skip ci]
+    # 3. commit message 不以 'docs:' 开头 (纯文档更新跳过版本递增)
+    if: github.ref == 'refs/heads/dev' && !contains(github.event.head_commit.message, '[skip ci]') && !startsWith(github.event.head_commit.message, 'docs:')
     steps:
       - uses: actions/checkout@v5
         with:
