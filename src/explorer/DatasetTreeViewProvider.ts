@@ -279,6 +279,17 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
             }
         ));
 
+        children.push(new InfoTreeNode(
+            'View Statistics',
+            'Dataset dashboard',
+            'graph',
+            {
+                title: 'Open dataset statistics dashboard',
+                command: 'yolo-labeling-vs.openDatasetStats',
+                arguments: [{ yamlPath: stats.yamlPath }]
+            }
+        ));
+
         return children;
     }
 

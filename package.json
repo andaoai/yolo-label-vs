@@ -94,6 +94,11 @@
         "command": "yolo-labeling-vs.refreshDatasets",
         "title": "Refresh Dataset List",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "yolo-labeling-vs.openDatasetStats",
+        "title": "View Dataset Statistics",
+        "icon": "$(graph)"
       }
     ],
     "menus": {
@@ -102,6 +107,11 @@
           "command": "yolo-labeling-vs.refreshDatasets",
           "when": "view == yolo-datasets.tree",
           "group": "navigation@1"
+        },
+        {
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "when": "view == yolo-datasets.tree",
+          "group": "navigation@2"
         }
       ],
       "explorer/context": [
@@ -109,6 +119,11 @@
           "when": "resourceExtname == .yaml || resourceExtname == .yml",
           "command": "yolo-labeling-vs.openLabelingPanel",
           "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "group": "navigation@2"
         }
       ],
       "editor/context": [
@@ -116,6 +131,11 @@
           "when": "resourceExtname == .yaml || resourceExtname == .yml",
           "command": "yolo-labeling-vs.openLabelingPanel",
           "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "group": "navigation@2"
         }
       ],
       "editor/title/context": [
@@ -123,6 +143,11 @@
           "when": "resourceExtname == .yaml || resourceExtname == .yml",
           "command": "yolo-labeling-vs.openLabelingPanel",
           "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "group": "navigation@2"
         }
       ]
     },
