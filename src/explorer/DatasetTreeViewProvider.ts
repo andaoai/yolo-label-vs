@@ -10,6 +10,7 @@ import { loadConfig } from '../yolo/ConfigLoader';
  */
 type TreeNode =
     | DatasetTreeNode
+    | DataFolderTreeNode
     | SubsetTreeNode
     | FolderTreeNode
     | ImageTreeNode
@@ -33,6 +34,22 @@ class DatasetTreeNode extends vscode.TreeItem {
             command: 'yolo-labeling-vs.openLabelingPanel',
             arguments: [{ yamlPath: stats.yamlPath }]
         };
+    }
+}
+
+/**
+ * Data folder node (groups train/val/test subsets)
+ */
+class DataFolderTreeNode extends vscode.TreeItem {
+    constructor(
+        public readonly stats: DatasetStats,
+        public readonly collapsibleState: vscode.TreeItemCollapsibleState
+    ) {
+        super('Dataset', collapsibleState);
+        this.description = `${stats.trainCount + stats.valCount + stats.testCount} images`;
+        this.tooltip = 'Dataset subsets (train/val/test)';
+        this.iconPath = new vscode.ThemeIcon('folder');
+        this.contextValue = 'data-folder-item';
     }
 }
 
@@ -204,6 +221,10 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
             return this.getDatasetChildren(element.stats);
         }
 
+        if (element instanceof DataFolderTreeNode) {
+            return this.getDataFolderChildren(element.stats);
+        }
+
         if (element instanceof SubsetTreeNode) {
             return this.getSubsetChildren(element.stats, element.subsetName, element.imageFiles);
         }
@@ -243,31 +264,7 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
             });
         }
 
-        const images = this.datasetImagesCache.get(stats.yamlPath)!;
-
-        // Subset nodes (train/val/test)
-        if (images.train.length > 0) {
-            children.push(new SubsetTreeNode(
-                stats, 'train', images.train,
-                vscode.TreeItemCollapsibleState.Collapsed
-            ));
-        }
-
-        if (images.val.length > 0) {
-            children.push(new SubsetTreeNode(
-                stats, 'val', images.val,
-                vscode.TreeItemCollapsibleState.Collapsed
-            ));
-        }
-
-        if (images.test.length > 0) {
-            children.push(new SubsetTreeNode(
-                stats, 'test', images.test,
-                vscode.TreeItemCollapsibleState.Collapsed
-            ));
-        }
-
-        // Quick actions
+        // Quick actions (first priority)
         children.push(new InfoTreeNode(
             'Open YAML Config',
             '',
@@ -289,6 +286,44 @@ export class DatasetTreeViewProvider implements vscode.TreeDataProvider<TreeNode
                 arguments: [{ yamlPath: stats.yamlPath }]
             }
         ));
+
+        // Data folder node (groups train/val/test)
+        children.push(new DataFolderTreeNode(
+            stats,
+            vscode.TreeItemCollapsibleState.Collapsed
+        ));
+
+        return children;
+    }
+
+    /**
+     * Get data folder child nodes (train/val/test subsets)
+     */
+    private getDataFolderChildren(stats: DatasetStats): TreeNode[] {
+        const children: TreeNode[] = [];
+        const images = this.datasetImagesCache.get(stats.yamlPath);
+        if (!images) return children;
+
+        if (images.train.length > 0) {
+            children.push(new SubsetTreeNode(
+                stats, 'train', images.train,
+                vscode.TreeItemCollapsibleState.Collapsed
+            ));
+        }
+
+        if (images.val.length > 0) {
+            children.push(new SubsetTreeNode(
+                stats, 'val', images.val,
+                vscode.TreeItemCollapsibleState.Collapsed
+            ));
+        }
+
+        if (images.test.length > 0) {
+            children.push(new SubsetTreeNode(
+                stats, 'test', images.test,
+                vscode.TreeItemCollapsibleState.Collapsed
+            ));
+        }
 
         return children;
     }
