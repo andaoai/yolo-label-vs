@@ -144,6 +144,7 @@ export class App {
       onCycleClass: (dir) => this.cycleClass(dir),
       onCopyLabel: () => this.copyLabel(),
       onPasteLabel: () => this.pasteLabel(),
+      onDeleteLabel: (idx) => this.deleteLabel(idx),
     });
   }
 
