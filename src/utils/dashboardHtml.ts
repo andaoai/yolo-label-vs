@@ -3,6 +3,7 @@ import { DatasetStatistics } from '../services/DatasetStatisticsService';
 
 /**
  * Generate HTML for dataset statistics dashboard with Chart.js
+ * Supports VS Code theme switching (light/dark)
  */
 export function generateDashboardHtml(
     extensionUri: vscode.Uri,
@@ -11,12 +12,6 @@ export function generateDashboardHtml(
 ): string {
     // Serialize chart data for JavaScript
     const chartDataJson = JSON.stringify(stats.chartData);
-
-    // Theme colors (VS Code dark theme compatible)
-    const textColor = '#cccccc';
-    const gridColor = '#444444';
-    const bgColor = '#1e1e1e';
-    const cardBgColor = '#252526';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -35,8 +30,8 @@ export function generateDashboardHtml(
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             padding: 24px;
-            color: ${textColor};
-            background-color: ${bgColor};
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
             line-height: 1.4;
         }
 
@@ -83,13 +78,13 @@ export function generateDashboardHtml(
             margin: 0 0 4px 0;
             font-size: 22px;
             font-weight: 600;
-            color: #ffffff;
+            color: var(--vscode-titleBar-activeForeground);
         }
 
         .hero-title p {
             margin: 0;
             font-size: 12px;
-            color: #888;
+            color: var(--vscode-descriptionForeground);
             font-family: 'SF Mono', 'Consolas', monospace;
         }
 
@@ -124,8 +119,8 @@ export function generateDashboardHtml(
         }
 
         .stat-card {
-            background: ${cardBgColor};
-            border: 1px solid #3c3c3c;
+            background: var(--vscode-editorWidget-background);
+            border: 1px solid var(--vscode-panel-border);
             border-radius: 8px;
             padding: 12px 14px;
             display: flex;
@@ -163,13 +158,13 @@ export function generateDashboardHtml(
         .stat-value {
             font-size: 17px;
             font-weight: 600;
-            color: #ffffff;
+            color: var(--vscode-titleBar-activeForeground);
             line-height: 1.2;
         }
 
         .stat-label {
             font-size: 10px;
-            color: #777;
+            color: var(--vscode-descriptionForeground);
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-top: 2px;
@@ -177,10 +172,10 @@ export function generateDashboardHtml(
 
         /* ========== Progress Section ========== */
         .progress-section {
-            background-color: ${cardBgColor};
+            background-color: var(--vscode-editorWidget-background);
             border-radius: 8px;
             padding: 15px;
-            border: 1px solid #3c3c3c;
+            border: 1px solid var(--vscode-panel-border);
             margin-bottom: 20px;
         }
 
@@ -188,7 +183,7 @@ export function generateDashboardHtml(
             margin: 0 0 12px 0;
             font-size: 14px;
             font-weight: 600;
-            color: #ffffff;
+            color: var(--vscode-titleBar-activeForeground);
         }
 
         .progress-row {
@@ -209,18 +204,18 @@ export function generateDashboardHtml(
         }
 
         .progress-stats .stat-label {
-            color: #888;
+            color: var(--vscode-descriptionForeground);
         }
 
         .progress-stats .stat-value {
             font-weight: 600;
-            color: #fff;
+            color: var(--vscode-foreground);
         }
 
         .progress-bar-container {
             flex: 1;
             height: 24px;
-            background-color: #333;
+            background-color: var(--vscode-progressBar-background);
             border-radius: 6px;
             overflow: hidden;
         }
@@ -245,12 +240,11 @@ export function generateDashboardHtml(
         /* ========== Charts Grid ========== */
         .charts-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);  /* 4列布局 */
+            grid-template-columns: repeat(4, 1fr);
             gap: 12px;
             margin-bottom: 20px;
         }
 
-        /* 第二行是3列 */
         .charts-grid.row-3col {
             grid-template-columns: repeat(3, 1fr);
         }
@@ -274,14 +268,13 @@ export function generateDashboardHtml(
         }
 
         .chart-card {
-            background-color: ${cardBgColor};
+            background-color: var(--vscode-editorWidget-background);
             border-radius: 8px;
             padding: 15px;
-            border: 1px solid #3c3c3c;
+            border: 1px solid var(--vscode-panel-border);
             overflow: hidden;
         }
 
-        /* ========== 正方形卡片 - 用 padding-top 百分比技巧保证 1:1 ========== */
         .chart-card.square {
             position: relative;
             padding: 0;
@@ -290,7 +283,7 @@ export function generateDashboardHtml(
         .chart-card.square::before {
             content: '';
             display: block;
-            padding-top: 100%;  /* 🔒 核心：宽高 1:1 */
+            padding-top: 100%;
         }
 
         .square-content {
@@ -304,7 +297,6 @@ export function generateDashboardHtml(
             flex-direction: column;
         }
 
-        /* 饼图和散点图的容器要居中 */
         .chart-card.square .chart-container {
             flex: 1;
             display: flex;
@@ -318,24 +310,23 @@ export function generateDashboardHtml(
             max-width: 100%;
         }
 
-        /* ========== 宽卡片（占满整行） ========== */
         .chart-card.wide {
             height: 450px;
-            overflow: hidden;  /* 移除滚动 */
+            overflow: hidden;
         }
 
         .chart-card h3 {
             margin: 0 0 10px 0;
             font-size: 14px;
             font-weight: 600;
-            color: #ffffff;
+            color: var(--vscode-titleBar-activeForeground);
             flex-shrink: 0;
         }
 
         .chart-container {
             position: relative;
             width: 100%;
-            overflow: hidden;  /* 彻底移除滚动 */
+            overflow: hidden;
         }
 
         .chart-card.wide .chart-container {
@@ -345,13 +336,12 @@ export function generateDashboardHtml(
         .footer {
             margin-top: 20px;
             padding-top: 15px;
-            border-top: 1px solid #3c3c3c;
+            border-top: 1px solid var(--vscode-panel-border);
             text-align: center;
             font-size: 12px;
-            color: #666;
+            color: var(--vscode-descriptionForeground);
         }
 
-        /* Legend styles for pie charts */
         .pie-legend {
             display: flex;
             flex-wrap: wrap;
@@ -365,6 +355,7 @@ export function generateDashboardHtml(
             align-items: center;
             gap: 6px;
             font-size: 12px;
+            color: var(--vscode-foreground);
         }
 
         .legend-color {
@@ -500,7 +491,6 @@ export function generateDashboardHtml(
 
     <!-- Charts Grid - Row 1: 4 SQUARES! -->
     <div class="charts-grid">
-        <!-- Chart 1: Subset Distribution (train/val/test) -->
         <div class="chart-card square">
             <div class="square-content">
                 <h3>Subset Distribution</h3>
@@ -511,7 +501,6 @@ export function generateDashboardHtml(
             </div>
         </div>
 
-        <!-- Chart 2: Folder Distribution -->
         <div class="chart-card square">
             <div class="square-content">
                 <h3>Folder Distribution</h3>
@@ -522,7 +511,6 @@ export function generateDashboardHtml(
             </div>
         </div>
 
-        <!-- Chart 3: Box Width vs Height Scatter -->
         <div class="chart-card square">
             <div class="square-content">
                 <h3>Box Size (W × H)</h3>
@@ -532,7 +520,6 @@ export function generateDashboardHtml(
             </div>
         </div>
 
-        <!-- Chart 4: Box Center 2D Distribution -->
         <div class="chart-card square">
             <div class="square-content">
                 <h3>Box Center 2D</h3>
@@ -543,9 +530,7 @@ export function generateDashboardHtml(
         </div>
     </div>
 
-    <!-- Charts Grid - Row 2: Box Area + Center X + Center Y (3 columns) -->
     <div class="charts-grid row-3col">
-        <!-- Chart 4: Box Area Distribution -->
         <div class="chart-card" style="height: 260px;">
             <h3>Box Area Distribution</h3>
             <div class="chart-container" style="height: 200px;">
@@ -553,7 +538,6 @@ export function generateDashboardHtml(
             </div>
         </div>
 
-        <!-- Chart 5: Center X Distribution -->
         <div class="chart-card" style="height: 260px;">
             <h3>Box Center X</h3>
             <div class="chart-container" style="height: 200px;">
@@ -561,7 +545,6 @@ export function generateDashboardHtml(
             </div>
         </div>
 
-        <!-- Chart 6: Center Y Distribution -->
         <div class="chart-card" style="height: 260px;">
             <h3>Box Center Y</h3>
             <div class="chart-container" style="height: 200px;">
@@ -570,7 +553,6 @@ export function generateDashboardHtml(
         </div>
     </div>
 
-    <!-- Charts Grid - Row 3: Labels Per Image (Full Width) -->
     <div class="charts-grid">
         <div class="chart-card wide" style="grid-column: 1 / -1;">
             <h3>Labels Per Image</h3>
@@ -580,7 +562,6 @@ export function generateDashboardHtml(
         </div>
     </div>
 
-    <!-- Charts Grid - Row 4: Class Distribution (Full Width) -->
     <div class="charts-grid">
         <div class="chart-card wide" style="grid-column: 1 / -1;">
             <h3>Class Distribution</h3>
@@ -590,7 +571,6 @@ export function generateDashboardHtml(
         </div>
     </div>
 
-    <!-- Charts Grid - Row 5: Class Distribution by Subset (Full Width) -->
     <div class="charts-grid">
         <div class="chart-card wide" style="grid-column: 1 / -1;">
             <h3>Class Distribution by Subset (Train vs Val vs Test)</h3>
@@ -613,41 +593,102 @@ export function generateDashboardHtml(
         const folderDistribution = ${JSON.stringify(stats.folderDistribution)};
         const classCountsBySubset = ${JSON.stringify(stats.classCountsBySubset)};
 
-        // Chart configuration defaults
-        const chartDefaults = {
-            responsive: true,
-            maintainAspectRatio: false,  // 由容器控制高度
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        color: '${gridColor}'
-                    },
-                    ticks: {
-                        color: '${textColor}'
-                    }
-                },
-                y: {
-                    grid: {
-                        color: '${gridColor}'
-                    },
-                    ticks: {
-                        color: '${textColor}'
-                    }
-                }
-            }
-        };
-
-        // Color palette
+        // Color palette - same colors for all themes
         const colors = [
             '#0098ff', '#36c9b8', '#ff8c00', '#f14c4c', '#9d65c9',
             '#ffcb2f', '#47cf73', '#72b5f5', '#ff7675', '#a55eea',
             '#74b9ff', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7'
         ];
+
+        // Store all chart instances for theme updates
+        const chartInstances = [];
+
+        // Get current theme colors from CSS variables
+        function getThemeColors() {
+            const style = getComputedStyle(document.body);
+            const textColor = style.getPropertyValue('--vscode-foreground').trim() || '#cccccc';
+            const gridColor = style.getPropertyValue('--vscode-panel-border').trim() || '#444444';
+            const cardBgColor = style.getPropertyValue('--vscode-editorWidget-background').trim() || '#252526';
+            return { textColor, gridColor, cardBgColor };
+        }
+
+        // Create base chart options with current theme colors
+        function getChartOptions() {
+            const { textColor, gridColor } = getThemeColors();
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: textColor
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: textColor
+                        }
+                    }
+                }
+            };
+        }
+
+        // Update all charts with new theme colors
+        function updateChartTheme() {
+            const { textColor, gridColor } = getThemeColors();
+
+            chartInstances.forEach(chart => {
+                if (chart.options.scales) {
+                    if (chart.options.scales.x) {
+                        chart.options.scales.x.grid.color = gridColor;
+                        chart.options.scales.x.ticks.color = textColor;
+                        if (chart.options.scales.x.title) {
+                            chart.options.scales.x.title.color = textColor;
+                        }
+                    }
+                    if (chart.options.scales.y) {
+                        chart.options.scales.y.grid.color = gridColor;
+                        chart.options.scales.y.ticks.color = textColor;
+                        if (chart.options.scales.y.title) {
+                            chart.options.scales.y.title.color = textColor;
+                        }
+                    }
+                }
+                if (chart.options.plugins?.legend?.labels) {
+                    chart.options.plugins.legend.labels.color = textColor;
+                }
+                chart.update();
+            });
+        }
+
+        // Listen for VS Code theme changes using CSS variable observers
+        function setupThemeListener() {
+            // Create a hidden element to monitor CSS variable changes
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'class') {
+                        updateChartTheme();
+                    }
+                });
+            });
+
+            // Observe body class changes (VS Code adds 'vscode-light'/'vscode-dark' class)
+            observer.observe(document.body, { attributes: true });
+
+            // Also listen for window focus events as a fallback
+            window.addEventListener('focus', updateChartTheme);
+        }
 
         // ========== Chart 1: Subset Distribution (Pie) ==========
         (function() {
@@ -655,6 +696,7 @@ export function generateDashboardHtml(
             const subsets = [];
             const data = [];
             const subsetColors = [];
+            const { cardBgColor } = getThemeColors();
 
             if (trainImages > 0) { subsets.push('Train'); data.push(trainImages); subsetColors.push(colors[0]); }
             if (valImages > 0) { subsets.push('Val'); data.push(valImages); subsetColors.push(colors[2]); }
@@ -666,7 +708,7 @@ export function generateDashboardHtml(
                 subsetColors.push(colors[1]);
             }
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: subsets,
@@ -674,14 +716,14 @@ export function generateDashboardHtml(
                         data,
                         backgroundColor: subsetColors,
                         borderWidth: 2,
-                        borderColor: '${cardBgColor}'
+                        borderColor: cardBgColor
                     }]
                 },
                 options: {
-                    ...chartDefaults,
-                    aspectRatio: 1,  // 饼图必须正方形
+                    ...getChartOptions(),
+                    aspectRatio: 1,
                     cutout: '50%',
-                    scales: undefined,  // 饼图不需要坐标轴
+                    scales: undefined,
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -696,8 +738,8 @@ export function generateDashboardHtml(
                     }
                 }
             });
+            chartInstances.push(chart);
 
-            // Add legend with percentage
             const total = data.reduce((a, b) => a + b, 0);
             const legend = document.getElementById('subsetLegend');
             subsets.forEach((name, i) => {
@@ -716,8 +758,9 @@ export function generateDashboardHtml(
             const folders = folderFullPaths.map(f => f.split('/').pop() || f);
             const data = folderDistribution.map(f => f.count);
             const folderColors = colors.slice(0, folders.length);
+            const { cardBgColor } = getThemeColors();
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: folders,
@@ -725,14 +768,14 @@ export function generateDashboardHtml(
                         data,
                         backgroundColor: folderColors,
                         borderWidth: 2,
-                        borderColor: '${cardBgColor}'
+                        borderColor: cardBgColor
                     }]
                 },
                 options: {
-                    ...chartDefaults,
-                    aspectRatio: 1,  // 饼图必须正方形
+                    ...getChartOptions(),
+                    aspectRatio: 1,
                     cutout: '50%',
-                    scales: undefined,  // 饼图不需要坐标轴
+                    scales: undefined,
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -747,8 +790,8 @@ export function generateDashboardHtml(
                     }
                 }
             });
+            chartInstances.push(chart);
 
-            // Show folder count
             const legend = document.getElementById('folderLegend');
             const item = document.createElement('div');
             item.className = 'legend-item';
@@ -756,20 +799,19 @@ export function generateDashboardHtml(
             legend.appendChild(item);
         })();
 
-        // ========== Chart 3: Labels Per Image (Full Data) ==========
+        // ========== Chart 3: Labels Per Image ==========
         (function() {
             const ctx = document.getElementById('labelsPerImageChart').getContext('2d');
             const labels = [];
             const data = [];
+            const { textColor, gridColor } = getThemeColors();
 
-            // 显示完整数据，最多 30 个
             const maxLabels = Math.min(chartData.labelsPerImage.maxLabels, 30);
             for (let i = 0; i <= maxLabels; i++) {
                 labels.push(i.toString());
                 data.push(chartData.labelsPerImage.counts[i] || 0);
             }
 
-            // 如果还有更多，添加 "+" 类别
             if (chartData.labelsPerImage.maxLabels > maxLabels) {
                 let over = 0;
                 for (let i = maxLabels + 1; i < chartData.labelsPerImage.counts.length; i++) {
@@ -781,7 +823,7 @@ export function generateDashboardHtml(
                 }
             }
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels,
@@ -799,35 +841,35 @@ export function generateDashboardHtml(
                     },
                     scales: {
                         x: {
-                            grid: { color: '${gridColor}' },
-                            ticks: { color: '${textColor}', maxTicksLimit: 31 },
-                            title: { display: true, text: 'Labels per image', color: '${textColor}' }
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, maxTicksLimit: 31 },
+                            title: { display: true, text: 'Labels per image', color: textColor }
                         },
                         y: {
-                            grid: { color: '${gridColor}' },
-                            ticks: { color: '${textColor}' },
-                            title: { display: true, text: 'Number of images', color: '${textColor}' },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Number of images', color: textColor },
                             beginAtZero: true
                         }
                     }
                 }
             });
+            chartInstances.push(chart);
         })();
 
-        // ========== Chart 4: All Class Distribution (Horizontal Bar) ==========
+        // ========== Chart 4: All Class Distribution ==========
         (function() {
             const ctx = document.getElementById('classDistributionChart').getContext('2d');
+            const { textColor, gridColor } = getThemeColors();
 
-            // Show ALL classes sorted by count
             const classData = chartData.classNames
                 .map((name, i) => ({ name, count: chartData.classCounts[i] || 0 }))
                 .filter(c => c.count > 0)
                 .sort((a, b) => b.count - a.count);
 
-            // Generate color for each class
             const barColors = classData.map((_, i) => colors[i % colors.length]);
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: classData.map(c => c.name),
@@ -840,7 +882,6 @@ export function generateDashboardHtml(
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    // indexAxis: 'x',  // 纵向柱状图，和 Labels Per Image 一样
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -855,26 +896,27 @@ export function generateDashboardHtml(
                     },
                     scales: {
                         x: {
-                            grid: { color: '${gridColor}' },
-                            ticks: { color: '${textColor}', autoSkip: false, maxRotation: 90, minRotation: 45 },
-                            title: { display: true, text: 'Class', color: '${textColor}' }
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, autoSkip: false, maxRotation: 90, minRotation: 45 },
+                            title: { display: true, text: 'Class', color: textColor }
                         },
                         y: {
-                            grid: { color: '${gridColor}' },
-                            ticks: { color: '${textColor}' },
-                            title: { display: true, text: 'Number of labels', color: '${textColor}' },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Number of labels', color: textColor },
                             beginAtZero: true
                         }
                     }
                 }
             });
+            chartInstances.push(chart);
         })();
 
-        // ========== Chart 4.5: Class Distribution by Subset (Grouped Bar) ==========
+        // ========== Chart 4.5: Class Distribution by Subset ==========
         (function() {
             const ctx = document.getElementById('classDistributionBySubsetChart').getContext('2d');
+            const { textColor, gridColor } = getThemeColors();
 
-            // Sort classes by total count (same as Class Distribution chart)
             const classData = chartData.classNames
                 .map((name, i) => ({
                     name,
@@ -886,12 +928,10 @@ export function generateDashboardHtml(
                 .filter(c => c.total > 0)
                 .sort((a, b) => b.total - a.total);
 
-            // Calculate subset totals for percentage
             const trainTotal = classCountsBySubset.train.reduce((a, b) => a + b, 0);
             const valTotal = classCountsBySubset.val.reduce((a, b) => a + b, 0);
             const testTotal = classCountsBySubset.test.reduce((a, b) => a + b, 0);
 
-            // Build datasets - use percentage for comparison
             const datasets = [];
 
             if (trainTotal > 0) {
@@ -921,9 +961,8 @@ export function generateDashboardHtml(
                 });
             }
 
-            // Only show chart if there are at least 2 subsets to compare
             if (datasets.length >= 2) {
-                new Chart(ctx, {
+                const chart = new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: classData.map(c => c.name),
@@ -936,7 +975,7 @@ export function generateDashboardHtml(
                             legend: {
                                 display: true,
                                 position: 'top',
-                                labels: { color: '${textColor}' }
+                                labels: { color: textColor }
                             },
                             tooltip: {
                                 callbacks: {
@@ -955,38 +994,38 @@ export function generateDashboardHtml(
                         },
                         scales: {
                             x: {
-                                grid: { color: '${gridColor}' },
-                                ticks: { color: '${textColor}', autoSkip: false, maxRotation: 90, minRotation: 45 },
-                                title: { display: true, text: 'Class', color: '${textColor}' }
+                                grid: { color: gridColor },
+                                ticks: { color: textColor, autoSkip: false, maxRotation: 90, minRotation: 45 },
+                                title: { display: true, text: 'Class', color: textColor }
                             },
                             y: {
-                                grid: { color: '${gridColor}' },
-                                ticks: { color: '${textColor}' },
-                                title: { display: true, text: 'Percentage within subset (%)', color: '${textColor}' },
+                                grid: { color: gridColor },
+                                ticks: { color: textColor },
+                                title: { display: true, text: 'Percentage within subset (%)', color: textColor },
                                 beginAtZero: true
                             }
                         }
                     }
                 });
+                chartInstances.push(chart);
             } else {
-                // Hide chart if only one subset exists
                 const container = document.getElementById('classDistributionBySubsetChart').parentElement.parentElement;
                 container.style.display = 'none';
             }
         })();
 
-        // ========== Chart 5: Box Size Scatter Plot (Square) ==========
+        // ========== Chart 5: Box Size Scatter Plot ==========
         (function() {
             const ctx = document.getElementById('boxSizeChart').getContext('2d');
+            const { textColor, gridColor } = getThemeColors();
 
-            // Sample data if too many points (for performance)
             const maxPoints = 2000;
             const sampleRate = Math.max(1, Math.floor(chartData.boxSizes.length / maxPoints));
             const sampledData = chartData.boxSizes
                 .filter((_, i) => i % sampleRate === 0)
                 .map(box => ({ x: box.w, y: box.h }));
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'scatter',
                 data: {
                     datasets: [{
@@ -999,31 +1038,34 @@ export function generateDashboardHtml(
                     }]
                 },
                 options: {
-                    ...chartDefaults,
-                    aspectRatio: 1,  // 散点图必须正方形
+                    ...getChartOptions(),
+                    aspectRatio: 1,
                     scales: {
                         x: {
-                            ...chartDefaults.scales.x,
-                            title: { display: true, text: 'Width (normalized)', color: '${textColor}' },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Width (normalized)', color: textColor },
                             min: 0,
                             max: 1
                         },
                         y: {
-                            ...chartDefaults.scales.y,
-                            title: { display: true, text: 'Height (normalized)', color: '${textColor}' },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Height (normalized)', color: textColor },
                             min: 0,
                             max: 1
                         }
                     }
                 }
             });
+            chartInstances.push(chart);
         })();
 
-        // ========== Chart 5.5: Box Center 2D Distribution (NEW!) ==========
+        // ========== Chart 5.5: Box Center 2D Distribution ==========
         (function() {
             const ctx = document.getElementById('boxCenter2DChart').getContext('2d');
+            const { textColor, gridColor } = getThemeColors();
 
-            // Sample data if too many points (for performance)
             const maxPoints = 2000;
             const sampleRate = Math.max(1, Math.floor(chartData.boxCenterX.length / maxPoints));
             const sampledCenters = [];
@@ -1037,12 +1079,12 @@ export function generateDashboardHtml(
                 }
             }
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'scatter',
                 data: {
                     datasets: [{
                         data: sampledCenters,
-                        backgroundColor: 'rgba(54, 201, 184, 0.5)',  // 青绿色半透明
+                        backgroundColor: 'rgba(54, 201, 184, 0.5)',
                         borderColor: colors[1],
                         borderWidth: 1,
                         pointRadius: 2,
@@ -1050,40 +1092,35 @@ export function generateDashboardHtml(
                     }]
                 },
                 options: {
-                    ...chartDefaults,
-                    aspectRatio: 1,  // 正方形
+                    ...getChartOptions(),
+                    aspectRatio: 1,
                     scales: {
                         x: {
-                            ...chartDefaults.scales.x,
-                            title: { display: true, text: 'Center X', color: '${textColor}' },
+                            grid: { color: gridColor, lineWidth: 1 },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Center X', color: textColor },
                             min: 0,
-                            max: 1,
-                            grid: {
-                                color: '${gridColor}',
-                                lineWidth: 1
-                            }
+                            max: 1
                         },
                         y: {
-                            ...chartDefaults.scales.y,
-                            title: { display: true, text: 'Center Y', color: '${textColor}' },
+                            grid: { color: gridColor, lineWidth: 1 },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Center Y', color: textColor },
                             min: 0,
                             max: 1,
-                            reverse: true,  // 图片坐标系：Y=0 在顶部
-                            grid: {
-                                color: '${gridColor}',
-                                lineWidth: 1
-                            }
+                            reverse: true
                         }
                     }
                 }
             });
+            chartInstances.push(chart);
         })();
 
         // ========== Chart 6: Box Area Histogram ==========
         (function() {
             const ctx = document.getElementById('boxAreaChart').getContext('2d');
+            const { textColor, gridColor } = getThemeColors();
 
-            // Create histogram bins
             const bins = 20;
             const histogram = new Array(bins).fill(0);
             const binWidth = 1 / bins;
@@ -1099,7 +1136,7 @@ export function generateDashboardHtml(
                 return \`\${start}-\${end}%\`;
             });
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels,
@@ -1110,25 +1147,29 @@ export function generateDashboardHtml(
                     }]
                 },
                 options: {
-                    ...chartDefaults,
+                    ...getChartOptions(),
                     scales: {
                         x: {
-                            ...chartDefaults.scales.x,
-                            title: { display: true, text: 'Box area (% of image)', color: '${textColor}' }
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Box area (% of image)', color: textColor }
                         },
                         y: {
-                            ...chartDefaults.scales.y,
-                            title: { display: true, text: 'Number of boxes', color: '${textColor}' },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Number of boxes', color: textColor },
                             beginAtZero: true
                         }
                     }
                 }
             });
+            chartInstances.push(chart);
         })();
 
         // ========== Chart 7: Center X Distribution ==========
         (function() {
             const ctx = document.getElementById('centerXChart').getContext('2d');
+            const { textColor, gridColor } = getThemeColors();
 
             const bins = 20;
             const histogram = new Array(bins).fill(0);
@@ -1145,7 +1186,7 @@ export function generateDashboardHtml(
                 return \`\${start}-\${end}\`;
             });
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels,
@@ -1156,25 +1197,29 @@ export function generateDashboardHtml(
                     }]
                 },
                 options: {
-                    ...chartDefaults,
+                    ...getChartOptions(),
                     scales: {
                         x: {
-                            ...chartDefaults.scales.x,
-                            title: { display: true, text: 'Center X position (normalized)', color: '${textColor}' }
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Center X position (normalized)', color: textColor }
                         },
                         y: {
-                            ...chartDefaults.scales.y,
-                            title: { display: true, text: 'Number of boxes', color: '${textColor}' },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Number of boxes', color: textColor },
                             beginAtZero: true
                         }
                     }
                 }
             });
+            chartInstances.push(chart);
         })();
 
         // ========== Chart 8: Center Y Distribution ==========
         (function() {
             const ctx = document.getElementById('centerYChart').getContext('2d');
+            const { textColor, gridColor } = getThemeColors();
 
             const bins = 20;
             const histogram = new Array(bins).fill(0);
@@ -1191,7 +1236,7 @@ export function generateDashboardHtml(
                 return \`\${start}-\${end}\`;
             });
 
-            new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels,
@@ -1202,21 +1247,27 @@ export function generateDashboardHtml(
                     }]
                 },
                 options: {
-                    ...chartDefaults,
+                    ...getChartOptions(),
                     scales: {
                         x: {
-                            ...chartDefaults.scales.x,
-                            title: { display: true, text: 'Center Y position (normalized)', color: '${textColor}' }
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Center Y position (normalized)', color: textColor }
                         },
                         y: {
-                            ...chartDefaults.scales.y,
-                            title: { display: true, text: 'Number of boxes', color: '${textColor}' },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            title: { display: true, text: 'Number of boxes', color: textColor },
                             beginAtZero: true
                         }
                     }
                 }
             });
+            chartInstances.push(chart);
         })();
+
+        // Setup theme listener after all charts are created
+        setupThemeListener();
     </script>
 </body>
 </html>`;
