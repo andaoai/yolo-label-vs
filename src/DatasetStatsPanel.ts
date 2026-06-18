@@ -73,6 +73,18 @@ export class DatasetStatsPanel {
                 this._panel.webview,
                 this._statistics
             );
+
+            // Listen for VS Code theme changes to update webview colors
+            const themeChangeListener = vscode.window.onDidChangeActiveColorTheme(() => {
+                if (this._statistics && this._panel.webview) {
+                    this._panel.webview.html = generateDashboardHtml(
+                        this._extensionUri,
+                        this._panel.webview,
+                        this._statistics
+                    );
+                }
+            });
+            this._disposables.push(themeChangeListener);
         } catch (error: any) {
             console.error('Error loading dataset statistics:', error);
             this._panel.webview.html = this._getErrorHtml(error.message);
@@ -90,14 +102,14 @@ export class DatasetStatsPanel {
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             padding: 60px 20px;
-            color: #cccccc;
-            background-color: #1e1e1e;
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
             text-align: center;
         }
         .spinner {
             width: 50px;
             height: 50px;
-            border: 4px solid #444;
+            border: 4px solid var(--vscode-panel-border);
             border-top-color: #0098ff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -107,11 +119,11 @@ export class DatasetStatsPanel {
             to { transform: rotate(360deg); }
         }
         h2 {
-            color: #fff;
+            color: var(--vscode-titleBar-activeForeground);
             margin-bottom: 10px;
         }
         p {
-            color: #888;
+            color: var(--vscode-descriptionForeground);
         }
     </style>
 </head>
@@ -133,16 +145,17 @@ export class DatasetStatsPanel {
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             padding: 40px 20px;
-            color: #cccccc;
-            background-color: #1e1e1e;
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
             text-align: center;
         }
         h2 {
-            color: #f14c4c;
+            color: var(--vscode-errorForeground);
             margin-bottom: 15px;
         }
         .error-box {
-            background-color: #252526;
+            background-color: var(--vscode-editorWidget-background);
+            border: 1px solid var(--vscode-panel-border);
             padding: 15px;
             border-radius: 6px;
             margin: 20px auto;
