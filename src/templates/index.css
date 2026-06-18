@@ -24,6 +24,52 @@ body {
     overflow: hidden;
 }
 
+/* =================== 最小尺寸提示覆盖层 =================== */
+.min-size-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--vscode-editor-background);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.min-size-message {
+    text-align: center;
+    padding: 40px;
+    max-width: 400px;
+}
+
+.min-size-message svg {
+    color: var(--vscode-descriptionForeground);
+    margin-bottom: 20px;
+    opacity: 0.6;
+}
+
+.min-size-message h3 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--vscode-editor-foreground);
+}
+
+.min-size-message p {
+    margin: 8px 0;
+    font-size: 14px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.min-size-hint {
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 12px !important;
+    opacity: 0.7;
+    margin-top: 16px !important;
+}
+
 .container {
     display: flex;
     flex-direction: column;
@@ -31,6 +77,17 @@ body {
     padding: 10px;
     box-sizing: border-box;
     overflow: hidden;
+}
+
+/* 当窗口小于最小尺寸时显示覆盖层并隐藏主内容 */
+@media (max-width: 649px), (max-height: 499px) {
+    .min-size-overlay {
+        display: flex;
+    }
+
+    .container {
+        display: none;
+    }
 }
 
 /* =================== 顶部工具栏 =================== */
@@ -693,18 +750,20 @@ select:focus {
     margin-top: 10px;
     flex-shrink: 0;
     overflow: hidden;
+    gap: 8px;
+    min-height: 26px;
+}
+
+.status-bar > span {
+    opacity: 0.85;
+    flex-shrink: 0;
     white-space: nowrap;
 }
 
-.status-bar span {
-    opacity: 0.85;
-    margin-right: 5px;
-}
-
 .status-bar .divider {
-    margin: 0 8px;
     opacity: 0.5;
     color: var(--vscode-panelTitle-inactiveForeground);
+    flex-shrink: 0;
 }
 
 .status-bar #imageInfo {
@@ -952,51 +1011,37 @@ svg {
         gap: 12px;
         padding: 6px 8px;
     }
-    
-    .nav-buttons, 
+
+    .nav-buttons,
     .file-actions {
         gap: 6px;
     }
-    
+
     .search-container {
         gap: 8px;
         margin: 0 6px;
         max-width: calc(100% - 350px);
     }
-}
 
-/* For very narrow screens */
-@media (max-width: 700px) {
-    .toolbar {
-        flex-wrap: wrap;
-    }
-
-    .search-container {
-        order: 3;
-        width: 100%;
-        max-width: 100%;
-        margin: 8px 0 0 0;
-    }
-
-    .right-controls {
-        min-width: auto;
-    }
-
-    .status-bar {
-        flex-wrap: wrap;
-    }
-
-    .support-links {
-        width: 100%;
-        margin-top: 4px;
-        justify-content: center;
-        margin-left: 0;
-    }
-
-    .shortcuts-info {
-        display: none; /* Hide shortcuts info on very small screens */
+    /* 状态栏响应式：隐藏坐标 */
+    .status-bar #coordinates {
+        display: none;
     }
 }
+
+@media (max-width: 800px) {
+    /* 状态栏响应式：隐藏缩放 */
+    .status-bar #zoom-info {
+        display: none;
+    }
+
+    .status-bar .divider:nth-last-child(2),
+    .status-bar .divider:nth-last-child(4) {
+        display: none;
+    }
+}
+
+/* 注意：小于 650px 时会触发最小尺寸覆盖层，不再需要更细的断点 */
 
 /* File info area styles */
 /* File info area styles - removing this section
