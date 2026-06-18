@@ -494,6 +494,15 @@ export class App {
     this.dom.updateLabelList();
   }
 
+  clearAllLabels(): void {
+    const labels = this.store.get('labels');
+    if (labels.length === 0) return;
+    this.pushHistory();
+    this.store.setLabels([]);
+    this.worker.setLabels([]);
+    this.dom.updateLabelList();
+  }
+
   changeLabelClass(index: number, newClass: number): void {
     const labels = this.store.get('labels');
     const updated = LabelOps.changeClass(labels[index], newClass);
@@ -696,6 +705,7 @@ export class App {
         this.worker.setShowLabels(show);
       },
       onUndo: () => this.undo(),
+      onClearAllLabels: () => this.clearAllLabels(),
       onSave: () => this.save(),
       onLoadImage: (path) => this.extension.loadImage(path),
       onClassChange: (idx, cls) => this.changeLabelClass(idx, cls),

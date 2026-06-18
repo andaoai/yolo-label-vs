@@ -23,6 +23,7 @@ export interface DOMCallbacks {
   onToolChange: (tool: ToolType) => void;
   onToggleLabels: () => void;
   onUndo: () => void;
+  onClearAllLabels: () => void;
   onSave: () => void;
   onLoadImage: (path: string) => void;
   onClassChange: (labelIndex: number, newClass: number) => void;
@@ -57,6 +58,7 @@ export class DOMManager {
       onToolChange: callbacks.onToolChange,
       onToggleLabels: callbacks.onToggleLabels,
       onUndo: callbacks.onUndo,
+      onClearAllLabels: callbacks.onClearAllLabels,
       onSave: callbacks.onSave,
       onLoadImage: callbacks.onLoadImage,
     });
