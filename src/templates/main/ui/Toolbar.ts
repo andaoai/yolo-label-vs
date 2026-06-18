@@ -22,6 +22,7 @@ export class Toolbar {
       onToolChange: (tool: ToolType) => void;
       onToggleLabels: () => void;
       onUndo: () => void;
+      onClearAllLabels: () => void;
       onSave: () => void;
       onLoadImage: (path: string) => void;
     },
@@ -242,6 +243,11 @@ export class Toolbar {
     // 撤销按钮
     document.getElementById('undoButton')?.addEventListener('click', () => {
       this.callbacks.onUndo();
+    });
+
+    // 清除所有标签按钮
+    document.getElementById('clearAllLabels')?.addEventListener('click', () => {
+      this.callbacks.onClearAllLabels();
     });
 
     this.updateSaveButton();

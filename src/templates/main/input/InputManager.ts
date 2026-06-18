@@ -29,6 +29,7 @@ export interface InputCallbacks {
   onCycleClass: (direction: 1 | -1) => void;
   onCopyLabel: () => void;
   onPasteLabel: () => void;
+  onDeleteLabel: (index: number) => void;
 }
 
 export class InputManager {
@@ -329,6 +330,16 @@ export class InputManager {
     if (key === 'd' && !modifiers.ctrl && !modifiers.alt) {
       this.callbacks.onNavigateNext();
       return;
+    }
+
+    // Delete / Backspace：删除悬停的标签
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const hoveredIndex = this.store.get('hoveredLabelIndex');
+      if (hoveredIndex !== null) {
+        e.preventDefault();
+        this.callbacks.onDeleteLabel(hoveredIndex);
+        return;
+      }
     }
 
     // 工具按键（也转为小写）
