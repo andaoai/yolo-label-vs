@@ -55,9 +55,14 @@ jobs:
         with:
           node-version: '24.x'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Get current version
         id: current_version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        run: echo "version=$(node -p "require('./packages/vscode/package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Bump patch version (third number)
         id: new_version
@@ -72,6 +77,7 @@ jobs:
 
       - name: Update package.json version
         run: |
+          cd packages/vscode
           npm version ${{ steps.new_version.outputs.version }} --no-git-tag-version
 
       - name: Update README badges
@@ -87,20 +93,23 @@ jobs:
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add package.json README.md docs/README_CN.md
+          git add packages/vscode/package.json README.md docs/README_CN.md
           git commit -m "Bump patch version to ${{ steps.new_version.outputs.version }} for dev release [skip ci]"
           git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}
           git push
 
-      - name: Delete package-lock.json and install dependencies
+      - name: Install dependencies
         run: |
-          rm -f package-lock.json
-          npm install --no-package-lock --ignore-scripts
+          pnpm install --no-frozen-lockfile
 
-      - name: Build extension with webpack (development)
-        run: npm run build:dev
+      - name: Build (core + VS Code extension, development)
+        run: |
+          pnpm --filter @yolo-label/core build
+          pnpm --filter yolo-labeling-vs build:dev
 
       - name: Package extension
+        working-directory: packages/vscode
         run: |
-          npm install -g @vscode/vsce
-          vsce package
+          cp ../../README.md ./README.md
+          cp ../../LICENSE ./LICENSE
+          npx --yes @vscode/vsce package

@@ -56,23 +56,28 @@ jobs:
         with:
           node-version: '24.x'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Get current version
         id: current_version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        run: echo "version=$(node -p "require('./packages/vscode/package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: |
-          npm install --no-package-lock --ignore-scripts
+          pnpm install --no-frozen-lockfile
 
-      - name: Build extension with webpack (production)
-        run: npm run build
-        env:
-          NODE_ENV: production
+      - name: Build (core + VS Code extension)
+        run: pnpm build
 
       - name: Package extension
+        working-directory: packages/vscode
         run: |
-          npm install -g @vscode/vsce
-          vsce package
+          cp ../../README.md ./README.md
+          cp ../../LICENSE ./LICENSE
+          npx --yes @vscode/vsce package
 
       - name: Create GitHub Release and Upload VSIX
         uses: softprops/action-gh-release@v3
@@ -84,7 +89,7 @@ jobs:
           body: |
             New version released to VS Code Marketplace.
             Version: ${{ steps.current_version.outputs.version }}
-          files: ./yolo-labeling-vs-${{ steps.current_version.outputs.version }}.vsix
+          files: ./packages/vscode/yolo-labeling-vs-${{ steps.current_version.outputs.version }}.vsix
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 

@@ -8,3 +8,7 @@ dist
 # test data & output
 test/data
 test/output
+# monorepo build outputs
+.cache
+packages/*/lib
+*.tgz

@@ -1,0 +1,217 @@
+{
+  "name": "yolo-labeling-vs",
+  "displayName": "YOLO Labeling",
+  "description": "A VS Code extension for YOLO dataset labeling",
+  "version": "0.0.91",
+  "publisher": "andaoai",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andaoai/yolo-label-vs"
+  },
+  "keywords": [
+    "yolo",
+    "yolov5",
+    "yolov8",
+    "yolov11",
+    "ultralytics",
+    "labeling",
+    "annotation",
+    "data labeling",
+    "image annotation",
+    "labelImg",
+    "cvat",
+    "makesense",
+    "roboflow",
+    "dataset",
+    "computer vision",
+    "machine learning",
+    "object detection",
+    "bounding box",
+    "deep learning",
+    "ai",
+    "yaml",
+    "keybindings",
+    "darknet",
+    "neural network",
+    "pytorch",
+    "tensorflow",
+    "cv",
+    "segmentation",
+    "instance segmentation",
+    "pose estimation",
+    "keypoints",
+    "obb",
+    "oriented bounding box",
+    "coco",
+    "onnx",
+    "inference",
+    "auto-annotation",
+    "auto labeling",
+    "real-time"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Data Science",
+    "Machine Learning",
+    "Visualization",
+    "Formatters"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:**/*.yaml",
+    "workspaceContains:**/*.yml"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "yolo-datasets",
+          "title": "YOLO Datasets",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "yolo-datasets": [
+        {
+          "id": "yolo-datasets.tree",
+          "name": "Datasets"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "yolo-datasets.tree",
+        "contents": "Click refresh to scan YOLO datasets in your workspace\n[Refresh](command:yolo-labeling-vs.refreshDatasets)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "yolo-labeling-vs.openLabelingPanel",
+        "title": "Open YOLO Labeling Panel"
+      },
+      {
+        "command": "yolo-labeling-vs.openLabelingPanelKeyboard",
+        "title": "Open YOLO Labeling Panel (Keyboard Shortcut)"
+      },
+      {
+        "command": "yolo-labeling-vs.refreshDatasets",
+        "title": "Refresh Dataset List",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "yolo-labeling-vs.openDatasetStats",
+        "title": "View Dataset Statistics",
+        "icon": "$(graph)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "yolo-labeling-vs.refreshDatasets",
+          "when": "view == yolo-datasets.tree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "when": "view == yolo-datasets.tree",
+          "group": "navigation@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openLabelingPanel",
+          "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "group": "navigation@2"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openLabelingPanel",
+          "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "group": "navigation@2"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openLabelingPanel",
+          "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "command": "yolo-labeling-vs.openDatasetStats",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "yolo-labeling-vs.openLabelingPanel",
+        "key": "ctrl+y",
+        "when": "editorTextFocus && resourceExtname == .yaml || resourceExtname == .yml"
+      },
+      {
+        "command": "yolo-labeling-vs.openLabelingPanelKeyboard",
+        "key": "ctrl+y",
+        "when": "!editorTextFocus || !(resourceExtname == .yaml || resourceExtname == .yml)"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "cross-env NODE_ENV=production webpack --config webpack.config.js && npm run copy-templates",
+    "build:dev": "cross-env NODE_ENV=development webpack --config webpack.config.js && npm run copy-templates",
+    "watch": "cross-env NODE_ENV=development webpack --watch --config webpack.config.js && npm run copy-templates",
+    "copy-templates": "node scripts/copy-templates.js",
+    "test:inference": "tsx test/test-inference-all.ts",
+    "test:sam": "tsx test/test-inference-sam.ts",
+    "vscode:prepublish": "pnpm --filter @yolo-label/core build && npm run build"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "@types/js-yaml": "^4.0.9",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.17.32",
+    "@types/vscode": "^1.85.0",
+    "@types/webpack": "^5.28.5",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "adm-zip": "^0.5.17",
+    "chokidar": "^3.5.3",
+    "copy-webpack-plugin": "^13.0.0",
+    "cross-env": "^7.0.3",
+    "eslint": "^9.23.0",
+    "js-yaml": "^4.2.0",
+    "onnxruntime-node": "^1.26.0",
+    "sharp": "^0.35.1",
+    "svg2png-cli": "^1.1.1",
+    "svgexport": "^0.4.2",
+    "terser-webpack-plugin": "^5.3.14",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.2",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@yolo-label/core": "workspace:*",
+    "jimp": "^0.22.10",
+    "onnxruntime-web": "^1.26.0"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "yolo-label-dsh",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness plugin for YOLO dataset labeling: host HTTP API + native client workbench (box / seg / pose).",
+  "license": "MIT",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build-host.mjs && node scripts/build-client.mjs",
+    "build:host": "node scripts/build-host.mjs",
+    "build:client": "node scripts/build-client.mjs",
+    "watch:client": "node scripts/build-client.mjs --watch"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "onnxruntime-node": "^1.26.0",
+    "sharp": "^0.35.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.32",
+    "@types/react": "^18.3.31",
+    "@yolo-label/core": "workspace:*",
+    "esbuild": "^0.25.12",
+    "react": "^18.3.1"
+  }
+}

@@ -1,0 +1,14 @@
+# yolo-label-dsh bundle patch
+#
+# `dsh.bundle.patch` 层：通过官方 CLI 安装时——
+#
+#   dsh plugin --profile <name> add yolo-label-dsh@<version>
+#
+# —— CLI 会按已安装包对账 dsh.profile.bundles，发现本声明后把
+# yolo-label-dsh 追加进 bundle 栈；profile 启动时合并本 patch
+# （单行 insert 挂载插件），无需手工编辑 profile。
+#
+# 开发时（源码方式加载）请改用 cordis.dev.patch.yml（--patch 绝对路径）。
+- insert:
+    - id: yolo-label-dsh
+      name: 'yolo-label-dsh'

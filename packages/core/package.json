@@ -1,0 +1,35 @@
+{
+  "name": "@yolo-label/core",
+  "version": "0.1.0",
+  "description": "Platform-agnostic YOLO dataset core: config loading, image scanning, label codec, data reader, statistics.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./lib/node/index.js",
+  "types": "./lib/node/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./node": {
+      "types": "./lib/node/index.d.ts",
+      "default": "./lib/node/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -w -p tsconfig.json"
+  },
+  "dependencies": {
+    "js-yaml": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.17.32",
+    "typescript": "^5.8.2"
+  }
+}

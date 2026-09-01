@@ -1,0 +1,7 @@
+# 开发用 overlay：本地源码方式加载 yolo-label-dsh host 插件。
+# 用法：在 deepseek-harness 仓库目录执行
+#   pnpm dsh web --port 3180 --no-open \
+#     --patch /home/andaoai/wf/work-dir/github.com/andaoai/yolo-label-vs/packages/dsh/cordis.dev.patch.yml
+- insert:
+    - id: yolo-label-dsh
+      name: '/home/andaoai/wf/work-dir/github.com/andaoai/yolo-label-vs/packages/dsh/src/host/index.ts'
